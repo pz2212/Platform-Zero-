@@ -9,14 +9,14 @@ import { Settings as SettingsComponent } from './Settings';
 import { 
   Package, Truck, MapPin, AlertTriangle, LayoutDashboard, 
   Tags, Users, Clock, CheckCircle, Store, X, UploadCloud, 
-  DollarSign, Camera, Check, ChevronDown, Info, Trash2, Search, Bell, Settings, GitPullRequest, ScanLine
+  DollarSign, Camera, Check, ChevronDown, Info, Trash2, Search, Bell, Settings, GitPullRequest, ScanLine, FileWarning, Lock
 } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
 }
 
-/* HIGH FIDELITY PACKING LIST MODAL - MATCHING REFINED USER REQUIREMENTS */
+/* HIGH FIDELITY PACKING LIST MODAL */
 const PackingListModal: React.FC<{
     order: Order;
     onClose: () => void;
@@ -41,17 +41,11 @@ const PackingListModal: React.FC<{
         setItemIssues(prev => ({ ...prev, [productId]: issue }));
         setReportingItemId(null);
         
-        // OPERATIONAL FLOW: Notify PZ Admin (u1) and Customer (order.buyerId)
         const product = mockService.getProduct(productId);
         const productName = product?.name || 'Unknown Item';
         
-        // 1. Notify Platform Zero Admin (u1)
         mockService.addNotification('u1', `URGENT: Order #${order.id} - Issue reported for ${productName}: ${issue}`);
-        
-        // 2. Notify the Customer (order.buyerId)
         mockService.addNotification(order.buyerId, `Status update for Order #${order.id}: A packing issue has been reported for ${productName} (${issue}). Platform Zero is resolving this for you.`);
-        
-        // Ensure item is not marked as packed if there is an issue
         setPackedItems(prev => ({ ...prev, [productId]: false }));
     };
 
@@ -72,7 +66,6 @@ const PackingListModal: React.FC<{
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-                {/* Modal Header */}
                 <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-white">
                     <div className="flex items-center gap-3">
                         <div className="bg-gray-100 p-2.5 rounded-xl text-gray-700"><Package size={24}/></div>
@@ -84,7 +77,6 @@ const PackingListModal: React.FC<{
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X size={24}/></button>
                 </div>
 
-                {/* Customer & Packer Assignment Row */}
                 <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8 bg-gray-50/30 border-b border-gray-100 items-end">
                     <div>
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Customer</p>
@@ -114,7 +106,6 @@ const PackingListModal: React.FC<{
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                    {/* Items Table */}
                     <div>
                         <h3 className="text-base font-bold text-gray-900 mb-4">Items to Pack</h3>
                         <table className="w-full text-left">
@@ -282,7 +273,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     setCustomers(mockService.getCustomers());
   };
 
+  const isProfileComplete = user.businessProfile?.isComplete || false;
+
   const handleAcceptOrder = (order: Order) => {
+    // ENFORCED RULE: Cannot accept orders until profile documents are complete
+    if (!isProfileComplete) {
+        alert("Action Required: Please go to Settings and complete your onboarding documents (NDA, Logistics, and T&Cs) before you can accept marketplace orders.");
+        return;
+    }
+    
     mockService.acceptOrderV2(order.id);
     loadData();
     alert("Order Accepted! Platform Zero Admin and the customer have been notified.");
@@ -331,6 +330,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             </button>
         </div>
       </div>
+
+      {/* ONBOARDING WARNING BANNER */}
+      {!isProfileComplete && (
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-[2rem] p-8 flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4">
+              <div className="bg-white p-4 rounded-2xl text-amber-600 shadow-sm border border-amber-100">
+                  <FileWarning size={32} />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                  <h2 className="text-xl font-black text-amber-900 uppercase tracking-tight">Onboarding Documents Pending</h2>
+                  <p className="text-amber-800 font-medium mt-1">Platform Zero has connected you to marketplace traffic, but you cannot <span className="font-black">Accept</span> or <span className="font-black">Pack</span> orders until your business profile is complete.</p>
+              </div>
+              <button 
+                onClick={() => setActiveTab('Settings')}
+                className="px-8 py-3 bg-amber-600 text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg hover:bg-amber-700 transition-all whitespace-nowrap"
+              >
+                  Complete Setup Now
+              </button>
+          </div>
+      )}
 
       {/* Tabs Row */}
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -453,8 +471,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                     return (
                         <div 
                             key={order.id} 
-                            onClick={() => setPackingOrder(order)}
-                            className="bg-[#FFFDF0] rounded-[2rem] border-2 border-[#FDE68A] p-10 shadow-sm hover:shadow-xl transition-all relative group cursor-pointer animate-in fade-in zoom-in-95 duration-300"
+                            className="bg-[#FFFDF0] rounded-[2rem] border-2 border-[#FDE68A] p-10 shadow-sm hover:shadow-xl transition-all relative group animate-in fade-in zoom-in-95 duration-300"
                         >
                             <div className="flex flex-col lg:flex-row justify-between gap-12">
                                 <div className="flex-1 space-y-10">
@@ -500,7 +517,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
                                     <div className="w-full space-y-4">
                                         <button 
-                                            onClick={(e) => { e.stopPropagation(); setPackingOrder(order); }}
+                                            onClick={() => setPackingOrder(order)}
                                             className="w-full py-3.5 bg-white border-2 border-gray-200 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:bg-gray-50 transition-all shadow-sm"
                                         >
                                             View Full Details
@@ -508,19 +525,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                         <div className="flex gap-3">
                                             {!isAccepted && (
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleRejectOrder(order); }}
+                                                    onClick={() => handleRejectOrder(order)}
                                                     className="flex-1 py-4 bg-white border-2 border-red-100 text-red-500 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-50 transition-all shadow-sm"
                                                 >
                                                     Reject
                                                 </button>
                                             )}
                                             <button 
-                                                onClick={(e) => { e.stopPropagation(); isAccepted ? setPackingOrder(order) : handleAcceptOrder(order); }}
-                                                className={`flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:scale-105 transition-all text-white ${isAccepted ? 'bg-blue-600 hover:bg-blue-700' : 'bg-[#22C55E] hover:bg-[#16A34A]'}`}
+                                                onClick={() => isAccepted ? setPackingOrder(order) : handleAcceptOrder(order)}
+                                                className={`flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:scale-105 transition-all text-white flex items-center justify-center gap-2 ${
+                                                    !isAccepted && !isProfileComplete ? 'bg-gray-400 cursor-not-allowed' :
+                                                    isAccepted ? 'bg-blue-600 hover:bg-blue-700' : 'bg-[#22C55E] hover:bg-[#16A34A]'
+                                                }`}
                                             >
-                                                {isAccepted ? 'Pack Order' : 'Accept Order'}
+                                                {!isAccepted && !isProfileComplete ? (
+                                                    <><Lock size={14}/> Setup Required</>
+                                                ) : (
+                                                    isAccepted ? 'Pack Order' : 'Accept Order'
+                                                )}
                                             </button>
                                         </div>
+                                        {!isAccepted && !isProfileComplete && (
+                                            <p className="text-[9px] text-red-500 font-bold uppercase tracking-tight text-center mt-2 animate-pulse">Complete Profile to Unlock</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>

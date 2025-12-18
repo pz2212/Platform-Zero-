@@ -8,8 +8,8 @@ import {
 
 export const USERS: User[] = [
   { id: 'u1', name: 'Admin User', businessName: 'Platform Zero', role: UserRole.ADMIN, email: 'admin@pz.com' },
-  { id: 'u2', name: 'Sarah Wholesaler', businessName: 'Fresh Wholesalers', role: UserRole.WHOLESALER, email: 'sarah@fresh.com', dashboardVersion: 'v2' },
-  { id: 'u3', name: 'Bob Farmer', businessName: 'Green Valley Farms', role: UserRole.FARMER, email: 'bob@greenvalley.com', dashboardVersion: 'v2' },
+  { id: 'u2', name: 'Sarah Wholesaler', businessName: 'Fresh Wholesalers', role: UserRole.WHOLESALER, email: 'sarah@fresh.com', dashboardVersion: 'v2', businessProfile: { isComplete: true } as any },
+  { id: 'u3', name: 'Bob Farmer', businessName: 'Green Valley Farms', role: UserRole.FARMER, email: 'bob@greenvalley.com', dashboardVersion: 'v2', businessProfile: { isComplete: true } as any },
   { id: 'u4', name: 'Alice Consumer', businessName: 'The Morning Cafe', role: UserRole.CONSUMER, email: 'alice@cafe.com' },
   { id: 'rep1', name: 'Rep User', businessName: 'Platform Zero', role: UserRole.PZ_REP, email: 'rep1@pz.com', commissionRate: 5.0 },
   { id: 'd1', name: 'Dave Driver', businessName: 'Fresh Wholesalers', role: UserRole.DRIVER, email: 'dave@fresh.com' }
@@ -111,7 +111,7 @@ class MockDataService {
   updateBusinessProfile(userId: string, profile: BusinessProfile) {
       const user = this.users.find(u => u.id === userId);
       if (user) {
-        user.businessProfile = profile;
+        user.businessProfile = { ...profile, isComplete: true };
         if (user.role === UserRole.CONSUMER) {
           const exists = this.customers.find(c => c.id === user.id);
           if (!exists) {
@@ -128,6 +128,70 @@ class MockDataService {
         }
       }
       this.persistData();
+  }
+
+  onboardNewBusiness(data: {
+      type: 'Buyer' | 'Supplier',
+      businessName: string,
+      email: string,
+      phone: string,
+      abn: string,
+      address: string,
+      customerType: string
+  }) {
+      const id = `u-man-${Date.now()}`;
+      const role = data.type === 'Buyer' ? UserRole.CONSUMER : UserRole.WHOLESALER;
+      
+      const newUser: User = {
+          id,
+          name: data.businessName,
+          businessName: data.businessName,
+          email: data.email.toLowerCase(),
+          role,
+          dashboardVersion: 'v2',
+          businessProfile: {
+              companyName: data.businessName,
+              tradingName: data.businessName,
+              abn: data.abn,
+              businessLocation: data.address,
+              directorName: 'Pending',
+              businessMobile: data.phone,
+              email: data.email.toLowerCase(),
+              accountsEmail: data.email.toLowerCase(),
+              accountsMobile: data.phone,
+              tradingDaysHours: '',
+              productsSold: '',
+              hasLogistics: null,
+              bankName: '',
+              bsb: '',
+              accountNumber: '',
+              agreeTo14DayTerms: false,
+              agreeTo20PercentDiscount: null,
+              acceptedTandCs: false,
+              isComplete: false // MUST COMPLETE DOCUMENTS IN THEIR PORTAL
+          }
+      };
+
+      this.users.push(newUser);
+
+      if (data.type === 'Buyer') {
+          const customer: Customer = {
+              id: `c-man-${Date.now()}`,
+              businessName: data.businessName,
+              contactName: 'Pending Setup',
+              email: data.email.toLowerCase(),
+              phone: data.phone,
+              category: data.customerType as any,
+              abn: data.abn,
+              location: data.address,
+              connectionStatus: 'Pending Connection',
+              joinedDate: new Date().toISOString()
+          };
+          this.customers.push(customer);
+      }
+
+      this.persistData();
+      return newUser;
   }
 
   updateCustomerMarkup(customerId: string, markup: number) {
@@ -329,7 +393,7 @@ class MockDataService {
         id: inviteId,
         name: data.name,
         businessName: data.businessName,
-        email: data.email,
+        email: data.email.toLowerCase(),
         requestedRole: data.role,
         submittedDate: new Date().toISOString(),
         status: 'Pending',
@@ -348,9 +412,30 @@ class MockDataService {
       id: inviteId,
       name: data.name,
       businessName: data.businessName,
-      email: data.email,
+      email: data.email.toLowerCase(),
       role: data.role,
-      dashboardVersion: 'v2'
+      dashboardVersion: 'v2',
+      businessProfile: {
+          companyName: data.businessName,
+          tradingName: data.businessName,
+          abn: '',
+          businessLocation: '',
+          directorName: data.name,
+          businessMobile: data.mobile,
+          email: data.email.toLowerCase(),
+          accountsEmail: data.email.toLowerCase(),
+          accountsMobile: data.mobile,
+          tradingDaysHours: '',
+          productsSold: '',
+          hasLogistics: null,
+          bankName: '',
+          bsb: '',
+          accountNumber: '',
+          agreeTo14DayTerms: false,
+          agreeTo20PercentDiscount: null,
+          acceptedTandCs: false,
+          isComplete: false
+      }
     };
     this.users.push(newUser);
 
@@ -363,7 +448,7 @@ class MockDataService {
           id: `req-${Date.now()}`,
           name: data.name,
           businessName: data.businessName,
-          email: data.email,
+          email: data.email.toLowerCase(),
           requestedRole: UserRole.CONSUMER,
           submittedDate: new Date().toISOString(),
           status: 'Pending',
@@ -385,9 +470,30 @@ class MockDataService {
                 id: `u-${Date.now()}`,
                 name: req.name,
                 businessName: req.businessName,
-                email: req.email,
+                email: req.email.toLowerCase(),
                 role: req.requestedRole,
-                dashboardVersion: 'v2'
+                dashboardVersion: 'v2',
+                businessProfile: {
+                    companyName: req.businessName,
+                    tradingName: req.businessName,
+                    abn: '',
+                    businessLocation: '',
+                    directorName: req.name,
+                    businessMobile: '',
+                    email: req.email.toLowerCase(),
+                    accountsEmail: req.email.toLowerCase(),
+                    accountsMobile: '',
+                    tradingDaysHours: '',
+                    productsSold: '',
+                    hasLogistics: null,
+                    bankName: '',
+                    bsb: '',
+                    accountNumber: '',
+                    agreeTo14DayTerms: false,
+                    agreeTo20PercentDiscount: null,
+                    acceptedTandCs: false,
+                    isComplete: false
+                }
               };
               this.users.push(user);
           }
@@ -400,7 +506,7 @@ class MockDataService {
                 id: user.id,
                 businessName: req.businessName,
                 contactName: req.name,
-                email: req.email,
+                email: req.email.toLowerCase(),
                 category: 'Restaurant',
                 connectionStatus: 'Pending Connection',
                 joinedDate: new Date().toISOString()
@@ -453,11 +559,12 @@ class MockDataService {
           const newCustomer: Customer = {
               id: `c-won-${Date.now()}`,
               businessName: req.customerContext,
-              contactName: 'Unknown',
+              contactName: 'Pending Setup',
               category: 'Restaurant',
-              connectionStatus: 'Active',
+              connectionStatus: 'Pending Connection',
               joinedDate: new Date().toISOString(),
-              connectedSupplierId: req.supplierId
+              connectedSupplierId: req.supplierId,
+              email: 'pending@setup.com'
           };
           this.customers.push(newCustomer);
           this.persistData();

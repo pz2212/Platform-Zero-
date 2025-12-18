@@ -35,6 +35,8 @@ export const ConsumerOnboarding: React.FC = () => {
       businessName: '',
       abn: '',
       address: '',
+      email: '',
+      phone: '',
       weeklySpend: '',
       orderFreq: '',
       deliveryWindow: '',
@@ -118,38 +120,35 @@ export const ConsumerOnboarding: React.FC = () => {
 
   const handleOpenInvoices = (customer: Customer) => {
       const allOrders = mockService.getOrders('u1');
-      const unpaid = allOrders.filter(o => o.buyerId === customer.id && (o.paymentStatus === 'Unpaid' || o.paymentStatus === 'Overdue'));
-      setCustomerInvoices(unpaid);
+      const history = allOrders.filter(o => o.buyerId === customer.id);
+      setCustomerInvoices(history);
       setViewingInvoicesCustomer(customer);
   };
 
   const handleCreateBusiness = (e: React.FormEvent) => {
       e.preventDefault();
-      const customer: Customer = {
-          id: `c-${Date.now()}`,
+      
+      const newUser = mockService.onboardNewBusiness({
+          type: onboardType,
           businessName: newBusiness.businessName,
-          contactName: newBusiness.directorName || 'Director',
-          email: newBusiness.directorEmail,
-          category: newBusiness.customerType as any,
+          email: newBusiness.email,
+          phone: newBusiness.phone,
           abn: newBusiness.abn,
-          location: newBusiness.address,
-          deliveryAddress: newBusiness.address,
-          weeklySpend: parseFloat(newBusiness.weeklySpend) || 0,
-          orderFrequency: newBusiness.orderFreq,
-          deliveryTimeWindow: newBusiness.deliveryWindow,
-          commonProducts: newBusiness.products,
-          director: { name: newBusiness.directorName, email: newBusiness.directorEmail, phone: newBusiness.directorPhone },
-          accounts: { name: newBusiness.accountsName, email: newBusiness.accountsEmail, phone: newBusiness.accountsMobile },
-          chef: { name: newBusiness.chefName, email: newBusiness.chefEmail, phone: newBusiness.chefMobile },
-          connectionStatus: 'Pending Connection',
-          pricingStatus: 'Not Set',
-          joinedDate: new Date().toISOString()
-      };
+          address: newBusiness.address,
+          customerType: newBusiness.customerType
+      });
 
-      mockService.addMarketplaceCustomer(customer);
       refreshData();
       setIsOnboardModalOpen(false);
-      alert(`Business "${customer.businessName}" successfully onboarded!`);
+      alert(`${onboardType} "${newBusiness.businessName}" successfully onboarded! They can now log in with ${newBusiness.email} and PZ can send them orders. Note: They must complete setup in their dashboard before they can fulfill orders.`);
+      
+      setNewBusiness({
+          businessName: '', abn: '', address: '', email: '', phone: '',
+          weeklySpend: '', orderFreq: '', deliveryWindow: '', products: '',
+          directorName: '', directorEmail: '', directorPhone: '',
+          accountsName: '', accountsEmail: '', accountsMobile: '',
+          chefName: '', chefEmail: '', chefMobile: '', customerType: 'Restaurant'
+      });
   };
 
   const filteredCustomers = customers.filter(c => 
@@ -200,7 +199,7 @@ export const ConsumerOnboarding: React.FC = () => {
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-visible min-h-[500px]">
         <div className="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2"><Store size={20} className="text-gray-900"/><h2 className="text-lg font-bold text-gray-900">{activeTab === 'waiting' ? 'Pending Applications' : 'Marketplace Customers'}</h2></div>
-          {activeTab !== 'waiting' && (<div className="relative w-full md:w-80"><Search className="absolute left-3 top-2.5 text-gray-400" size={18} /><input type="text" placeholder="Search customers..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 outline-none" /></div>)}
+          {activeTab !== 'waiting' && (<div className="relative w-full md:w-80"><Search className="absolute left-3 top-2.5 text-gray-400" size={18} /><input type="text" placeholder="Search customers..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm font-black text-slate-900 focus:ring-2 focus:ring-gray-900 outline-none" /></div>)}
         </div>
 
         {activeTab === 'customers' && (
@@ -247,7 +246,7 @@ export const ConsumerOnboarding: React.FC = () => {
                         <td className="px-6 py-4 text-sm text-gray-900 font-medium text-center">{metrics.orderCount}</td>
                         <td className="px-6 py-4 text-center">
                             <button onClick={() => handleOpenInvoices(customer)} className="flex items-center justify-center gap-1 text-sm font-medium text-green-700 hover:underline w-full">
-                                <FileText size={14}/> {metrics.activeInvoices}
+                                <FileText size={14}/> {metrics.orderCount} Total
                             </button>
                         </td>
                         <td className="px-6 py-4">
@@ -317,194 +316,11 @@ export const ConsumerOnboarding: React.FC = () => {
         )}
       </div>
 
-      {/* INVOICE LIST MODAL */}
-      {viewingInvoicesCustomer && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                  <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                      <div>
-                          <h2 className="text-xl font-bold text-gray-900">Unpaid Invoices: {viewingInvoicesCustomer.businessName}</h2>
-                          <p className="text-sm text-gray-500">Found {customerInvoices.length} outstanding invoices</p>
-                      </div>
-                      <button onClick={() => setViewingInvoicesCustomer(null)} className="text-gray-400 hover:text-gray-600 p-2"><X size={24}/></button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-6 bg-white">
-                      {customerInvoices.length === 0 ? (
-                          <div className="text-center py-20 text-gray-400">No unpaid invoices for this customer.</div>
-                      ) : (
-                          <table className="w-full text-left">
-                              <thead className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">
-                                  <tr>
-                                      <th className="pb-4 px-2">Date</th>
-                                      <th className="pb-4 px-2">Invoice #</th>
-                                      <th className="pb-4 px-2">Total Amount</th>
-                                      <th className="pb-4 px-2">Due Date</th>
-                                      <th className="pb-4 px-2">Status</th>
-                                      <th className="pb-4 px-2 text-right">Action</th>
-                                  </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-50">
-                                  {customerInvoices.map(invoice => (
-                                      <tr key={invoice.id} className="hover:bg-gray-50 transition-colors">
-                                          <td className="py-4 px-2 text-sm">{new Date(invoice.date).toLocaleDateString()}</td>
-                                          <td className="py-4 px-2 font-mono text-sm">#{invoice.id.split('-')[1] || invoice.id}</td>
-                                          <td className="py-4 px-2 font-bold text-gray-900">${invoice.totalAmount.toFixed(2)}</td>
-                                          <td className="py-4 px-2 text-sm text-gray-500">{new Date(new Date(invoice.date).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</td>
-                                          <td className="py-4 px-2">
-                                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${invoice.paymentStatus === 'Overdue' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                                                  {invoice.paymentStatus || 'Unpaid'}
-                                              </span>
-                                          </td>
-                                          <td className="py-4 px-2 text-right">
-                                              <button 
-                                                  onClick={() => setSelectedInvoice(invoice)}
-                                                  className="text-indigo-600 hover:text-indigo-800 font-bold text-sm flex items-center gap-1 ml-auto"
-                                              >
-                                                  View Detailed <ExternalLink size={14}/>
-                                              </button>
-                                          </td>
-                                      </tr>
-                                  ))}
-                              </tbody>
-                          </table>
-                      )}
-                  </div>
-                  <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end">
-                      <button onClick={() => setViewingInvoicesCustomer(null)} className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition-colors">Close Viewer</button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* DETAILED INVOICE MODAL */}
-      {selectedInvoice && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col animate-in zoom-in-95 duration-200">
-                  {/* Header */}
-                  <div className="p-6 border-b border-gray-200 flex justify-between items-start bg-gray-50">
-                      <div>
-                          <div className="flex items-center gap-3 mb-1">
-                              <h2 className="text-2xl font-bold text-gray-900">Tax Invoice</h2>
-                              <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${selectedInvoice.paymentStatus === 'Overdue' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                                  {selectedInvoice.paymentStatus || 'Unpaid'}
-                              </span>
-                          </div>
-                          <p className="text-sm text-gray-500 font-mono">Reference: #{selectedInvoice.id}</p>
-                      </div>
-                      <button onClick={() => setSelectedInvoice(null)} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200">
-                          <X size={24} />
-                      </button>
-                  </div>
-
-                  {/* Body */}
-                  <div className="p-8 space-y-10 bg-white">
-                      {/* Addresses */}
-                      <div className="flex flex-col sm:flex-row justify-between gap-8">
-                          <div>
-                              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">From (Supplier)</h3>
-                              <p className="font-bold text-gray-900">{mockService.getAllUsers().find(u => u.id === selectedInvoice.sellerId)?.businessName || 'Platform Zero Partner'}</p>
-                              <p className="text-sm text-gray-500 mt-1">Direct Wholesale Network</p>
-                          </div>
-                          <div className="sm:text-right">
-                              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Bill To (Customer)</h3>
-                              <p className="font-bold text-gray-900">{customers.find(c => c.id === selectedInvoice.buyerId)?.businessName}</p>
-                              <p className="text-sm text-gray-500 mt-1">{customers.find(c => c.id === selectedInvoice.buyerId)?.deliveryAddress}</p>
-                          </div>
-                      </div>
-
-                      {/* Summary Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                          <div>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase">Issue Date</span>
-                              <p className="text-sm font-bold text-gray-900">{new Date(selectedInvoice.date).toLocaleDateString()}</p>
-                          </div>
-                          <div>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase">Due Date</span>
-                              <p className="text-sm font-bold text-gray-900">{new Date(new Date(selectedInvoice.date).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
-                          </div>
-                          <div>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase">Status</span>
-                              <p className="text-sm font-bold text-red-600 uppercase">{selectedInvoice.paymentStatus || 'Unpaid'}</p>
-                          </div>
-                          <div>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase">Balance Due</span>
-                              <p className="text-lg font-black text-gray-900">${selectedInvoice.totalAmount.toFixed(2)}</p>
-                          </div>
-                      </div>
-
-                      {/* Items Table */}
-                      <table className="w-full text-left border-collapse">
-                          <thead>
-                              <tr className="border-b-2 border-gray-100">
-                                  <th className="py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Description</th>
-                                  <th className="py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Qty</th>
-                                  <th className="py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Price</th>
-                                  <th className="py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Total</th>
-                              </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-50">
-                              {selectedInvoice.items.map((item, idx) => {
-                                  const product = products.find(p => p.id === item.productId);
-                                  return (
-                                      <tr key={idx}>
-                                          <td className="py-4">
-                                              <div className="font-bold text-gray-900 text-sm">{product?.name || 'Produce Item'}</div>
-                                              <div className="text-[10px] text-gray-400 font-medium">{product?.variety || 'Standard'}</div>
-                                          </td>
-                                          <td className="py-4 text-right text-sm font-medium text-gray-700">{item.quantityKg} kg</td>
-                                          <td className="py-4 text-right text-sm text-gray-500">${item.pricePerKg.toFixed(2)}</td>
-                                          <td className="py-4 text-right text-sm font-bold text-gray-900">${(item.quantityKg * item.pricePerKg).toFixed(2)}</td>
-                                      </tr>
-                                  );
-                              })}
-                          </tbody>
-                      </table>
-
-                      {/* Totals */}
-                      <div className="flex justify-end pt-4 border-t border-gray-100">
-                          <div className="w-64 space-y-3">
-                              <div className="flex justify-between text-sm font-medium text-gray-500">
-                                  <span>Subtotal</span>
-                                  <span>${selectedInvoice.totalAmount.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between text-sm font-medium text-gray-500">
-                                  <span>GST (10%)</span>
-                                  <span>${(selectedInvoice.totalAmount * 0.1).toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between text-xl font-black text-gray-900 pt-3 border-t border-gray-900">
-                                  <span>Total Due</span>
-                                  <span>${(selectedInvoice.totalAmount * 1.1).toFixed(2)}</span>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="p-6 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-                      <div className="flex gap-2">
-                          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">
-                              <Printer size={16}/> Print
-                          </button>
-                          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">
-                              <Download size={16}/> PDF
-                          </button>
-                      </div>
-                      <button 
-                          onClick={() => setSelectedInvoice(null)}
-                          className="w-full sm:w-auto px-10 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-md"
-                      >
-                          Close Detail
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
-
       {/* ONBOARDING MODAL */}
       {isOnboardModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4 overflow-y-auto">
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-8 animate-in zoom-in-95 duration-200 overflow-hidden">
-                  <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                       <div><h2 className="text-2xl font-bold text-gray-900">Onboard New Business</h2><p className="text-sm text-gray-500 mt-1">Create profiles for buyers or suppliers manually.</p></div>
                       <button onClick={() => setIsOnboardModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-200 transition-colors"><X size={24}/></button>
                   </div>
@@ -514,10 +330,19 @@ export const ConsumerOnboarding: React.FC = () => {
                           <div className="space-y-4">
                               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide flex items-center gap-2 border-b border-gray-100 pb-2"><Building size={18} className="text-emerald-600"/> Business Details</h3>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                  <div><label className="block text-sm font-semibold text-gray-700 mb-1">Business Name</label><input required type="text" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" value={newBusiness.businessName} onChange={e => setNewBusiness({...newBusiness, businessName: e.target.value})} placeholder="e.g. The Morning Cafe" /></div>
-                                  <div><label className="block text-sm font-semibold text-gray-700 mb-1">ABN</label><input required type="text" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" value={newBusiness.abn} onChange={e => setNewBusiness({...newBusiness, abn: e.target.value})} placeholder="XX XXX XXX XXX" /></div>
-                                  <div className="md:col-span-2"><label className="block text-sm font-semibold text-gray-700 mb-1">Address / Location</label><div className="relative"><MapPin size={18} className="absolute left-3 top-3 text-gray-400"/><input required type="text" className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" value={newBusiness.address} onChange={e => setNewBusiness({...newBusiness, address: e.target.value})} placeholder="123 Main St, Melbourne VIC 3000" /></div></div>
+                                  <div><label className="block text-sm font-semibold text-gray-700 mb-1">Business Name</label><input required type="text" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 font-black" value={newBusiness.businessName} onChange={e => setNewBusiness({...newBusiness, businessName: e.target.value})} placeholder="e.g. The Morning Cafe" /></div>
+                                  <div><label className="block text-sm font-semibold text-gray-700 mb-1">ABN</label><input required type="text" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 font-black" value={newBusiness.abn} onChange={e => setNewBusiness({...newBusiness, abn: e.target.value})} placeholder="XX XXX XXX XXX" /></div>
+                                  <div className="md:col-span-2"><label className="block text-sm font-semibold text-gray-700 mb-1">Address / Location</label><div className="relative"><MapPin size={18} className="absolute left-3 top-3 text-gray-400"/><input required type="text" className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 font-black" value={newBusiness.address} onChange={e => setNewBusiness({...newBusiness, address: e.target.value})} placeholder="123 Main St, Melbourne VIC 3000" /></div></div>
                               </div>
+                          </div>
+                          
+                          <div className="space-y-4 pt-4">
+                              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide flex items-center gap-2 border-b border-gray-100 pb-2"><Mail size={18} className="text-indigo-600"/> Connection Details</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div><label className="block text-sm font-semibold text-gray-700 mb-1">Login Email Address</label><div className="relative"><Mail size={18} className="absolute left-3 top-3 text-gray-400"/><input required type="email" className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 font-black" value={newBusiness.email} onChange={e => setNewBusiness({...newBusiness, email: e.target.value})} placeholder="orders@business.com" /></div></div>
+                                  <div><label className="block text-sm font-semibold text-gray-700 mb-1">Primary Mobile / Phone</label><div className="relative"><Phone size={18} className="absolute left-3 top-3 text-gray-400"/><input required type="tel" className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 font-black" value={newBusiness.phone} onChange={e => setNewBusiness({...newBusiness, phone: e.target.value})} placeholder="0400 000 000" /></div></div>
+                              </div>
+                              <p className="text-xs text-gray-400 font-medium italic">These credentials will be used to generate their Platform Zero access link.</p>
                           </div>
                       </div>
                       <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 sticky bottom-0">

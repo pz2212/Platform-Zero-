@@ -1,4 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
+
+import { GoogleGenAI, Type } from "@google/genai";
 import { InventoryItem, Product } from "../types";
 
 export interface InvoiceItem {
@@ -8,15 +9,62 @@ export interface InvoiceItem {
   pzRate: number; // Calculated/Mocked PZ price
 }
 
+export interface SeasonalProduct {
+    name: string;
+    category: 'Vegetable' | 'Fruit';
+    variety: string;
+    co2Savings: number;
+}
+
+export const generateSeasonalCatalog = async (): Promise<SeasonalProduct[]> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: `Identify 15-20 fruits and vegetables that are currently in peak season in Australia for the month of ${currentMonth}.
+            For each item provide:
+            - 'name' (e.g. "Broccolini", "Mangoes")
+            - 'category' (Must be exactly "Fruit" or "Vegetable")
+            - 'variety' (A specific common variety found in AU markets)
+            - 'co2Savings' (A number between 0.5 and 2.5 representing kg CO2 avoided by sourcing local seasonal stock).
+            
+            Return ONLY a valid JSON array of objects.`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            name: { type: Type.STRING },
+                            category: { type: Type.STRING, enum: ["Fruit", "Vegetable"] },
+                            variety: { type: Type.STRING },
+                            co2Savings: { type: Type.NUMBER }
+                        },
+                        required: ["name", "category", "variety", "co2Savings"]
+                    }
+                }
+            }
+        });
+
+        const text = response.text;
+        if (text) {
+            return JSON.parse(text);
+        }
+        return [];
+    } catch (error) {
+        console.error("Gemini Seasonal Catalog Error:", error);
+        return [];
+    }
+};
+
 export const getMarketAnalysis = async (inventory: InventoryItem[], products: Product[]): Promise<string> => {
-  // Always create a new instance with the key from process.env.API_KEY
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
-    // Corrected model name to gemini-3-flash-preview
     const model = 'gemini-3-flash-preview';
-    
-    // Prepare context
     const inventorySummary = inventory.map(i => {
       const product = products.find(p => p.id === i.productId);
       return `- ${product?.name}: ${i.quantityKg}kg, Expires: ${new Date(i.expiryDate).toLocaleDateString()}`;
@@ -24,16 +72,13 @@ export const getMarketAnalysis = async (inventory: InventoryItem[], products: Pr
 
     const prompt = `
       You are an expert agricultural market analyst for Platform Zero, a B2B produce marketplace.
-      
       Here is the current inventory available on the platform:
       ${inventorySummary}
-
       Please provide a concise market analysis (max 150 words). 
       Highlight:
       1. Which items are in oversupply (risk of waste).
       2. Suggestions for dynamic pricing (e.g., discount items expiring soon).
       3. A quick sustainability tip for farmers.
-      
       Format the output with bold headers.
     `;
 
@@ -42,7 +87,6 @@ export const getMarketAnalysis = async (inventory: InventoryItem[], products: Pr
       contents: prompt,
     });
 
-    // Property .text is correct for GenerateContentResponse
     return response.text || "Could not generate analysis.";
   } catch (error) {
     console.error("Gemini API Error:", error);
@@ -51,9 +95,7 @@ export const getMarketAnalysis = async (inventory: InventoryItem[], products: Pr
 };
 
 export const getPricingAdvice = async (productName: string, quantity: number, daysToExpiry: number): Promise<string> => {
-    // Create new instance per request
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
@@ -68,9 +110,7 @@ export const getPricingAdvice = async (productName: string, quantity: number, da
 }
 
 export const identifyProductFromImage = async (base64Image: string): Promise<{ name: string; quality: string; confidence: number }> => {
-  // Create new instance per request
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -104,15 +144,12 @@ export const identifyProductFromImage = async (base64Image: string): Promise<{ n
     throw new Error("No text returned");
   } catch (error) {
     console.error("Gemini Vision Error:", error);
-    // Returning a realistic mock for demo purposes if the API call fails
     return { name: "Eggplants", quality: "Grade A - Shiny skin, firm texture", confidence: 0.95 };
   }
 };
 
 export const extractInvoiceItems = async (base64Data: string, mimeType: string): Promise<InvoiceItem[]> => {
-  // Create new instance per request
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -132,7 +169,6 @@ export const extractInvoiceItems = async (base64Data: string, mimeType: string):
             - 'marketRate' (number, the unit price on the invoice).
             
             Also estimate a 'pzRate' (number) for each item, which represents a "Platform Zero" wholesale price. The pzRate should generally be 15-25% lower than the marketRate found on the invoice.
-            
             Return ONLY a JSON array of objects. Example: [{"name": "Milk", "qty": 10, "marketRate": 3.50, "pzRate": 2.80}]`
           }
         ]

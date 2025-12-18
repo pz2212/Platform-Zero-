@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { User, Product, InventoryItem, UserRole } from '../types';
 import { mockService } from '../services/mockDataService';
+import { generateSeasonalCatalog, SeasonalProduct } from '../services/geminiService';
 import { ProductPricing } from './ProductPricing';
-import { ShoppingCart, Search, ChevronDown, Plus, Package, Edit2, Trash2, X, Image as ImageIcon, Tag, DollarSign, Upload, LayoutGrid, Leaf, Minus, Loader2, Calendar, Clock, User as UserIcon, CreditCard, FileText, ShieldCheck, CheckCircle, ArrowRight, PartyPopper, Truck } from 'lucide-react';
+import { ShoppingCart, Search, ChevronDown, Plus, Package, Edit2, Trash2, X, Image as ImageIcon, Tag, DollarSign, Upload, LayoutGrid, Leaf, Minus, Loader2, Calendar, Clock, User as UserIcon, CreditCard, FileText, ShieldCheck, CheckCircle, ArrowRight, PartyPopper, Truck, Sparkles, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface MarketplaceProps {
@@ -103,6 +104,12 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user }) => {
       const [allProducts, setAllProducts] = useState<Product[]>([]);
       const [isAddModalOpen, setIsAddModalOpen] = useState(false);
       const [isAnalyzing, setIsAnalyzing] = useState(false);
+      
+      // AI Catalog States
+      const [isGenerating, setIsGenerating] = useState(false);
+      const [aiSuggestedProducts, setAiSuggestedProducts] = useState<SeasonalProduct[]>([]);
+      const [showAiPreview, setShowAiPreview] = useState(false);
+
       const [newProduct, setNewProduct] = useState<Partial<Product>>({
           name: '',
           category: 'Vegetable',
@@ -112,9 +119,13 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user }) => {
       });
 
       useEffect(() => {
+          refreshList();
+      }, []);
+
+      const refreshList = () => {
           const products = mockService.getAllProducts().sort((a, b) => a.name.localeCompare(b.name));
           setAllProducts(products);
-      }, []);
+      };
 
       const handleAddProduct = async (e: React.FormEvent) => {
           e.preventDefault();
@@ -145,65 +156,164 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user }) => {
                   co2SavingsPerKg: co2Val 
               });
 
-              setAllProducts(mockService.getAllProducts().sort((a, b) => a.name.localeCompare(b.name)));
+              refreshList();
               setIsAnalyzing(false);
               setIsAddModalOpen(false);
               setNewProduct({ name: '', category: 'Vegetable', variety: '', defaultPricePerKg: 0, imageUrl: '' });
           }
       };
 
+      const handleGenerateAiCatalog = async () => {
+          setIsGenerating(true);
+          try {
+              const seasonal = await generateSeasonalCatalog();
+              // Filter out duplicates (ones already in catalog)
+              const existingNames = allProducts.map(p => p.name.toLowerCase());
+              const uniqueSuggestions = seasonal.filter(s => !existingNames.includes(s.name.toLowerCase()));
+              
+              setAiSuggestedProducts(uniqueSuggestions);
+              setShowAiPreview(true);
+          } catch (e) {
+              alert("Failed to generate AI catalog. Please ensure your API key is active.");
+          } finally {
+              setIsGenerating(false);
+          }
+      };
+
+      const handleBulkAdd = () => {
+          aiSuggestedProducts.forEach(s => {
+              mockService.addProduct({
+                  id: `p-ai-${Math.random().toString(36).substr(2, 9)}`,
+                  name: s.name,
+                  category: s.category,
+                  variety: s.variety,
+                  defaultPricePerKg: 0,
+                  imageUrl: '',
+                  co2SavingsPerKg: s.co2Savings
+              });
+          });
+          refreshList();
+          setShowAiPreview(false);
+          setAiSuggestedProducts([]);
+          alert(`Successfully added ${aiSuggestedProducts.length} seasonal products to the catalog!`);
+      };
+
       const handleDeleteProduct = (id: string) => {
           if(confirm('Delete product?')) {
               mockService.deleteProduct(id);
-              setAllProducts(mockService.getAllProducts().sort((a, b) => a.name.localeCompare(b.name)));
+              refreshList();
           }
       }
 
       return (
-          <div className="space-y-8">
-              <div className="flex justify-between items-center">
+          <div className="space-y-8 pb-20">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
-                      <h1 className="text-2xl font-bold text-gray-900">Marketplace Catalog</h1>
-                      <p className="text-gray-500">Manage global products visible to all wholesalers and buyers.</p>
+                      <h1 className="text-3xl font-black text-gray-900 tracking-tight">Marketplace Catalog</h1>
+                      <p className="text-gray-500 font-medium">Manage global products visible to all wholesalers and buyers.</p>
                   </div>
-                  <button onClick={() => setIsAddModalOpen(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-indigo-700 shadow-sm"><Plus size={18}/> Add New Product</button>
+                  <div className="flex gap-3">
+                    <button 
+                        onClick={handleGenerateAiCatalog}
+                        disabled={isGenerating}
+                        className="bg-emerald-50 text-emerald-700 px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-emerald-100 border-2 border-emerald-100 transition-all shadow-sm disabled:opacity-50"
+                    >
+                        {isGenerating ? <Loader2 size={16} className="animate-spin"/> : <Sparkles size={16} className="text-emerald-500"/>}
+                        Generate Seasonal Catalog
+                    </button>
+                    <button onClick={() => setIsAddModalOpen(true)} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-indigo-700 shadow-md">
+                        <Plus size={18}/> Add New Product
+                    </button>
+                  </div>
               </div>
+
+              {/* AI SUGGESTION PREVIEW BANNER */}
+              {showAiPreview && aiSuggestedProducts.length > 0 && (
+                  <div className="bg-emerald-900 text-white rounded-[2rem] p-10 shadow-2xl animate-in slide-in-from-top-4 duration-500 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none transform scale-150 rotate-12"><Sparkles size={200}/></div>
+                      <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-8">
+                            <div>
+                                <h2 className="text-2xl font-black tracking-tight mb-2 flex items-center gap-3">
+                                    <Sparkles className="text-emerald-400" size={32}/> AI Seasonal Discovery
+                                </h2>
+                                <p className="text-emerald-200 font-medium max-w-lg">We found {aiSuggestedProducts.length} high-demand Australian seasonal items not yet in your catalog. Sourced via Gemini Intelligence.</p>
+                            </div>
+                            <button onClick={() => setShowAiPreview(false)} className="text-emerald-400 hover:text-white p-2"><X size={24}/></button>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
+                            {aiSuggestedProducts.slice(0, 10).map((p, idx) => (
+                                <div key={idx} className="bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-2xl flex flex-col justify-between h-24">
+                                    <p className="font-black text-sm text-white truncate">{p.name}</p>
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">{p.category}</span>
+                                        <div className="flex items-center gap-1 text-[10px] font-bold text-white/60">
+                                            <Leaf size={10}/> {p.co2Savings}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {aiSuggestedProducts.length > 10 && (
+                                <div className="bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center font-black text-white/40 text-xs">
+                                    + {aiSuggestedProducts.length - 10} more
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={handleBulkAdd}
+                                className="px-10 py-4 bg-emerald-400 text-emerald-950 font-black rounded-2xl uppercase tracking-[0.2em] text-xs shadow-xl hover:bg-white transition-all hover:scale-105"
+                            >
+                                Bulk Add {aiSuggestedProducts.length} Items to Catalog
+                            </button>
+                            <span className="text-emerald-400/60 font-medium text-xs italic flex items-center gap-2">
+                                <CheckCircle size={14}/> Varieties and CO2 impact will be auto-mapped.
+                            </span>
+                        </div>
+                      </div>
+                  </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {allProducts.map(product => (
-                      <div key={product.id} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full justify-between">
-                          <div className="mb-4">
+                      <div key={product.id} className="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm hover:shadow-xl transition-all group flex flex-col h-full justify-between animate-in zoom-in-95 duration-200">
+                          <div className="mb-6">
                               <div className="flex justify-between items-start mb-2">
-                                  <h3 className="font-bold text-gray-900 text-lg leading-tight">{product.name}</h3>
-                                  <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase tracking-wide">{product.category}</span>
+                                  <h3 className="font-black text-gray-900 text-2xl tracking-tight leading-none mb-2">{product.name}</h3>
+                                  <span className="text-[10px] font-black bg-gray-100 text-gray-400 px-2 py-1 rounded-lg uppercase tracking-widest border border-gray-50">{product.category}</span>
                               </div>
-                              <p className="text-sm text-gray-500">{product.variety}</p>
+                              <p className="text-sm font-bold text-indigo-600 uppercase tracking-widest opacity-60 mb-4">{product.variety}</p>
                               {product.co2SavingsPerKg !== undefined && (
-                                  <div className="mt-2 flex items-center gap-1 text-emerald-600 text-xs font-bold"><Leaf size={10} /> {product.co2SavingsPerKg.toFixed(2)} kg CO2e / kg</div>
+                                  <div className="flex items-center gap-2 text-emerald-600 text-xs font-black uppercase tracking-widest bg-emerald-50 w-fit px-3 py-1.5 rounded-full border border-emerald-100">
+                                      <Leaf size={14} className="fill-current"/> {product.co2SavingsPerKg.toFixed(2)} kg CO2e / kg
+                                  </div>
                               )}
                           </div>
-                          <div className="pt-4 mt-auto border-t border-gray-100 flex justify-end">
-                              <button onClick={() => handleDeleteProduct(product.id)} className="text-gray-400 hover:text-red-500 flex items-center gap-1.5 text-sm font-medium transition-colors"><Trash2 size={16}/> Delete</button>
+                          <div className="pt-6 mt-auto border-t border-gray-50 flex justify-between items-center">
+                              <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Active ID: {product.id.split('-').pop()}</span>
+                              <button onClick={() => handleDeleteProduct(product.id)} className="text-gray-300 hover:text-red-500 flex items-center gap-1.5 text-xs font-black uppercase tracking-widest transition-all p-2 rounded-xl hover:bg-red-50"><Trash2 size={16}/> Remove</button>
                           </div>
                       </div>
                   ))}
-                  <button onClick={() => setIsAddModalOpen(true)} className="border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center h-full min-h-[180px] hover:bg-gray-50 hover:border-indigo-300 transition-all group">
-                      <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Plus size={24} className="text-gray-400 group-hover:text-indigo-600"/></div>
-                      <span className="font-bold text-gray-500 group-hover:text-indigo-600">Add Product</span>
+                  <button onClick={() => setIsAddModalOpen(true)} className="border-4 border-dashed border-gray-100 rounded-[2rem] flex flex-col items-center justify-center h-full min-h-[220px] hover:bg-gray-50 hover:border-indigo-200 transition-all group p-10">
+                      <div className="bg-white p-5 rounded-3xl shadow-lg mb-4 group-hover:scale-110 transition-transform border border-gray-100"><Plus size={32} className="text-gray-300 group-hover:text-indigo-600"/></div>
+                      <span className="font-black text-gray-400 uppercase tracking-[0.2em] text-xs group-hover:text-indigo-600">Manual Entry</span>
                   </button>
               </div>
 
               {isAddModalOpen && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-                      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-                          <div className="p-6 border-b border-gray-100 flex justify-between items-center"><h2 className="text-xl font-bold text-gray-900">Add New Product</h2><button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button></div>
-                          <form onSubmit={handleAddProduct} className="p-6 space-y-4">
-                              <div><label className="block text-sm font-bold text-gray-700 mb-1">Product Name</label><input required type="text" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="e.g. Romanesco Broccoli" value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} /></div>
-                              <div className="grid grid-cols-2 gap-4">
-                                  <div><label className="block text-sm font-bold text-gray-700 mb-1">Category</label><div className="relative"><LayoutGrid size={16} className="absolute left-3 top-3 text-gray-400"/><select className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 outline-none bg-white" value={newProduct.category} onChange={(e) => setNewProduct({...newProduct, category: e.target.value as any})}><option value="Vegetable">Vegetable</option><option value="Fruit">Fruit</option></select></div></div>
-                                  <div><label className="block text-sm font-bold text-gray-700 mb-1">Variety</label><div className="relative"><Tag size={16} className="absolute left-3 top-3 text-gray-400"/><input type="text" className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 outline-none" placeholder="e.g. Green" value={newProduct.variety} onChange={(e) => setNewProduct({...newProduct, variety: e.target.value})} /></div></div>
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+                      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+                          <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-white"><h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Manual Product Entry</h2><button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2"><X size={24}/></button></div>
+                          <form onSubmit={handleAddProduct} className="p-8 space-y-6">
+                              <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Product Name</label><input required type="text" className="w-full border border-gray-200 rounded-2xl p-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-gray-900 font-bold bg-gray-50" placeholder="e.g. Romanesco Broccoli" value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} /></div>
+                              <div className="grid grid-cols-2 gap-6">
+                                  <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Category</label><div className="relative"><LayoutGrid size={18} className="absolute left-4 top-4 text-gray-400"/><select className="w-full pl-11 pr-4 py-4 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none bg-gray-50 font-bold text-gray-900 appearance-none" value={newProduct.category} onChange={(e) => setNewProduct({...newProduct, category: e.target.value as any})}><option value="Vegetable">Vegetable</option><option value="Fruit">Fruit</option></select><ChevronDown size={16} className="absolute right-4 top-4.5 text-gray-400 pointer-events-none"/></div></div>
+                                  <div><label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Variety</label><div className="relative"><Tag size={18} className="absolute left-4 top-4 text-gray-400"/><input type="text" className="w-full pl-11 pr-4 py-4 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold text-gray-900 bg-gray-50" placeholder="e.g. Green" value={newProduct.variety} onChange={(e) => setNewProduct({...newProduct, variety: e.target.value})} /></div></div>
                               </div>
-                              <div className="pt-4 flex justify-end gap-3"><button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button><button type="submit" disabled={isAnalyzing} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-sm disabled:opacity-70 flex items-center gap-2">{isAnalyzing ? <><Loader2 size={18} className="animate-spin"/> Calculating Impact...</> : 'Save Product'}</button></div>
+                              <div className="pt-6 flex justify-end gap-3 border-t border-gray-100"><button type="button" onClick={() => setIsAddModalOpen(false)} className="px-6 py-3 text-gray-500 font-black uppercase text-xs tracking-widest hover:bg-gray-50 rounded-xl transition-all">Cancel</button><button type="submit" disabled={isAnalyzing} className="px-10 py-3 bg-indigo-600 text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg hover:bg-indigo-700 disabled:opacity-70 flex items-center gap-3 transition-all hover:scale-105 active:scale-95">{isAnalyzing ? <><Loader2 size={18} className="animate-spin"/> Scanning Impact...</> : <><Check size={18}/> Save to Catalog</>}</button></div>
                           </form>
                       </div>
                   </div>

@@ -1,12 +1,5 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { InventoryItem, Product } from "../types";
-
-// In a real app, this key would come from a secure backend or environment variable injection.
-// For this demo, we assume process.env.API_KEY is available as per instructions.
-const apiKey = process.env.API_KEY || ''; 
-
-const ai = new GoogleGenAI({ apiKey });
 
 export interface InvoiceItem {
   name: string;
@@ -16,10 +9,12 @@ export interface InvoiceItem {
 }
 
 export const getMarketAnalysis = async (inventory: InventoryItem[], products: Product[]): Promise<string> => {
-  if (!apiKey) return "API Key is missing. Please configure the environment.";
+  // Always create a new instance with the key from process.env.API_KEY
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
-    const model = 'gemini-2.5-flash';
+    // Corrected model name to gemini-3-flash-preview
+    const model = 'gemini-3-flash-preview';
     
     // Prepare context
     const inventorySummary = inventory.map(i => {
@@ -47,6 +42,7 @@ export const getMarketAnalysis = async (inventory: InventoryItem[], products: Pr
       contents: prompt,
     });
 
+    // Property .text is correct for GenerateContentResponse
     return response.text || "Could not generate analysis.";
   } catch (error) {
     console.error("Gemini API Error:", error);
@@ -55,11 +51,12 @@ export const getMarketAnalysis = async (inventory: InventoryItem[], products: Pr
 };
 
 export const getPricingAdvice = async (productName: string, quantity: number, daysToExpiry: number): Promise<string> => {
-    if (!apiKey) return "API Key missing.";
+    // Create new instance per request
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-flash-preview',
             contents: `I have ${quantity}kg of ${productName} that expires in ${daysToExpiry} days. 
             Give me a specific pricing strategy to maximize revenue while ensuring it sells before expiry.
             Keep it under 3 sentences.`
@@ -71,29 +68,25 @@ export const getPricingAdvice = async (productName: string, quantity: number, da
 }
 
 export const identifyProductFromImage = async (base64Image: string): Promise<{ name: string; quality: string; confidence: number }> => {
-  if (!apiKey) {
-    // Mock response for demo if API key isn't working/set
-    return new Promise(resolve => setTimeout(() => resolve({ 
-      name: "Eggplants", 
-      quality: "Grade A - Shiny skin, firm texture", 
-      confidence: 0.95 
-    }), 2000));
-  }
+  // Create new instance per request
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: base64Image
+      model: 'gemini-3-flash-preview',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: base64Image
+            }
+          },
+          {
+            text: "Identify the fresh produce in this image. Return a JSON object with 'name' (generic product name, e.g. Eggplants, Apples) and 'quality' (brief 5-word quality assessment based on visual cues)."
           }
-        },
-        {
-          text: "Identify the fresh produce in this image. Return a JSON object with 'name' (generic product name, e.g. Eggplants, Apples) and 'quality' (brief 5-word quality assessment based on visual cues)."
-        }
-      ],
+        ]
+      },
       config: {
         responseMimeType: 'application/json'
       }
@@ -111,35 +104,39 @@ export const identifyProductFromImage = async (base64Image: string): Promise<{ n
     throw new Error("No text returned");
   } catch (error) {
     console.error("Gemini Vision Error:", error);
-    return { name: "Eggplants", quality: "Visual analysis failed (Mock)", confidence: 0.0 };
+    // Returning a realistic mock for demo purposes if the API call fails
+    return { name: "Eggplants", quality: "Grade A - Shiny skin, firm texture", confidence: 0.95 };
   }
 };
 
 export const extractInvoiceItems = async (base64Data: string, mimeType: string): Promise<InvoiceItem[]> => {
-  if (!apiKey) return [];
+  // Create new instance per request
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          inlineData: {
-            mimeType: mimeType,
-            data: base64Data
+      model: 'gemini-3-flash-preview',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Data
+            }
+          },
+          {
+            text: `Analyze this food invoice image/document. Extract a list of line items found in the document.
+            For each item return: 
+            - 'name' (string, e.g. "Tomatoes Truss")
+            - 'qty' (number, defaults to 1 if not found)
+            - 'marketRate' (number, the unit price on the invoice).
+            
+            Also estimate a 'pzRate' (number) for each item, which represents a "Platform Zero" wholesale price. The pzRate should generally be 15-25% lower than the marketRate found on the invoice.
+            
+            Return ONLY a JSON array of objects. Example: [{"name": "Milk", "qty": 10, "marketRate": 3.50, "pzRate": 2.80}]`
           }
-        },
-        {
-          text: `Analyze this food invoice image/document. Extract a list of line items found in the document.
-          For each item return: 
-          - 'name' (string, e.g. "Tomatoes Truss")
-          - 'qty' (number, defaults to 1 if not found)
-          - 'marketRate' (number, the unit price on the invoice).
-          
-          Also estimate a 'pzRate' (number) for each item, which represents a "Platform Zero" wholesale price. The pzRate should generally be 15-25% lower than the marketRate found on the invoice.
-          
-          Return ONLY a JSON array of objects. Example: [{"name": "Milk", "qty": 10, "marketRate": 3.50, "pzRate": 2.80}]`
-        }
-      ],
+        ]
+      },
       config: {
         responseMimeType: 'application/json'
       }

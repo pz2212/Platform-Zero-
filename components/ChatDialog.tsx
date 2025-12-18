@@ -7,6 +7,7 @@ interface ChatMessage {
   text: string;
   sender: 'user' | 'admin' | 'system';
   timestamp: Date;
+  isImage?: boolean;
 }
 
 interface ChatDialogProps {
@@ -14,32 +15,72 @@ interface ChatDialogProps {
   onClose: () => void;
   orderId: string;
   issueType: string;
-  repName?: string; // New prop for dynamic rep name
+  repName?: string;
+  imageUrl?: string;
 }
 
-export const ChatDialog: React.FC<ChatDialogProps> = ({ isOpen, onClose, orderId, issueType, repName = "PZ Admin Support" }) => {
+export const ChatDialog: React.FC<ChatDialogProps> = ({ isOpen, onClose, orderId, issueType, repName = "PZ Admin Support", imageUrl }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setMessages([
-        {
-          id: '1',
-          text: `Support case started for Order #${orderId}. Issue: ${issueType}`,
-          sender: 'system',
-          timestamp: new Date()
-        },
-        {
-          id: '2',
-          text: `Hello, this is ${repName}. I see you have reported an issue. How can I help resolve this?`,
-          sender: 'admin',
-          timestamp: new Date(Date.now() + 500)
+      if (orderId === 'PROPOSAL-LIVE') {
+        // SALES PROPOSAL FLOW
+        const initialMessages: ChatMessage[] = [
+          {
+            id: '1',
+            text: `Market Opportunity: ${issueType}`,
+            sender: 'system',
+            timestamp: new Date()
+          }
+        ];
+
+        if (imageUrl) {
+          initialMessages.push({
+            id: 'photo-1',
+            text: imageUrl,
+            sender: 'user',
+            timestamp: new Date(Date.now() + 100),
+            isImage: true
+          });
         }
-      ]);
+
+        initialMessages.push({
+          id: '2',
+          text: `Hi ${repName}! 👋 I am selling ${issueType}. Would you like to include delivery with this order? (Yes / No)`,
+          sender: 'user',
+          timestamp: new Date(Date.now() + 500)
+        });
+
+        initialMessages.push({
+          id: '3',
+          text: `Hello! This is ${repName}. 😊 Thank you for reaching out with this offer! It looks like a great opportunity. How can I help you get this proposal finalized today?`,
+          sender: 'admin',
+          timestamp: new Date(Date.now() + 1000)
+        });
+
+        setMessages(initialMessages);
+      } else {
+        // STANDARD SUPPORT FLOW
+        setMessages([
+          {
+            id: '1',
+            text: `Support case started for Order #${orderId}. Issue: ${issueType}`,
+            sender: 'system',
+            timestamp: new Date()
+          },
+          {
+            id: '2',
+            text: `Hi there! 👋 I'm ${repName} from Platform Zero Support. I'm here to help you resolve this issue as quickly as possible. How can I assist you with this today?`,
+            sender: 'admin',
+            timestamp: new Date(Date.now() + 500)
+          }
+        ]);
+      }
     }
-  }, [isOpen, orderId, issueType, repName]);
+  }, [isOpen, orderId, issueType, repName, imageUrl]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -58,15 +99,17 @@ export const ChatDialog: React.FC<ChatDialogProps> = ({ isOpen, onClose, orderId
     setMessages(prev => [...prev, newUserMsg]);
     setInputValue('');
 
-    // Simulate Admin Reply
+    // Simulate Reply
     setTimeout(() => {
-      const adminMsg: ChatMessage = {
+      const replyMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        text: "Thanks for the details. I'll review the photo evidence and coordinate with the buyer immediately to approve the resolution.",
+        text: orderId === 'PROPOSAL-LIVE' 
+          ? "That sounds perfect. I've noted your delivery preference. Let me just confirm the details with the buyer and I'll get back to you shortly! 🚀"
+          : "Thank you for providing those details. I'm looking into it right now and will make sure we get this resolved for you promptly. 🤝",
         sender: 'admin',
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, adminMsg]);
+      setMessages(prev => [...prev, replyMsg]);
     }, 2000);
   };
 
@@ -86,7 +129,7 @@ export const ChatDialog: React.FC<ChatDialogProps> = ({ isOpen, onClose, orderId
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-slate-900 rounded-full"></span>
               </div>
               <div>
-                <h3 className="font-bold text-sm">PZ Support: {repName.split(' ')[0]}</h3>
+                <h3 className="font-bold text-sm">{orderId === 'PROPOSAL-LIVE' ? 'Buyer Connection' : 'PZ Support'}</h3>
                 <p className="text-xs text-slate-400">Typical reply time: &lt; 2m</p>
               </div>
             </div>
@@ -101,7 +144,7 @@ export const ChatDialog: React.FC<ChatDialogProps> = ({ isOpen, onClose, orderId
               <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                  {msg.sender === 'system' ? (
                    <div className="w-full text-center my-2">
-                     <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-2 py-1 rounded-full uppercase tracking-wider">{msg.text}</span>
+                     <span className="text-[10px] text-gray-400 font-bold bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">{msg.text}</span>
                    </div>
                  ) : (
                    <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
@@ -109,7 +152,14 @@ export const ChatDialog: React.FC<ChatDialogProps> = ({ isOpen, onClose, orderId
                        ? 'bg-emerald-600 text-white rounded-br-none' 
                        : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
                    }`}>
-                     <p>{msg.text}</p>
+                     {msg.isImage ? (
+                        <div className="space-y-1">
+                          <img src={msg.text} alt="Proposal item" className="rounded-lg w-full h-32 object-cover bg-black/10 border border-white/20" />
+                          <p className="text-[10px] opacity-70">Proposed Item Photo</p>
+                        </div>
+                     ) : (
+                       <p className="whitespace-pre-line leading-relaxed">{msg.text}</p>
+                     )}
                      <p className={`text-[10px] mt-1 text-right ${msg.sender === 'user' ? 'text-emerald-100' : 'text-gray-400'}`}>
                        {msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                      </p>

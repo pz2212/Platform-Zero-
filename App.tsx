@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { UserRole, User } from './types';
-import { USERS, mockService } from './services/mockDataService';
+import { mockService } from './services/mockDataService';
 import { Dashboard } from './components/Dashboard';
 import { ConsumerDashboard } from './components/ConsumerDashboard';
 import { Inventory } from './components/Inventory';
@@ -10,7 +10,6 @@ import { ProductPricing } from './components/ProductPricing';
 import { Marketplace } from './components/Marketplace';
 import { SupplierMarket } from './components/SupplierMarket';
 import { AdminDashboard } from './components/AdminDashboard';
-import { DriverManagement } from './components/DriverManagement';
 import { DriverDashboard } from './components/DriverDashboard';
 import { RepDashboard } from './components/RepDashboard';
 import { Settings as SettingsComponent } from './components/Settings';
@@ -57,17 +56,21 @@ import {
   Target,
   Plus,
   ChevronUp,
-  BarChart4
+  BarChart4,
+  Layers,
+  FileText,
+  Gift,
+  Truck,
+  Sparkles
 } from 'lucide-react';
 
-// --- Sidebar Navigation Component ---
 const SidebarLink = ({ to, icon: Icon, label, active, onClick }: any) => (
   <Link 
     to={to} 
     onClick={onClick}
     className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
       active 
-        ? 'bg-emerald-50 text-emerald-600 font-bold' 
+        ? 'bg-emerald-50 text-[#043003] font-bold' 
         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
     }`}
   >
@@ -76,7 +79,7 @@ const SidebarLink = ({ to, icon: Icon, label, active, onClick }: any) => (
   </Link>
 );
 
-const NetworkSignalsWidget = ({ user }: { user: User }) => {
+const NetworkSignalsWidget = ({ user, mode = 'sidebar', onFinish }: { user: User, mode?: 'sidebar' | 'popup', onFinish?: () => void }) => {
   const [sellingTags, setSellingTags] = useState<string[]>(user.activeSellingInterests || []);
   const [buyingTags, setBuyingTags] = useState<string[]>(user.activeBuyingInterests || []);
   const [sellInput, setSellInput] = useState('');
@@ -98,82 +101,110 @@ const NetworkSignalsWidget = ({ user }: { user: User }) => {
   };
 
   const handleRemove = (type: 'sell' | 'buy', tag: string) => {
-     if (type === 'sell') {
-        const newTags = sellingTags.filter(t => t !== tag);
-        setSellingTags(newTags);
-        mockService.updateUserInterests(user.id, newTags, buyingTags);
-     } else {
-        const newTags = buyingTags.filter(t => t !== tag);
-        setBuyingTags(newTags);
-        mockService.updateUserInterests(user.id, sellingTags, newTags);
-     }
+    if (type === 'sell') {
+      const newTags = sellingTags.filter(t => t !== tag);
+      setSellingTags(newTags);
+      mockService.updateUserInterests(user.id, newTags, buyingTags);
+    } else {
+      const newTags = buyingTags.filter(t => t !== tag);
+      setBuyingTags(newTags);
+      mockService.updateUserInterests(user.id, sellingTags, newTags);
+    }
   };
 
-  return (
-    <div className="mx-3 mt-4 mb-2 bg-slate-900 rounded-xl p-3 text-white overflow-hidden shadow-lg border border-slate-800">
-       <button 
-         onClick={() => setIsExpanded(!isExpanded)}
-         className="flex items-center justify-between w-full text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-colors"
-       >
+  const widgetContent = (
+    <div className="overflow-hidden w-full">
+       <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center justify-between w-full text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1 px-1">
          <span>Daily Signals</span>
-         {isExpanded ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+         {isExpanded ? <ChevronDown size={14} className="text-slate-500" /> : <ChevronUp size={14} className="text-slate-500" />}
        </button>
-       
        {isExpanded && (
-         <div className="mt-3 space-y-4 animate-in slide-in-from-top-2">
-            {/* Selling */}
+         <div className="mt-4 space-y-4 px-1">
             <div>
-               <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 mb-2">
-                  <TrendingUp size={12}/> Selling Today
-               </div>
-               <div className="flex gap-1 mb-2">
-                  <input 
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:border-emerald-500 outline-none"
-                    placeholder="e.g. Apples"
-                    value={sellInput}
-                    onChange={e => setSellInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleAdd('sell')}
-                  />
-                  <button onClick={() => handleAdd('sell')} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded p-1"><Plus size={14}/></button>
+               <div className="flex items-center gap-2 text-[10px] font-black text-[#10B981] mb-2 uppercase tracking-wide"><TrendingUp size={12}/> Selling Today</div>
+               <div className="flex items-center gap-1.5 mb-3 h-8 w-full overflow-hidden">
+                  <div className="flex-1 min-w-0">
+                    <input 
+                      className="w-full bg-[#1E293B] border border-slate-700 rounded-md px-2 py-1 text-xs text-white placeholder-slate-500 outline-none focus:ring-1 focus:ring-emerald-500 transition-all font-bold" 
+                      placeholder="Apples" 
+                      value={sellInput} 
+                      onChange={e => setSellInput(e.target.value)} 
+                      onKeyDown={e => e.key === 'Enter' && handleAdd('sell')} 
+                    />
+                  </div>
+                  <button onClick={() => handleAdd('sell')} className="bg-[#043003] hover:bg-black text-white rounded-md w-8 h-full flex items-center justify-center transition-colors shadow-lg border border-emerald-900/50 shrink-0"><Plus size={14}/></button>
                </div>
                <div className="flex flex-wrap gap-1.5">
-                  {sellingTags.length === 0 && <span className="text-[10px] text-slate-600 italic">No items listed.</span>}
-                  {sellingTags.map(tag => (
-                     <span key={tag} className="bg-slate-800 text-slate-200 text-[10px] px-2 py-0.5 rounded flex items-center gap-1 border border-slate-700">
-                        {tag}
-                        <button onClick={() => handleRemove('sell', tag)} className="hover:text-red-400"><X size={10}/></button>
-                     </span>
-                  ))}
+                 {sellingTags.map(tag => (
+                   <div key={tag} className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-md text-[9px] font-bold animate-in zoom-in-95">
+                     {tag}
+                     <button onClick={() => handleRemove('sell', tag)} className="hover:text-emerald-200 transition-colors">
+                       <X size={10}/>
+                     </button>
+                   </div>
+                 ))}
                </div>
             </div>
-
-            {/* Buying */}
             <div>
-               <div className="flex items-center gap-2 text-xs font-bold text-blue-400 mb-2">
-                  <Target size={12}/> Buying Today
-               </div>
-               <div className="flex gap-1 mb-2">
-                  <input 
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:border-blue-500 outline-none"
-                    placeholder="e.g. Packing"
-                    value={buyInput}
-                    onChange={e => setBuyInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleAdd('buy')}
-                  />
-                  <button onClick={() => handleAdd('buy')} className="bg-blue-600 hover:bg-blue-700 text-white rounded p-1"><Plus size={14}/></button>
+               <div className="flex items-center gap-2 text-[10px] font-black text-[#3B82F6] mb-2 uppercase tracking-wide"><Target size={12}/> Buying Today</div>
+               <div className="flex items-center gap-1.5 mb-3 h-8 w-full overflow-hidden">
+                  <div className="flex-1 min-w-0">
+                    <input 
+                      className="w-full bg-[#1E293B] border border-slate-700 rounded-md px-2 py-1 text-xs text-white placeholder-slate-500 outline-none focus:ring-1 focus:ring-blue-500 transition-all font-bold" 
+                      placeholder="Packing" 
+                      value={buyInput} 
+                      onChange={e => setBuyInput(e.target.value)} 
+                      onKeyDown={e => e.key === 'Enter' && handleAdd('buy')} 
+                    />
+                  </div>
+                  <button onClick={() => handleAdd('buy')} className="bg-[#3B82F6] hover:bg-blue-600 text-white rounded-md w-8 h-full flex items-center justify-center transition-colors shadow-lg border border-blue-900/50 shrink-0"><Plus size={14}/></button>
                </div>
                <div className="flex flex-wrap gap-1.5">
-                  {buyingTags.length === 0 && <span className="text-[10px] text-slate-600 italic">No items listed.</span>}
-                  {buyingTags.map(tag => (
-                     <span key={tag} className="bg-slate-800 text-slate-200 text-[10px] px-2 py-0.5 rounded flex items-center gap-1 border border-slate-700">
-                        {tag}
-                        <button onClick={() => handleRemove('buy', tag)} className="hover:text-red-400"><X size={10}/></button>
-                     </span>
-                  ))}
+                 {buyingTags.map(tag => (
+                   <div key={tag} className="flex items-center gap-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-md text-[9px] font-bold animate-in zoom-in-95">
+                     {tag}
+                     <button onClick={() => handleRemove('buy', tag)} className="hover:text-blue-200 transition-colors">
+                       <X size={10}/>
+                     </button>
+                   </div>
+                 ))}
                </div>
             </div>
+            {mode === 'popup' && (
+                <button 
+                  onClick={onFinish}
+                  className="w-full mt-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[10px] uppercase tracking-widest rounded-lg transition-all border border-slate-700"
+                >
+                    Done for Now
+                </button>
+            )}
          </div>
        )}
+    </div>
+  );
+
+  if (mode === 'popup') {
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+            <div className="w-full max-w-sm bg-[#0B1221] rounded-3xl p-8 text-white shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] border border-slate-800 animate-in zoom-in-95 duration-300">
+                <div className="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 className="text-2xl font-black tracking-tight text-white">Market Status</h2>
+                        <p className="text-slate-500 text-sm mt-1">Set your signals for {new Date().toLocaleDateString()}</p>
+                    </div>
+                    <button onClick={onFinish} className="text-slate-600 hover:text-white p-1 transition-colors"><X size={24}/></button>
+                </div>
+                {widgetContent}
+            </div>
+        </div>
+    );
+  }
+
+  return (
+    <div className="mt-auto px-3 pb-4">
+        <div className="bg-[#0B1221] rounded-2xl p-4 text-white shadow-xl border border-slate-800 overflow-hidden">
+            {widgetContent}
+        </div>
     </div>
   );
 };
@@ -182,255 +213,110 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
   
-  // Mobile Menu State
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  // Admin Management Dropdown State
-  const [isManagementOpen, setIsManagementOpen] = useState(true);
-  
-  // Notification State
-  const [notifications, setNotifications] = useState<string[]>([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
+  const [showDailyPopup, setShowDailyPopup] = useState(false);
 
   useEffect(() => {
-      const fetchNotifs = () => {
-          const notifs = mockService.getNotifications(user.id);
-          setNotifications(notifs);
-      };
-      
-      fetchNotifs();
-      const interval = setInterval(fetchNotifs, 10000); // Poll every 10s
-      
-      return () => clearInterval(interval);
+    if (user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) {
+        const today = new Date().toLocaleDateString();
+        const lastSeen = localStorage.getItem(`pz_daily_signal_${user.id}`);
+        if (lastSeen !== today) {
+            setShowDailyPopup(true);
+        }
+    }
   }, [user]);
 
-  useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-          if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
-              setShowNotifications(false);
-          }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const handleClosePopup = () => {
+      const today = new Date().toLocaleDateString();
+      localStorage.setItem(`pz_daily_signal_${user.id}`, today);
+      setShowDailyPopup(false);
+  };
+
+  const isPartner = user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar - Desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 fixed inset-y-0 z-30">
         <div className="p-6 border-b border-gray-100 flex items-center gap-3">
           <div className="w-8 h-8 bg-[#043003] rounded-lg flex items-center justify-center text-white font-bold text-lg">P</div>
           <span className="font-bold text-xl tracking-tight text-gray-900">Platform Zero</span>
         </div>
-
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {/* Admin Links */}
-          {user.role === UserRole.ADMIN && (
-            <>
-              <SidebarLink to="/admin" icon={LayoutDashboard} label="Overview" active={isActive('/admin') || isActive('/')} />
-              <SidebarLink to="/marketplace" icon={ShoppingBag} label="Marketplace Catalog" active={isActive('/marketplace')} />
-              <SidebarLink to="/login-requests" icon={UserPlus} label="Leads & Requests" active={isActive('/login-requests')} />
-              <SidebarLink to="/pricing-requests" icon={Tags} label="Pricing & Quotes" active={isActive('/pricing-requests')} />
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto flex flex-col">
+          <div className="flex-1 space-y-1">
+              {user.role === UserRole.ADMIN ? (
+                  <>
+                    <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Platform Admin</div>
+                    <SidebarLink to="/" icon={LayoutDashboard} label="Overview" active={isActive('/')} />
+                    <SidebarLink to="/marketplace" icon={Layers} label="Catalog Manager" active={isActive('/marketplace')} />
+                    <SidebarLink to="/login-requests" icon={UserPlus} label="Login Requests" active={isActive('/login-requests')} />
+                    <SidebarLink to="/pricing-requests" icon={FileText} label="Quote Generator" active={isActive('/pricing-requests')} />
+                    <SidebarLink to="/consumer-onboarding" icon={Handshake} label="Marketplace Manager" active={isActive('/consumer-onboarding')} />
+                    <SidebarLink to="/customer-portals" icon={Gift} label="Growth & Portals" active={isActive('/customer-portals')} />
+                    <SidebarLink to="/admin-reps" icon={Award} label="Rep Management" active={isActive('/admin-reps')} />
+                  </>
+              ) : user.role === UserRole.CONSUMER ? (
+                <>
+                    <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Buyer Portal</div>
+                    <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/')} />
+                    <SidebarLink to="/orders" icon={ShoppingCart} label="Track Orders" active={isActive('/orders')} />
+                    <SidebarLink to="/marketplace" icon={ShoppingBag} label="Fresh Catalog" active={isActive('/marketplace')} />
+                </>
+              ) : (user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) ? (
+                <>
+                  <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Partner Operations</div>
+                  <SidebarLink to="/" icon={LayoutDashboard} label="Order Management" active={isActive('/')} />
+                  <SidebarLink to="/pricing" icon={Tags} label="Inventory & Price" active={isActive('/pricing')} />
+                  <SidebarLink to="/accounts" icon={DollarSign} label="Financials" active={isActive('/accounts')} />
+                  <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Network</div>
+                  <SidebarLink to="/market" icon={Store} label="Supplier Market" active={isActive('/market')} />
+                </>
+              ) : user.role === UserRole.DRIVER ? (
+                <>
+                    <SidebarLink to="/" icon={Truck} label="Run Sheet" active={isActive('/')} />
+                </>
+              ) : user.role === UserRole.PZ_REP ? (
+                <>
+                    <SidebarLink to="/" icon={Briefcase} label="Sales Console" active={isActive('/')} />
+                </>
+              ) : null}
               
-              <div className="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Management
+              <div className="pt-4 border-t border-gray-100">
+                <SidebarLink to="/settings" icon={Settings} label="Settings" active={isActive('/settings')} />
               </div>
-              <button 
-                  onClick={() => setIsManagementOpen(!isManagementOpen)}
-                  className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-500 hover:text-gray-900 font-medium"
-              >
-                  <span>Operations</span>
-                  {isManagementOpen ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
-              </button>
-              
-              {isManagementOpen && (
-                  <div className="space-y-1 pl-2">
-                      <SidebarLink to="/consumer-onboarding" icon={Users} label="Partner Network" active={isActive('/consumer-onboarding')} />
-                      <SidebarLink to="/customer-portals" icon={Store} label="Customer Portals" active={isActive('/customer-portals')} />
-                      <SidebarLink to="/rep-management" icon={Award} label="Sales Team" active={isActive('/rep-management')} />
-                  </div>
-              )}
-            </>
-          )}
-
-          {/* Wholesaler/Farmer Links */}
-          {(user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) && (
-            <>
-              <SidebarLink to="/" icon={LayoutDashboard} label="Operations Dashboard" active={isActive('/')} />
-              <SidebarLink to="/trading-insights" icon={BarChart4} label="Trading Insights" active={isActive('/trading-insights')} />
-              <SidebarLink to="/orders" icon={ClipboardList} label="Orders" active={isActive('/orders')} />
-              <SidebarLink to="/inventory" icon={Package} label="Inventory" active={isActive('/inventory')} />
-              <SidebarLink to="/pricing" icon={Tags} label="Product & Pricing" active={isActive('/pricing')} />
-              <SidebarLink to="/accounts" icon={DollarSign} label="Accounts" active={isActive('/accounts')} />
-              
-              <div className="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Growth
-              </div>
-              <SidebarLink to="/market" icon={Store} label="Supplier Market" active={isActive('/market')} />
-              <SidebarLink to="/ai-matcher" icon={ScanLine} label="AI Opportunity Matcher" active={isActive('/ai-matcher')} />
-            </>
-          )}
-
-          {/* Consumer Links */}
-          {user.role === UserRole.CONSUMER && (
-            <>
-              <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/')} />
-              <SidebarLink to="/marketplace" icon={ShoppingBag} label="Order Now" active={isActive('/marketplace')} />
-              <SidebarLink to="/my-orders" icon={ClipboardList} label="My Orders" active={isActive('/my-orders')} />
-              <SidebarLink to="/accounts" icon={DollarSign} label="Invoices" active={isActive('/accounts')} />
-            </>
-          )}
-
-          {/* Rep Links */}
-          {user.role === UserRole.PZ_REP && (
-            <>
-              <SidebarLink to="/" icon={LayoutDashboard} label="My Dashboard" active={isActive('/')} />
-              <SidebarLink to="/marketplace" icon={ShoppingBag} label="Marketplace" active={isActive('/marketplace')} />
-            </>
-          )}
-
-          <div className="pt-4 mt-auto border-t border-gray-100">
-            <SidebarLink to="/settings" icon={Settings} label="Settings" active={isActive('/settings')} />
           </div>
+
+          {isPartner && !showDailyPopup && <NetworkSignalsWidget user={user} mode="sidebar" />}
         </nav>
-
-        {/* Network Signals Widget for Sellers */}
-        {(user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) && (
-            <NetworkSignalsWidget user={user} />
-        )}
-
+        
         <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center gap-3 mb-3 px-2">
-             <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
-                {user.name.charAt(0)}
-             </div>
-             <div className="overflow-hidden">
-                <div className="text-sm font-bold text-gray-900 truncate">{user.name}</div>
-                <div className="text-xs text-gray-500 truncate">{user.businessName}</div>
-             </div>
-          </div>
-          <button 
-            onClick={onLogout}
-            className="w-full flex items-center gap-2 px-2 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
-          >
-            <LogOut size={18} />
-            <span>Sign Out</span>
-          </button>
+          <button onClick={onLogout} className="w-full flex items-center gap-2 px-2 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-bold"><LogOut size={18} /><span>Sign Out</span></button>
         </div>
       </aside>
+      
+      <main className="flex-1 md:ml-64 p-8 w-full overflow-x-hidden relative">
+        {isPartner && (
+            <div className="flex justify-end mb-6 absolute top-8 right-8 z-20">
+                <Link 
+                    to="/trading-insights"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-sm border ${
+                        isActive('/trading-insights')
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}
+                >
+                    <BarChart4 size={14} className={isActive('/trading-insights') ? 'text-emerald-400' : 'text-slate-400'}/>
+                    Market Intelligence
+                    {isActive('/trading-insights') && <Sparkles size={12} className="text-emerald-400 animate-pulse"/>}
+                </Link>
+            </div>
+        )}
 
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 p-4 z-40 flex justify-between items-center">
-         <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#043003] rounded-lg flex items-center justify-center text-white font-bold">P</div>
-            <span className="font-bold text-gray-900 tracking-tight">Platform Zero</span>
-         </div>
-         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-         </button>
-      </div>
-
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-30 bg-white pt-20 px-4 pb-4 overflow-y-auto">
-           <nav className="space-y-2">
-              <SidebarLink to="/" icon={LayoutDashboard} label="Home" onClick={() => setIsMobileMenuOpen(false)} />
-              
-              {user.role === UserRole.ADMIN && (
-                  <>
-                    <SidebarLink to="/admin" icon={LayoutDashboard} label="Overview" onClick={() => setIsMobileMenuOpen(false)} />
-                    <SidebarLink to="/marketplace" icon={ShoppingBag} label="Marketplace Catalog" onClick={() => setIsMobileMenuOpen(false)} />
-                    <SidebarLink to="/login-requests" icon={UserPlus} label="Leads & Requests" onClick={() => setIsMobileMenuOpen(false)} />
-                    <SidebarLink to="/pricing-requests" icon={Tags} label="Pricing & Quotes" onClick={() => setIsMobileMenuOpen(false)} />
-                    
-                    <div className="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        Management
-                    </div>
-                    <SidebarLink to="/consumer-onboarding" icon={Users} label="Partner Network" onClick={() => setIsMobileMenuOpen(false)} />
-                    <SidebarLink to="/customer-portals" icon={Store} label="Customer Portals" onClick={() => setIsMobileMenuOpen(false)} />
-                    <SidebarLink to="/rep-management" icon={Award} label="Sales Team" onClick={() => setIsMobileMenuOpen(false)} />
-                  </>
-              )}
-
-              {(user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) && (
-                <>
-                  <SidebarLink to="/trading-insights" icon={BarChart4} label="Trading Insights" onClick={() => setIsMobileMenuOpen(false)} />
-                  <SidebarLink to="/orders" icon={ClipboardList} label="Orders" onClick={() => setIsMobileMenuOpen(false)} />
-                  <SidebarLink to="/inventory" icon={Package} label="Inventory" onClick={() => setIsMobileMenuOpen(false)} />
-                  <SidebarLink to="/pricing" icon={Tags} label="Product & Pricing" onClick={() => setIsMobileMenuOpen(false)} />
-                  <SidebarLink to="/accounts" icon={DollarSign} label="Accounts" onClick={() => setIsMobileMenuOpen(false)} />
-                  
-                  <div className="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      Growth
-                  </div>
-                  <SidebarLink to="/market" icon={Store} label="Supplier Market" onClick={() => setIsMobileMenuOpen(false)} />
-                  <SidebarLink to="/ai-matcher" icon={ScanLine} label="AI Opportunity Matcher" onClick={() => setIsMobileMenuOpen(false)} />
-                </>
-              )}
-
-              {user.role === UserRole.CONSUMER && (
-                  <>
-                    <SidebarLink to="/marketplace" icon={ShoppingBag} label="Order Now" onClick={() => setIsMobileMenuOpen(false)} />
-                    <SidebarLink to="/my-orders" icon={ClipboardList} label="My Orders" onClick={() => setIsMobileMenuOpen(false)} />
-                    <SidebarLink to="/accounts" icon={DollarSign} label="Invoices" onClick={() => setIsMobileMenuOpen(false)} />
-                  </>
-              )}
-
-              {user.role === UserRole.PZ_REP && (
-                 <SidebarLink to="/marketplace" icon={ShoppingBag} label="Marketplace" onClick={() => setIsMobileMenuOpen(false)} />
-              )}
-
-              <div className="pt-4 border-t border-gray-100">
-                <SidebarLink to="/settings" icon={Settings} label="Settings" onClick={() => setIsMobileMenuOpen(false)} />
-              </div>
-              
-              <button 
-                onClick={onLogout}
-                className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50"
-              >
-                <LogOut size={20} />
-                <span className="font-medium">Sign Out</span>
-              </button>
-           </nav>
+        <div className={isPartner ? "mt-12" : ""}>
+            {children}
         </div>
-      )}
-
-      {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-8 w-full overflow-x-hidden">
-         {/* Top Bar (Notification Center) */}
-         <div className="flex justify-end mb-6 relative">
-             <div className="relative" ref={notifRef}>
-                 <button 
-                    onClick={() => setShowNotifications(!showNotifications)}
-                    className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors relative"
-                 >
-                     <Bell size={20}/>
-                     {notifications.length > 0 && (
-                         <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                     )}
-                 </button>
-                 
-                 {showNotifications && (
-                     <div className="absolute right-0 top-10 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 animate-in fade-in zoom-in-95 duration-200">
-                         <div className="p-4 border-b border-gray-100 font-bold text-gray-900">Notifications</div>
-                         <div className="max-h-64 overflow-y-auto">
-                             {notifications.length === 0 ? (
-                                 <div className="p-4 text-sm text-gray-500 text-center">No new notifications</div>
-                             ) : (
-                                 notifications.map((note, idx) => (
-                                     <div key={idx} className="p-4 border-b border-gray-50 text-sm hover:bg-gray-50 last:border-0">
-                                         {note}
-                                     </div>
-                                 ))
-                             )}
-                         </div>
-                     </div>
-                 )}
-             </div>
-         </div>
-
-         {children}
+        
+        {isPartner && showDailyPopup && (
+            <NetworkSignalsWidget user={user} mode="popup" onFinish={handleClosePopup} />
+        )}
       </main>
     </div>
   );
@@ -438,236 +324,150 @@ const AppLayout = ({ children, user, onLogout }: any) => {
 
 const App = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
-  
-  // Login Flow State
-  const [loginView, setLoginView] = useState<'SELECT' | 'EMAIL'>('SELECT');
-  const [email, setEmail] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [selectedRoleContext, setSelectedRoleContext] = useState<string>('');
-
-  const handlePortalSelect = (portal: 'MARKETPLACE' | 'PARTNERS' | 'ADMIN') => {
-      setSelectedRoleContext(portal);
-      setLoginView('EMAIL');
-  };
+  const [loginStep, setLoginStep] = useState<'select' | 'form'>('select');
+  const [portalType, setPortalType] = useState<'PARTNER' | 'MARKETPLACE' | 'ADMIN'>('PARTNER');
+  const [email, setEmail] = useState('');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    
-    // Simulate API Call
-    setTimeout(() => {
-      const foundUser = USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-      if (foundUser) {
-        setUser(foundUser);
+    // FIX: Use service to search all users including newly created ones
+    const found = mockService.getAllUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (found) {
+        setUser(found);
         setShowLoginModal(false);
-        setLoginView('SELECT'); // Reset for next time
-      } else {
-        alert("User not found. Try 'admin@pz.com', 'sarah@fresh.com' (Wholesaler), 'bob@greenvalley.com' (Farmer), 'alice@cafe.com' (Consumer), 'rep1@pz.com' (Rep)");
-      }
-      setLoading(false);
-    }, 800);
+        setLoginStep('select');
+    } else {
+        alert("Account not found. Tip: Try 'sarah@fresh.com' for Partners or 'alice@cafe.com' for Buyers.");
+    }
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setEmail('');
-    setLoginView('SELECT');
+  const selectPortal = (type: 'PARTNER' | 'MARKETPLACE' | 'ADMIN') => {
+      setPortalType(type);
+      setLoginStep('form');
+      if (type === 'ADMIN') setEmail('admin@pz.com');
+      else if (type === 'PARTNER') setEmail('sarah@fresh.com');
+      else setEmail('alice@cafe.com');
   };
 
-  const resetLoginModal = () => {
+  const resetModal = () => {
       setShowLoginModal(false);
-      setLoginView('SELECT');
+      setLoginStep('select');
       setEmail('');
   };
 
-  // If not logged in, show Landing Page or Login Modal
-  if (!user) {
-    return (
-      <>
-        {!showLoginModal ? (
-           <ConsumerLanding onLogin={() => setShowLoginModal(true)} />
-        ) : (
-           <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-              <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md animate-in zoom-in-95 duration-300 relative overflow-hidden">
-                <button 
-                    onClick={resetLoginModal}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
-                >
-                    <X size={20}/>
-                </button>
-
-                {loginView === 'SELECT' ? (
-                    <div className="text-center">
-                        <div className="w-12 h-12 bg-[#043003] rounded-xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-6 shadow-md">P</div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-2">Choose Portal</h1>
-                        <p className="text-gray-500 text-sm mb-8">Select your account type to login.</p>
-                        
-                        <div className="space-y-4">
-                            <button 
-                                onClick={() => handlePortalSelect('MARKETPLACE')}
-                                className="w-full p-4 border border-gray-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group flex items-center gap-4 text-left"
-                            >
-                                <div className="bg-emerald-100 p-3 rounded-full text-emerald-700 group-hover:bg-emerald-200 transition-colors">
-                                    <ShoppingBag size={24}/>
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-900 text-lg">Marketplace</h3>
-                                    <p className="text-xs text-gray-500">For Restaurants, Cafes & Retailers</p>
-                                </div>
-                            </button>
-
-                            <button 
-                                onClick={() => handlePortalSelect('PARTNERS')}
-                                className="w-full p-4 border border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group flex items-center gap-4 text-left"
-                            >
-                                <div className="bg-blue-100 p-3 rounded-full text-blue-700 group-hover:bg-blue-200 transition-colors">
-                                    <Handshake size={24}/>
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-900 text-lg">Partners</h3>
-                                    <p className="text-xs text-gray-500">For Wholesalers, Farmers & Agents</p>
-                                </div>
-                            </button>
-                        </div>
-
-                        <div className="mt-8 pt-6 border-t border-gray-100">
-                            <button 
-                                onClick={() => handlePortalSelect('ADMIN')}
-                                className="text-xs text-gray-400 hover:text-gray-600 font-medium flex items-center justify-center gap-1 mx-auto transition-colors"
-                            >
-                                <Lock size={12}/> Platform Zero
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    <div>
-                        <button 
-                            onClick={() => setLoginView('SELECT')}
-                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 font-bold mb-6 transition-colors"
-                        >
-                            <ArrowLeft size={14}/> Back to Selection
-                        </button>
-
-                        <div className="text-center mb-8">
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                {selectedRoleContext === 'MARKETPLACE' ? 'Buyer Login' : 
-                                 selectedRoleContext === 'PARTNERS' ? 'Partner Login' : 
-                                 'Admin Access'}
-                            </h1>
-                            <p className="text-gray-500 text-sm">Sign in to Platform Zero</p>
-                        </div>
-                        
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                                <input 
-                                    type="email" 
-                                    required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                                    placeholder="name@company.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    autoFocus
-                                />
-                            </div>
-                            
-                            <button 
-                                type="submit" 
-                                disabled={loading}
-                                className={`w-full py-3 text-white rounded-lg font-bold transition-colors disabled:opacity-50 ${
-                                    selectedRoleContext === 'PARTNERS' ? 'bg-blue-600 hover:bg-blue-700' :
-                                    selectedRoleContext === 'ADMIN' ? 'bg-slate-800 hover:bg-slate-900' :
-                                    'bg-emerald-600 hover:bg-emerald-700'
-                                }`}
-                            >
-                                {loading ? 'Signing In...' : 'Sign In'}
-                            </button>
-                        </form>
-
-                        <div className="mt-6 text-center text-xs text-gray-400">
-                            <p className="mb-2 font-bold">Demo Credentials:</p>
-                            {selectedRoleContext === 'ADMIN' ? (
-                                <p>Admin: admin@pz.com</p>
-                            ) : selectedRoleContext === 'PARTNERS' ? (
-                                <>
-                                    <p>Wholesaler: sarah@fresh.com</p>
-                                    <p>Farmer: bob@greenvalley.com</p>
-                                    <p>Rep: rep1@pz.com</p>
-                                </>
-                            ) : (
-                                <p>Consumer: alice@cafe.com</p>
-                            )}
-                        </div>
-                    </div>
-                )}
-              </div>
-           </div>
-        )}
-      </>
-    );
-  }
-
   return (
     <Router>
-      <AppLayout user={user} onLogout={handleLogout}>
-        <Routes>
-            <Route path="/" element={
-              user.role === UserRole.ADMIN ? <Navigate to="/admin" replace /> :
-              user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER ? (
-                <Dashboard user={user} />
-              ) : 
-              user.role === UserRole.DRIVER ? <DriverDashboard user={user} /> :
-              user.role === UserRole.PZ_REP ? <RepDashboard user={user} /> :
-              user.role === UserRole.CONSUMER ? <ConsumerDashboard user={user} /> :
-              <Navigate to="/" replace />
-            } />
-            
-            {/* Common Routes */}
-            <Route path="/settings" element={<SettingsComponent user={user} onRefreshUser={() => setUser({...user, dashboardVersion: 'v1'})} />} />
-            
-            {/* Admin Routes */}
-            {user.role === UserRole.ADMIN && (
-              <>
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/login-requests" element={<LoginRequests />} />
+      {!user ? (
+        <>
+            <ConsumerLanding onLogin={() => setShowLoginModal(true)} />
+            {showLoginModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+                        
+                        {loginStep === 'select' ? (
+                            <>
+                                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                                    <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
+                                    <button onClick={resetModal} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+                                </div>
+                                <div className="p-6 space-y-4 bg-white">
+                                    <p className="text-gray-500 text-sm font-medium mb-2">Please select your portal to continue.</p>
+                                    
+                                    <button 
+                                        onClick={() => selectPortal('PARTNER')}
+                                        className="w-full text-left p-5 border border-gray-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group flex items-center gap-4"
+                                    >
+                                        <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 group-hover:scale-105 transition-transform">
+                                            <Briefcase size={28} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-gray-900 text-lg">Partners</h3>
+                                            <p className="text-sm text-gray-500">Wholesalers & Farmers</p>
+                                        </div>
+                                        <ChevronRight size={20} className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
+                                    </button>
+
+                                    <button 
+                                        onClick={() => selectPortal('MARKETPLACE')}
+                                        className="w-full text-left p-5 border border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50/30 transition-all group flex items-center gap-4"
+                                    >
+                                        <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-105 transition-transform">
+                                            <ShoppingCart size={28} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-gray-900 text-lg">Marketplace</h3>
+                                            <p className="text-sm text-gray-500">Buyers & Consumers</p>
+                                        </div>
+                                        <ChevronRight size={20} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+                                    </button>
+                                </div>
+                                <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-center">
+                                    <button 
+                                        onClick={() => selectPortal('ADMIN')}
+                                        className="text-xs font-bold text-gray-400 hover:text-gray-600 flex items-center gap-2 uppercase tracking-widest py-2 transition-colors"
+                                    >
+                                        <Lock size={14} /> Admin & Staff Access
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="p-6 border-b border-gray-100 flex items-center gap-4">
+                                    <button onClick={() => setLoginStep('select')} className="text-gray-400 hover:text-gray-600"><ArrowLeft size={20}/></button>
+                                    <h2 className="text-xl font-bold text-gray-900">Sign in to {portalType.charAt(0) + portalType.slice(1).toLowerCase()}</h2>
+                                </div>
+                                <form onSubmit={handleLogin} className="p-8 space-y-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">Email Address</label>
+                                        <input 
+                                            type="email" 
+                                            autoFocus
+                                            value={email} 
+                                            onChange={e => setEmail(e.target.value)} 
+                                            className="w-full p-4 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50 text-lg text-black" 
+                                            placeholder="your@email.com"
+                                        />
+                                    </div>
+                                    <button type="submit" className="w-full py-4 bg-[#043003] text-white rounded-xl font-bold text-lg shadow-lg hover:bg-[#064004] transition-all">Continue</button>
+                                    <p className="text-xs text-center text-gray-400 italic">
+                                        Demo accounts are pre-filled based on your selection.
+                                    </p>
+                                </form>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+        </>
+      ) : (
+        <AppLayout user={user} onLogout={() => setUser(null)}>
+            <Routes>
+                <Route path="/" element={
+                  user.role === UserRole.ADMIN ? <AdminDashboard /> : 
+                  user.role === UserRole.CONSUMER ? <ConsumerDashboard user={user} /> :
+                  user.role === UserRole.DRIVER ? <DriverDashboard user={user} /> :
+                  user.role === UserRole.PZ_REP ? <RepDashboard user={user} /> :
+                  user.dashboardVersion === 'v1' ? <SellerDashboardV1 user={user} /> : <Dashboard user={user} />
+                } />
                 <Route path="/marketplace" element={<Marketplace user={user} />} />
+                <Route path="/login-requests" element={<LoginRequests />} />
+                <Route path="/pricing-requests" element={<PricingRequests user={user} />} />
                 <Route path="/consumer-onboarding" element={<ConsumerOnboarding />} />
                 <Route path="/customer-portals" element={<CustomerPortals />} />
-                <Route path="/pricing-requests" element={<PricingRequests user={user} />} />
-                <Route path="/rep-management" element={<AdminRepManagement />} />
-              </>
-            )}
-
-            {/* Seller Routes */}
-            {(user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) && (
-              <>
+                <Route path="/admin-reps" element={<AdminRepManagement />} />
                 <Route path="/trading-insights" element={<TradingInsights user={user} />} />
-                <Route path="/inventory" element={<Inventory items={mockService.getInventory(user.id)} />} />
                 <Route path="/pricing" element={<ProductPricing user={user} />} />
+                <Route path="/inventory" element={<Inventory items={mockService.getInventory(user.id)} />} />
                 <Route path="/market" element={<SupplierMarket user={user} />} />
-                <Route path="/orders" element={<SellerDashboardV1 user={user} />} />
-                <Route path="/ai-matcher" element={<AiOpportunityMatcher />} />
+                <Route path="/ai-matcher" element={<AiOpportunityMatcher user={user} />} />
                 <Route path="/accounts" element={<Accounts user={user} />} />
-              </>
-            )}
-
-            {/* Consumer Routes */}
-            {user.role === UserRole.CONSUMER && (
-              <>
-                <Route path="/marketplace" element={<Marketplace user={user} />} />
-                <Route path="/my-orders" element={<CustomerOrders user={user} />} />
-                <Route path="/accounts" element={<Accounts user={user} />} />
-              </>
-            )}
-
-            {/* Rep Routes */}
-            {user.role === UserRole.PZ_REP && (
-               <Route path="/marketplace" element={<Marketplace user={user} />} />
-            )}
-
-        </Routes>
-      </AppLayout>
+                <Route path="/orders" element={<CustomerOrders user={user} />} />
+                <Route path="/settings" element={<SettingsComponent user={user} onRefreshUser={() => setUser({...user})} />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </AppLayout>
+      )}
     </Router>
   );
 };

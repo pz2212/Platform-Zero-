@@ -6,7 +6,7 @@ import {
   Package, Users, AlertTriangle, Check, X, Settings, LayoutDashboard, 
   Box, FileText, Plus, Trash2, GripVertical, Save, ShoppingCart, 
   TrendingUp, DollarSign, CheckCircle, Search, MoreVertical, 
-  Store, Eye, Edit, UserCheck, CreditCard, ChevronDown, UserPlus, Filter, UserCog, Percent, ExternalLink, Download, Printer
+  Store, Eye, Edit, UserCheck, CreditCard, ChevronDown, UserPlus, Filter, UserCog, Percent, ExternalLink, Download, Printer, ChevronUp
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -20,6 +20,9 @@ export const AdminDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeActionMenu, setActiveActionMenu] = useState<string | null>(null);
   
+  // Mobile UI States
+  const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
+
   // Invoice Viewer State
   const [viewingInvoicesCustomer, setViewingInvoicesCustomer] = useState<Customer | null>(null);
   const [customerInvoices, setCustomerInvoices] = useState<Order[]>([]);
@@ -95,7 +98,6 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleOpenInvoices = (customer: Customer) => {
-      // Changed from filtering only Unpaid to filtering ALL orders for the buyer history
       const history = allOrders.filter(o => o.buyerId === customer.id);
       setCustomerInvoices(history);
       setViewingInvoicesCustomer(customer);
@@ -188,7 +190,55 @@ export const AdminDashboard: React.FC = () => {
 
       {activeTab === 'overview' && (
           <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* KPI Section with Mobile Compression */}
+            <div className="block md:hidden">
+                <button 
+                    onClick={() => setIsMetricsExpanded(!isMetricsExpanded)}
+                    className="w-full bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group transition-all"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600 shadow-sm">
+                            <DollarSign size={24}/>
+                        </div>
+                        <div className="text-left">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total GMV (Live)</p>
+                            <h3 className="text-2xl font-black text-gray-900">${totalGMV.toLocaleString()}</h3>
+                        </div>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded-lg text-gray-400">
+                        {isMetricsExpanded ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
+                    </div>
+                </button>
+
+                {isMetricsExpanded && (
+                    <div className="mt-4 grid grid-cols-1 gap-4 animate-in slide-in-from-top-2 duration-300">
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+                            <div className="p-3 bg-blue-50 rounded-xl text-blue-600"><ShoppingCart size={20} /></div>
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Orders Handled</p>
+                                <h3 className="text-xl font-black text-gray-900">{allOrders.length}</h3>
+                            </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+                            <div className="p-3 bg-purple-50 rounded-xl text-purple-600"><Box size={20} /></div>
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Partner Stock</p>
+                                <h3 className="text-xl font-black text-gray-900">{inventory.length}</h3>
+                            </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+                            <div className="p-3 bg-amber-50 rounded-xl text-amber-500"><Users size={20} /></div>
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Wholesalers</p>
+                                <h3 className="text-xl font-black text-gray-900">{totalWholesalers}</h3>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Desktop Full Metrics Grid */}
+            <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32 group hover:shadow-md transition-all">
                     <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Total GMV</p>
                     <div className="flex justify-between items-end">

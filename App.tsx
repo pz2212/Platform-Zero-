@@ -70,7 +70,8 @@ import {
   Clock,
   Building,
   User as UserIcon,
-  MessageCircle
+  MessageCircle,
+  Menu as HamburgerIcon
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, active, onClick, isSubItem = false, badge = 0, subLabel }: any) => (
@@ -315,14 +316,14 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   const isChatActive = (id: string) => location.pathname === '/contacts' && queryParams.get('id') === id;
   
   const [showDailyPopup, setShowDailyPopup] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isMarketplaceMenuOpen, setIsMarketplaceMenuOpen] = useState(true);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [directory, setDirectory] = useState<User[]>([]);
 
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const mobileNavRef = useRef<HTMLDivElement>(null);
 
   // Quote Notification Count (Admin)
   const submittedQuotesCount = mockService.getAllSupplierPriceRequests().filter(r => r.status === 'SUBMITTED').length;
@@ -351,11 +352,11 @@ const AppLayout = ({ children, user, onLogout }: any) => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
-        setIsMobileMenuOpen(false);
-      }
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
         setShowNotifDropdown(false);
+      }
+      if (mobileNavRef.current && !mobileNavRef.current.contains(event.target as Node)) {
+        setIsMobileNavOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -370,30 +371,23 @@ const AppLayout = ({ children, user, onLogout }: any) => {
 
   const isPartner = user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER;
 
-  const partnerLinks = [
-    { to: '/', label: 'Order Management', icon: LayoutDashboard },
-    { to: '/pricing', label: 'Inventory & Price', icon: Tags },
-    { to: '/accounts', label: 'Financials', icon: DollarSign },
-    { to: '/market', label: 'Supplier Market', icon: Store },
-    { to: '/trading-insights', label: 'Market Intelligence', icon: BarChart4 },
-    { to: '/settings', label: 'Settings', icon: Settings },
-  ];
-
-  return (
-    <div className="flex min-h-screen bg-gray-50">
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 fixed inset-y-0 z-30">
-        <div className="p-6 border-b border-gray-100 flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#043003] rounded-lg flex items-center justify-center text-white font-bold text-lg">P</div>
-          <span className="font-bold text-xl tracking-tight text-gray-900">Platform Zero</span>
-        </div>
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto flex flex-col no-scrollbar">
+  const NavItems = () => (
+    <div className="flex-1 py-4 px-3 space-y-1 flex flex-col no-scrollbar">
           <div className="flex-1 space-y-1">
               {user.role === UserRole.ADMIN ? (
                   <>
                     <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Platform Admin</div>
-                    <SidebarLink to="/" icon={LayoutDashboard} label="Overview" active={isActive('/')} />
-                    <SidebarLink to="/marketplace" icon={Layers} label="Catalog Manager" active={isActive('/marketplace')} />
+                    <SidebarLink to="/" icon={LayoutDashboard} label="Overview" active={isActive('/')} onClick={() => setIsMobileNavOpen(false)} />
                     
+                    {/* Elevated Quote Generator for better accessibility */}
+                    <SidebarLink 
+                        to="/pricing-requests" 
+                        icon={Calculator} 
+                        label="Quote Generator" 
+                        active={isActive('/pricing-requests')} 
+                        onClick={() => setIsMobileNavOpen(false)} 
+                    />
+
                     <div className="space-y-1">
                         <button 
                             onClick={() => setIsMarketplaceMenuOpen(!isMarketplaceMenuOpen)}
@@ -401,15 +395,16 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                         >
                             <div className="flex items-center gap-3">
                                 <Handshake size={20} className="text-gray-400" />
-                                <span className="font-medium">Marketplace Manager</span>
+                                <span className="font-medium">Admin Console</span>
                             </div>
                             <ChevronDown size={16} className={`transition-transform duration-200 ${isMarketplaceMenuOpen ? 'rotate-180' : ''}`} />
                         </button>
                         
                         {isMarketplaceMenuOpen && (
                             <div className="space-y-1 animate-in slide-in-from-top-2 duration-200">
-                                <SidebarLink to="/consumer-onboarding" icon={Users} label="Customers" active={isActive('/consumer-onboarding')} isSubItem />
-                                <SidebarLink to="/admin/suppliers" icon={Store} label="Suppliers" active={isActive('/admin/suppliers')} isSubItem />
+                                <SidebarLink to="/marketplace" icon={Layers} label="Catalog Manager" active={isActive('/marketplace')} isSubItem onClick={() => setIsMobileNavOpen(false)} />
+                                <SidebarLink to="/consumer-onboarding" icon={Users} label="Customers" active={isActive('/consumer-onboarding')} isSubItem onClick={() => setIsMobileNavOpen(false)} />
+                                <SidebarLink to="/admin/suppliers" icon={Store} label="Suppliers" active={isActive('/admin/suppliers')} isSubItem onClick={() => setIsMobileNavOpen(false)} />
                                 <SidebarLink 
                                     to="/login-requests" 
                                     icon={UserPlus} 
@@ -417,8 +412,8 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                                     active={isActive('/login-requests')} 
                                     isSubItem 
                                     badge={mockService.getRegistrationRequests().filter(r => r.status === 'Pending').length}
+                                    onClick={() => setIsMobileNavOpen(false)}
                                 />
-                                <SidebarLink to="/pricing-requests" icon={Calculator} label="Quote Generator" active={isActive('/pricing-requests')} isSubItem />
                                 <SidebarLink 
                                     to="/admin/negotiations" 
                                     icon={Tags} 
@@ -426,31 +421,32 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                                     active={isActive('/admin/negotiations')} 
                                     isSubItem 
                                     badge={submittedQuotesCount}
+                                    onClick={() => setIsMobileNavOpen(false)}
                                 />
                             </div>
                         )}
                     </div>
 
-                    <SidebarLink to="/customer-portals" icon={Gift} label="Growth & Portals" active={isActive('/customer-portals')} />
-                    <SidebarLink to="/admin-reps" icon={Award} label="Rep Management" active={isActive('/admin-reps')} />
+                    <SidebarLink to="/customer-portals" icon={Gift} label="Growth & Portals" active={isActive('/customer-portals')} onClick={() => setIsMobileNavOpen(false)} />
+                    <SidebarLink to="/admin-reps" icon={Award} label="Rep Management" active={isActive('/admin-reps')} onClick={() => setIsMobileNavOpen(false)} />
                   </>
               ) : user.role === UserRole.CONSUMER ? (
                 <>
                     <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Buyer Portal</div>
-                    <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/')} />
-                    <SidebarLink to="/orders" icon={ShoppingCart} label="Track Orders" active={isActive('/orders')} />
-                    <SidebarLink to="/marketplace" icon={ShoppingBag} label="Fresh Catalog" active={isActive('/marketplace')} />
+                    <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/')} onClick={() => setIsMobileNavOpen(false)} />
+                    <SidebarLink to="/orders" icon={ShoppingCart} label="Track Orders" active={isActive('/orders')} onClick={() => setIsMobileNavOpen(false)} />
+                    <SidebarLink to="/marketplace" icon={ShoppingBag} label="Fresh Catalog" active={isActive('/marketplace')} onClick={() => setIsMobileNavOpen(false)} />
                 </>
               ) : isPartner ? (
                 <>
-                  <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">{user.role === UserRole.FARMER ? 'Farmer Operations' : 'Partner Operations'}</div>
-                  <SidebarLink to="/" icon={LayoutDashboard} label="Order Management" active={isActive('/')} badge={mockService.getOrders(user.id).filter(o => o.sellerId === user.id && o.status === 'Pending').length} />
-                  <SidebarLink to="/pricing" icon={Tags} label="Inventory & Price" active={isActive('/pricing')} />
-                  <SidebarLink to="/accounts" icon={DollarSign} label="Financials" active={isActive('/accounts')} />
-                  <SidebarLink to="/trading-insights" icon={BarChart4} label="Market Intelligence" active={isActive('/trading-insights')} />
+                  <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">{user.role === UserRole.FARMER ? 'Farmer Operations' : 'Wholesaler Ops'}</div>
+                  <SidebarLink to="/" icon={LayoutDashboard} label="Order Management" active={isActive('/')} badge={mockService.getOrders(user.id).filter(o => o.sellerId === user.id && o.status === 'Pending').length} onClick={() => setIsMobileNavOpen(false)} />
+                  <SidebarLink to="/pricing" icon={Tags} label="Inventory & Price" active={isActive('/pricing')} onClick={() => setIsMobileNavOpen(false)} />
+                  <SidebarLink to="/accounts" icon={DollarSign} label="Financials" active={isActive('/accounts')} onClick={() => setIsMobileNavOpen(false)} />
+                  <SidebarLink to="/trading-insights" icon={BarChart4} label="Market Intelligence" active={isActive('/trading-insights')} onClick={() => setIsMobileNavOpen(false)} />
                   
                   <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Network</div>
-                  <SidebarLink to="/market" icon={Store} label="Supplier Market" active={isActive('/market')} />
+                  <SidebarLink to="/market" icon={Store} label="Supplier Market" active={isActive('/market')} onClick={() => setIsMobileNavOpen(false)} />
                   
                   <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contacts</div>
                   {directory.map(s => (
@@ -461,34 +457,96 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                       label={s.businessName} 
                       subLabel={s.role === UserRole.FARMER ? 'Farmer' : 'Wholesaler'}
                       active={isChatActive(s.id)} 
+                      onClick={() => setIsMobileNavOpen(false)}
                     />
                   ))}
                 </>
               ) : user.role === UserRole.DRIVER ? (
                 <>
-                    <SidebarLink to="/" icon={Truck} label="Run Sheet" active={isActive('/')} />
+                    <SidebarLink to="/" icon={Truck} label="Run Sheet" active={isActive('/')} onClick={() => setIsMobileNavOpen(false)} />
                 </>
               ) : user.role === UserRole.PZ_REP ? (
                 <>
-                    <SidebarLink to="/" icon={Briefcase} label="Sales Console" active={isActive('/')} />
+                    <SidebarLink to="/" icon={Briefcase} label="Sales Console" active={isActive('/')} onClick={() => setIsMobileNavOpen(false)} />
                 </>
               ) : null}
               
               <div className="pt-4 border-t border-gray-100">
-                <SidebarLink to="/settings" icon={Settings} label="Settings" active={isActive('/settings')} />
+                <SidebarLink to="/settings" icon={Settings} label="Settings" active={isActive('/settings')} onClick={() => setIsMobileNavOpen(false)} />
               </div>
           </div>
 
           {isPartner && !showDailyPopup && <NetworkSignalsWidget user={user} mode="sidebar" />}
-        </nav>
-        
+          
+          <div className="p-4 mt-4 border-t border-gray-100 md:hidden">
+             <button onClick={onLogout} className="w-full flex items-center gap-2 px-2 py-2 text-red-600 font-bold text-sm"><LogOut size={18} /><span>Sign Out</span></button>
+          </div>
+    </div>
+  );
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      {/* DESKTOP SIDEBAR */}
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 fixed inset-y-0 z-30">
+        <div className="p-6 border-b border-gray-100 flex items-center gap-3">
+          <div className="w-8 h-8 bg-[#043003] rounded-lg flex items-center justify-center text-white font-bold text-lg">P</div>
+          <span className="font-bold text-xl tracking-tight text-gray-900">Platform Zero</span>
+        </div>
+        <div className="flex-1 overflow-y-auto no-scrollbar">
+            <NavItems />
+        </div>
         <div className="p-4 border-t border-gray-200">
           <button onClick={onLogout} className="w-full flex items-center gap-2 px-2 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-bold"><LogOut size={18} /><span>Sign Out</span></button>
         </div>
       </aside>
+
+      {/* MOBILE HEADER */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-100 z-40 flex items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-[#043003] rounded-lg flex items-center justify-center text-white font-bold text-lg">P</div>
+            <span className="font-bold text-lg tracking-tight text-gray-900">Platform Zero</span>
+          </div>
+          <div className="flex items-center gap-2">
+              <div className="relative" ref={notifRef}>
+                <button 
+                    onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                    className="p-2 text-gray-500 relative"
+                >
+                    <Bell size={22} />
+                    {notifCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>}
+                </button>
+                {showNotifDropdown && <NotificationDropdown user={user} onClose={() => setShowNotifDropdown(false)} />}
+              </div>
+              <button 
+                onClick={() => setIsMobileNavOpen(true)}
+                className="p-2 text-gray-900 bg-gray-50 rounded-xl"
+              >
+                  <HamburgerIcon size={24}/>
+              </button>
+          </div>
+      </header>
+
+      {/* MOBILE NAV DRAWER */}
+      {isMobileNavOpen && (
+          <div className="fixed inset-0 z-50 md:hidden animate-in fade-in duration-300">
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMobileNavOpen(false)} />
+              <div 
+                ref={mobileNavRef}
+                className="absolute top-0 right-0 bottom-0 w-4/5 max-w-sm bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 border-l border-gray-100"
+              >
+                  <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                      <h2 className="font-black text-gray-900 uppercase text-xs tracking-widest">Navigation</h2>
+                      <button onClick={() => setIsMobileNavOpen(false)} className="p-2 bg-gray-50 rounded-full text-gray-400"><X size={20}/></button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto no-scrollbar">
+                      <NavItems />
+                  </div>
+              </div>
+          </div>
+      )}
       
-      <main className="flex-1 md:ml-64 p-4 md:p-8 w-full overflow-x-hidden relative">
-        <div className="flex justify-end mb-6 sticky top-0 md:absolute md:top-8 md:right-8 z-40 bg-gray-50/80 md:bg-transparent backdrop-blur-sm md:backdrop-blur-0 py-2 md:py-0 -mx-4 md:mx-0 px-4 md:px-0">
+      <main className="flex-1 md:ml-64 p-4 md:p-8 w-full overflow-x-hidden relative mt-16 md:mt-0">
+        <div className="hidden md:flex justify-end mb-6 sticky top-0 md:absolute md:top-8 md:right-8 z-40 bg-gray-50/80 md:bg-transparent backdrop-blur-sm md:backdrop-blur-0 py-2 md:py-0 -mx-4 md:mx-0 px-4 md:px-0">
             <div className="flex items-center gap-3">
                 <div className="relative" ref={notifRef}>
                     <button 
@@ -502,63 +560,27 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                             </span>
                         )}
                     </button>
-
-                    {showNotifDropdown && (
-                        <NotificationDropdown user={user} onClose={() => setShowNotifDropdown(false)} />
-                    )}
+                    {showNotifDropdown && <NotificationDropdown user={user} onClose={() => setShowNotifDropdown(false)} />}
                 </div>
 
                 {isPartner && (
-                    <>
-                        <div className="hidden md:block">
-                            <Link 
-                                to="/trading-insights"
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-sm border ${
-                                    isActive('/trading-insights')
-                                    ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                }`}
-                            >
-                                <BarChart4 size={14} className={isActive('/trading-insights') ? 'text-emerald-400' : 'text-slate-400'}/>
-                                Market Intelligence
-                                {isActive('/trading-insights') && <Sparkles size={12} className="text-emerald-400 animate-pulse"/>}
-                            </Link>
-                        </div>
-                        <div className="md:hidden relative" ref={mobileMenuRef}>
-                            <button 
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-black uppercase tracking-widest shadow-sm text-slate-700 active:bg-gray-100 transition-all"
-                            >
-                                <Menu size={16} className="text-emerald-600"/>
-                                Menu
-                                <ChevronDown size={14} className={`transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-180' : ''}`}/>
-                            </button>
-                            {isMobileMenuOpen && (
-                                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 animate-in zoom-in-95 duration-150 origin-top-right">
-                                    {partnerLinks.map((link) => (
-                                        <Link 
-                                            key={link.to}
-                                            to={link.to}
-                                            onClick={() => setIsMobileMenuOpen(false)}
-                                            className={`flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors ${
-                                                isActive(link.to) 
-                                                ? 'bg-emerald-50 text-emerald-900 border-r-4 border-emerald-500' 
-                                                : 'text-slate-600 hover:bg-gray-50'
-                                            }`}
-                                        >
-                                            <link.icon size={18} className={isActive(link.to) ? 'text-emerald-600' : 'text-slate-400'}/>
-                                            {link.label}
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </>
+                    <Link 
+                        to="/trading-insights"
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-sm border ${
+                            isActive('/trading-insights')
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                    >
+                        <BarChart4 size={14} className={isActive('/trading-insights') ? 'text-emerald-400' : 'text-slate-400'}/>
+                        Market Intelligence
+                        {isActive('/trading-insights') && <Sparkles size={12} className="text-emerald-400 animate-pulse"/>}
+                    </Link>
                 )}
             </div>
         </div>
 
-        <div className={isPartner ? "mt-4 md:mt-12" : ""}>
+        <div className={isPartner ? "md:mt-12" : ""}>
             {children}
         </div>
         
@@ -691,7 +713,7 @@ const App = () => {
                                     </button>
                                     <button 
                                         onClick={() => selectSubRole('FARMER')}
-                                        className="w-full text-left p-5 border border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group flex items-center gap-4"
+                                        className="w-full text-left p-5 border border-gray-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group flex items-center gap-4"
                                     >
                                         <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
                                             <Sprout size={24} />

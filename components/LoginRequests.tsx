@@ -87,13 +87,11 @@ const SuccessInviteModal = ({ invite, onClose }: { invite: RegistrationRequest, 
     );
 };
 
-/**
- * Main LoginRequests component exported for use in App.tsx
- */
 export const LoginRequests: React.FC = () => {
     const [requests, setRequests] = useState<RegistrationRequest[]>([]);
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
     const [successInvite, setSuccessInvite] = useState<RegistrationRequest | null>(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         setRequests(mockService.getRegistrationRequests());
@@ -107,6 +105,19 @@ export const LoginRequests: React.FC = () => {
     const handleReject = (id: string) => {
         mockService.rejectRegistration(id);
         setRequests(mockService.getRegistrationRequests());
+    };
+
+    const handleGenerateQuote = (req: RegistrationRequest) => {
+        // Navigate to quote generator with pre-filled state
+        navigate('/pricing-requests', { 
+            state: { 
+                customerName: req.businessName,
+                customerLocation: req.consumerData?.location || '',
+                invoiceFile: req.consumerData?.invoiceFile || null,
+                weeklySpend: req.consumerData?.weeklySpend || 0,
+                orderFreq: req.consumerData?.orderFrequency || 'Weekly'
+            } 
+        });
     };
 
     const handleManualInvite = (data: any) => {
@@ -172,7 +183,17 @@ export const LoginRequests: React.FC = () => {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <button onClick={() => handleDelete(req.id)} className="p-3 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={20}/></button>
+                                    
+                                    {/* Action: Quote Generator Transition */}
+                                    <button 
+                                        onClick={() => handleGenerateQuote(req)} 
+                                        className="px-6 py-3 bg-white border border-gray-200 text-indigo-600 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-indigo-50 hover:border-indigo-200 transition-all flex items-center gap-2"
+                                    >
+                                        <Calculator size={16}/> Generate Quote
+                                    </button>
+
                                     <button onClick={() => handleReject(req.id)} className="px-6 py-3 bg-white border border-gray-200 text-gray-500 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all">Reject</button>
+                                    
                                     <button onClick={() => handleApprove(req.id)} className="px-8 py-3 bg-emerald-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-emerald-700 shadow-md transition-all flex items-center gap-2">
                                         <Check size={16}/> Approve Access
                                     </button>

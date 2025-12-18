@@ -1,150 +1,18 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Order, InventoryItem, Product, SupplierPriceRequest, Driver, Packer, OrderItem, Customer, SupplierPriceRequestItem } from '../types';
+import { User, Order, InventoryItem, Product, Driver, Packer, OrderItem, Customer } from '../types';
 import { mockService } from '../services/mockDataService';
 import { AiOpportunityMatcher } from './AiOpportunityMatcher';
-import { ConsumerOnboarding } from './ConsumerOnboarding';
-import { ProductPricing } from './ProductPricing';
 import { Settings as SettingsComponent } from './Settings';
 import { 
   Package, Truck, MapPin, AlertTriangle, LayoutDashboard, 
-  Tags, Users, Clock, CheckCircle, Store, X, UploadCloud, 
-  DollarSign, Camera, Check, ChevronDown, Info, Trash2, Search, Bell, Settings, GitPullRequest, ScanLine, FileWarning, Lock, Send, ThumbsUp, ThumbsDown
+  Users, Clock, CheckCircle, X, UploadCloud, 
+  DollarSign, Camera, Check, ChevronDown, Info, Search, Bell, Settings, Lock
 } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
 }
-
-/* MODAL FOR PARTNERS TO REVIEW AND SUBMIT PRICING */
-const PriceRequestModal: React.FC<{
-    request: SupplierPriceRequest;
-    onClose: () => void;
-    onSubmit: (requestId: string, items: SupplierPriceRequestItem[]) => void;
-}> = ({ request, onClose, onSubmit }) => {
-    const [matchStatus, setMatchStatus] = useState<Record<string, 'YES' | 'NO' | null>>({});
-    const [customPrices, setCustomPrices] = useState<Record<string, string>>({});
-
-    useEffect(() => {
-        const initialMatch: Record<string, 'YES' | 'NO' | null> = {};
-        const initialPrices: Record<string, string> = {};
-        request.items.forEach(item => {
-            initialMatch[item.productId] = null;
-            initialPrices[item.productId] = '';
-        });
-        setMatchStatus(initialMatch);
-        setCustomPrices(initialPrices);
-    }, [request]);
-
-    const handleMatchChoice = (productId: string, choice: 'YES' | 'NO') => {
-        setMatchStatus(prev => ({ ...prev, [productId]: choice }));
-        if (choice === 'YES') {
-            const item = request.items.find(i => i.productId === productId);
-            setCustomPrices(prev => ({ ...prev, [productId]: item?.targetPrice.toString() || '' }));
-        }
-    };
-
-    const handlePriceChange = (productId: string, val: string) => {
-        setCustomPrices(prev => ({ ...prev, [productId]: val }));
-    };
-
-    const isFormValid = request.items.every(item => matchStatus[item.productId] !== null);
-
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-gray-100">
-                <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                    <div>
-                        <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Bulk Pricing Request</h2>
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Lead: {request.customerContext} • {request.customerLocation}</p>
-                    </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm border border-gray-100"><X size={20}/></button>
-                </div>
-
-                <div className="p-8 flex-1 overflow-y-auto max-h-[60vh] custom-scrollbar">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-8 border-l-4 border-indigo-500 pl-4">
-                        Please review our target prices. Select 'YES' to match or 'NO' to provide your best alternative.
-                    </p>
-                    
-                    <div className="space-y-6">
-                        {request.items.map((item, idx) => (
-                            <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group transition-all hover:bg-white hover:shadow-md">
-                                <div className="mb-4 sm:mb-0">
-                                    <h4 className="font-black text-gray-900 text-lg tracking-tight leading-tight">{item.productName}</h4>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Target Price:</span>
-                                        <span className="text-sm font-black text-indigo-600">${item.targetPrice.toFixed(2)} / kg</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                    <div className="flex bg-white p-1 rounded-xl border border-gray-200 shadow-inner-sm">
-                                        <button 
-                                            onClick={() => handleMatchChoice(item.productId, 'YES')}
-                                            className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-                                                matchStatus[item.productId] === 'YES' 
-                                                ? 'bg-emerald-600 text-white shadow-lg' 
-                                                : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
-                                            }`}
-                                        >
-                                            <ThumbsUp size={14}/> YES
-                                        </button>
-                                        <button 
-                                            onClick={() => handleMatchChoice(item.productId, 'NO')}
-                                            className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-                                                matchStatus[item.productId] === 'NO' 
-                                                ? 'bg-red-600 text-white shadow-lg' 
-                                                : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
-                                            }`}
-                                        >
-                                            <ThumbsDown size={14}/> NO
-                                        </button>
-                                    </div>
-
-                                    {matchStatus[item.productId] === 'NO' && (
-                                        <div className="relative w-32 animate-in slide-in-from-right-2">
-                                            <span className="absolute left-3 top-2.5 text-gray-400 font-bold text-xs">$</span>
-                                            <input 
-                                                type="number"
-                                                step="0.01"
-                                                placeholder="Offer"
-                                                className="w-full pl-6 pr-3 py-2 bg-white border-2 border-red-100 rounded-xl text-sm font-black text-right focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none"
-                                                value={customPrices[item.productId]}
-                                                onChange={(e) => handlePriceChange(item.productId, e.target.value)}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="p-8 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row justify-between items-center gap-6">
-                    <div className="flex items-center gap-3 text-gray-400">
-                        <Info size={18}/>
-                        <p className="text-[10px] font-bold uppercase tracking-widest leading-tight max-w-[200px]">
-                            Once submitted, PZ Admin will review your offers to finalize the lead.
-                        </p>
-                    </div>
-                    
-                    <div className="flex gap-3 w-full sm:w-auto">
-                        <button onClick={onClose} className="flex-1 sm:flex-none px-8 py-4 bg-white border border-gray-200 rounded-2xl font-black text-[10px] uppercase tracking-widest text-gray-500 hover:bg-gray-100 transition-all">
-                            Cancel
-                        </button>
-                        <button 
-                            disabled={!isFormValid}
-                            onClick={() => onSubmit(request.id, request.items.map(i => ({...i, offeredPrice: parseFloat(customPrices[i.productId])})))}
-                            className="flex-[2] sm:flex-none px-12 py-4 bg-[#0F172A] text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:scale-100"
-                        >
-                            <Send size={16}/> Submit Quote
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 /* HIGH FIDELITY PACKING LIST MODAL */
 const PackingListModal: React.FC<{
@@ -378,14 +246,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [priceRequests, setPriceRequests] = useState<SupplierPriceRequest[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [packers, setPackers] = useState<Packer[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
 
   // UI / Modal States
   const [packingOrder, setPackingOrder] = useState<Order | null>(null);
-  const [selectedRequest, setSelectedRequest] = useState<SupplierPriceRequest | null>(null);
 
   useEffect(() => {
     loadData();
@@ -398,7 +264,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     setOrders(allOrders);
     setInventory(mockService.getInventory(user.id));
     setProducts(mockService.getAllProducts());
-    setPriceRequests(mockService.getSupplierPriceRequests(user.id));
     setDrivers(mockService.getDrivers(user.id));
     setPackers(mockService.getPackers(user.id));
     setCustomers(mockService.getCustomers());
@@ -435,20 +300,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     alert(`Order #${packingOrder.id.split('-')[1]} is fully packed and ready!`);
   };
 
-  const handleSubmitOffer = (reqId: string, updatedItems: SupplierPriceRequestItem[]) => {
-      const original = priceRequests.find(r => r.id === reqId);
-      if (original) {
-          mockService.updateSupplierPriceRequest(reqId, {
-              ...original,
-              items: updatedItems,
-              status: 'SUBMITTED'
-          });
-          setSelectedRequest(null);
-          loadData();
-          alert("Offer submitted to Platform Zero Admin!");
-      }
-  };
-
   const pendingAcceptance = orders.filter(o => o.status === 'Pending');
   const acceptedOrders = orders.filter(o => o.status === 'Confirmed' || o.status === 'Ready for Delivery' || o.status === 'Shipped');
   const fulfilledOrders = orders.filter(o => o.status === 'Delivered');
@@ -464,7 +315,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
             <h1 className="text-2xl md:text-3xl font-black text-[#0F172A] tracking-tight">Partner Operations</h1>
-            <p className="text-gray-500 mt-1 text-base md:text-lg">Manage orders, price requests, and network.</p>
+            <p className="text-gray-500 mt-1 text-base md:text-lg">Manage orders, logistics, and network.</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
             <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-blue-200 rounded-xl text-blue-600 font-bold text-xs md:text-sm hover:bg-blue-50 shadow-sm transition-all whitespace-nowrap">
@@ -477,7 +328,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       {!isProfileComplete && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 animate-in slide-in-from-top-4">
               <div className="bg-white p-3 rounded-xl text-amber-600 shadow-sm border border-amber-100 hidden md:block">
-                  <FileWarning size={24} />
+                  <AlertTriangle size={24} />
               </div>
               <div className="flex-1 text-center md:text-left">
                   <h2 className="text-sm md:text-base font-black text-amber-900 uppercase tracking-tight">Onboarding Documents Pending</h2>
@@ -497,7 +348,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         {[
             { name: 'Order Management', icon: LayoutDashboard },
             { name: 'Sell', icon: Package },
-            { name: 'Price Requests', icon: Tags, badge: priceRequests.filter(r => r.status === 'PENDING').length },
             { name: 'Customers', icon: Users },
             { name: 'Settings', icon: Settings }
         ].map((tab) => (
@@ -512,7 +362,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           >
             <tab.icon size={16} />
             {tab.name}
-            {tab.badge ? <span className="bg-red-50 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{tab.badge}</span> : null}
           </button>
         ))}
       </div>
@@ -698,51 +547,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
       )}
 
-      {/* PRICE REQUESTS TAB - UPDATED TO MATCH SCREENSHOT */}
-      {activeTab === 'Price Requests' && (
-        <div className="bg-white border border-gray-100 rounded-3xl p-6 md:p-10 shadow-sm animate-in fade-in duration-500">
-            <div className="flex justify-between items-center mb-10">
-                <div>
-                    <h2 className="text-xl md:text-3xl font-black text-gray-900 tracking-tight">Price Requests</h2>
-                    <p className="text-gray-500 font-medium text-sm md:text-base">Respond to bulk pricing inquiries from Platform Zero Admin.</p>
-                </div>
-            </div>
-            {priceRequests.length === 0 ? (
-                <div className="py-20 text-center text-gray-400">
-                    <GitPullRequest size={48} className="mx-auto mb-4 opacity-20"/>
-                    <p className="font-bold uppercase tracking-widest text-xs">No active price requests.</p>
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    {priceRequests.map(req => (
-                        <div key={req.id} className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:shadow-md transition-all animate-in zoom-in-95">
-                            <div className="flex flex-wrap items-center gap-4">
-                                <h3 className="font-black text-gray-900 text-lg tracking-tight">{req.customerContext}</h3>
-                                <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
-                                    req.status === 'PENDING' ? 'bg-orange-50 text-orange-600 border-orange-100' : 
-                                    req.status === 'SUBMITTED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                    'bg-green-50 text-green-700 border-green-100'
-                                }`}>
-                                    {req.status}
-                                </span>
-                                <div className="flex items-center gap-6 text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-wide ml-2">
-                                    <span className="flex items-center gap-1.5"><MapPin size={16} className="text-gray-300"/> {req.customerLocation}</span>
-                                    <span className="flex items-center gap-1.5"><Clock size={16} className="text-gray-300"/> Received: {new Date(req.createdAt).toLocaleDateString()}</span>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setSelectedRequest(req)}
-                                className="w-full md:w-auto bg-[#0F172A] text-white px-10 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-sm active:scale-95"
-                            >
-                                REVIEW ITEMS
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-      )}
-
       {/* CUSTOMERS TAB */}
       {activeTab === 'Customers' && (
           <div className="bg-white border border-gray-100 rounded-3xl p-6 md:p-10 shadow-sm animate-in fade-in duration-500">
@@ -798,15 +602,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
               onComplete={handleCompletePacking}
               drivers={drivers}
               packers={packers}
-          />
-      )}
-
-      {/* PRICE REQUEST REVIEW MODAL */}
-      {selectedRequest && (
-          <PriceRequestModal 
-            request={selectedRequest}
-            onClose={() => setSelectedRequest(null)}
-            onSubmit={handleSubmitOffer}
           />
       )}
     </div>

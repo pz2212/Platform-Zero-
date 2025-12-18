@@ -448,12 +448,17 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                   <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Network</div>
                   <SidebarLink to="/market" icon={Store} label="Supplier Market" active={isActive('/market')} onClick={() => setIsMobileNavOpen(false)} />
                   
-                  <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contacts</div>
+                  <div className="pt-8 pb-3 px-4 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Contacts</div>
+                  <SidebarLink to="/contacts" icon={Users} label="Directory" active={isActive('/contacts') && !queryParams.get('id')} onClick={() => setIsMobileNavOpen(false)} />
                   {directory.map(s => (
                     <SidebarLink 
                       key={s.id} 
                       to={`/contacts?id=${s.id}`} 
-                      icon={MessageCircle} 
+                      icon={() => (
+                        <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center group-hover:border-emerald-500 transition-colors">
+                           <div className="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-emerald-500 transition-colors"></div>
+                        </div>
+                      )}
                       label={s.businessName} 
                       subLabel={s.role === UserRole.FARMER ? 'Farmer' : 'Wholesaler'}
                       active={isChatActive(s.id)} 
@@ -713,7 +718,7 @@ const App = () => {
                                     </button>
                                     <button 
                                         onClick={() => selectSubRole('FARMER')}
-                                        className="w-full text-left p-5 border border-gray-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group flex items-center gap-4"
+                                        className="w-full text-left p-5 border border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group flex items-center gap-4"
                                     >
                                         <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
                                             <Sprout size={24} />

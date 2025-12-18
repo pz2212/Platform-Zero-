@@ -1,21 +1,154 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { User, InventoryItem, Product, ChatMessage } from '../types';
+import { User, InventoryItem, Product, ChatMessage, UserRole } from '../types';
 import { mockService } from '../services/mockDataService';
-import { generateProductDeepLink } from '../services/smsService';
+import { triggerNativeSms, generateProductDeepLink } from '../services/smsService';
 import { 
   MessageCircle, Send, Plus, X, Search, Info, 
   ShoppingBag, Link as LinkIcon, CheckCircle, Clock,
-  Store, MapPin, Phone, ShieldCheck, Tag, ChevronRight
+  Store, MapPin, Phone, ShieldCheck, Tag, ChevronRight, Users, UserCheck,
+  ArrowLeft, UserPlus, Smartphone, Contact, Loader2, Building, Mail, BookOpen
 } from 'lucide-react';
 
 interface ContactsProps {
   user: User;
 }
 
+const ManualInviteModal = ({ isOpen, onClose, user }: { isOpen: boolean, onClose: () => void, user: User }) => {
+    const [formData, setFormData] = useState({ name: '', phone: '' });
+    const [isSyncing, setIsSyncing] = useState(false);
+    
+    if (!isOpen) return null;
+
+    const handleSyncFromPhonebook = async () => {
+        try {
+            setIsSyncing(true);
+            // Web Contact Picker API - requires HTTPS and mobile browser support
+            // @ts-ignore
+            if ('contacts' in navigator && 'select' in navigator.contacts) {
+                const props = ['name', 'tel'];
+                const opts = { multiple: false };
+                // @ts-ignore
+                const selectedContacts = await navigator.contacts.select(props, opts);
+                
+                if (selectedContacts && selectedContacts.length > 0) {
+                    const person = selectedContacts[0];
+                    const name = person.name?.[0] || '';
+                    const phone = person.tel?.[0]?.replace(/[^\d+]/g, '') || '';
+                    setFormData({ name, phone });
+                }
+            } else {
+                // High-fidelity fallback simulation for desktop/non-supported browsers
+                await new Promise(resolve => setTimeout(resolve, 800));
+                // Just to demonstrate the UI flow when native API isn't present
+                alert("The Web Contact Picker is only available on supported mobile browsers (Chrome Android/Safari iOS).");
+            }
+        } catch (err) {
+            console.error("Phonebook access error", err);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const handleSend = (e: React.FormEvent) => {
+        e.preventDefault();
+        const inviteLink = generateProductDeepLink('portal', user.id);
+        const message = `Hi ${formData.name || 'there'}, ${user.businessName} is using Platform Zero to trade fresh produce. Connect with us here: ${inviteLink}`;
+        
+        // This triggers the native SMS app
+        triggerNativeSms(formData.phone, message);
+        
+        // In the mock world, we'll assume the connection is made so they appear in the directory
+        mockService.onboardNewBusiness({
+          type: 'Supplier',
+          businessName: formData.name || 'New Partner',
+          email: `${formData.name.toLowerCase().replace(/\s/g, '')}@example.com`,
+          phone: formData.phone,
+          abn: 'N/A',
+          address: 'VIC, Australia',
+          customerType: 'Partner',
+          role: UserRole.FARMER // Mock role
+        });
+        
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Invite Partner</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2"><X size={24}/></button>
+                </div>
+                
+                {/* PRIMARY ACTION: SYNC FROM PHONE BOOK */}
+                <div className="px-8 pt-8">
+                    <button 
+                        onClick={handleSyncFromPhonebook}
+                        disabled={isSyncing}
+                        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all active:scale-95 shadow-xl shadow-indigo-100 disabled:opacity-50"
+                    >
+                        {isSyncing ? <Loader2 size={18} className="animate-spin"/> : <BookOpen size={18} strokeWidth={2.5}/>}
+                        <span>Select from Phone Book</span>
+                    </button>
+                    <div className="flex items-center gap-4 my-8">
+                        <div className="flex-1 h-px bg-gray-100"></div>
+                        <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">OR MANUAL ENTRY</span>
+                        <div className="flex-1 h-px bg-gray-100"></div>
+                    </div>
+                </div>
+
+                <form onSubmit={handleSend} className="p-8 pt-0 space-y-8">
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block text-[11px] font-black text-[#94a3b8] uppercase tracking-widest mb-3 ml-1">Partner Name</label>
+                            <div className="relative group">
+                                <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={20}/>
+                                <input 
+                                    required 
+                                    placeholder="Full Name" 
+                                    className="w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-100 rounded-2xl outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 font-bold text-slate-900 transition-all" 
+                                    value={formData.name} 
+                                    onChange={e => setFormData({...formData, name: e.target.value})} 
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-[11px] font-black text-[#94a3b8] uppercase tracking-widest mb-3 ml-1">Mobile Number</label>
+                            <div className="relative group">
+                                <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={20}/>
+                                <input 
+                                    required 
+                                    type="tel" 
+                                    placeholder="0400 000 000" 
+                                    className="w-full pl-12 pr-4 py-4 bg-white border-2 border-emerald-500 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 font-bold text-slate-900 transition-all shadow-sm" 
+                                    value={formData.phone} 
+                                    onChange={e => setFormData({...formData, phone: e.target.value})} 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        className="w-full py-5 bg-[#043003] text-white rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                    >
+                        <Send size={18} strokeWidth={2.5}/> Send Invite SMS
+                    </button>
+                    
+                    <p className="text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                        This will open your native messaging app
+                    </p>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 export const Contacts: React.FC<ContactsProps> = ({ user }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   const targetId = queryParams.get('id');
 
@@ -23,29 +156,37 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isManualInviteOpen, setIsManualInviteOpen] = useState(false);
   const [myInventory, setMyInventory] = useState<InventoryItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   
+  const [directory, setDirectory] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Show all wholesalers/farmers except current user
+    const all = mockService.getAllUsers().filter(u => u.id !== user.id && (u.role === UserRole.WHOLESALER || u.role === UserRole.FARMER));
+    setDirectory(all);
+
     if (targetId) {
-      const found = mockService.getAllUsers().find(u => u.id === targetId);
+      const found = all.find(u => u.id === targetId);
       if (found) {
         setActiveContact(found);
-        // Load persistent messages from mockService
         const chatHistory = mockService.getChatMessages(user.id, targetId);
         setMessages(chatHistory);
         
-        // Seed if first time ever chatting
         if (chatHistory.length === 0) {
             mockService.sendChatMessage(targetId, user.id, `Hi ${user.name.split(' ')[0]}, thanks for reaching out. We are looking for fresh stock this morning.`);
             setMessages(mockService.getChatMessages(user.id, targetId));
         }
       }
+    } else {
+      setActiveContact(null);
     }
     
-    // Load my items for sharing
     setMyInventory(mockService.getInventory(user.id));
     setProducts(mockService.getAllProducts());
   }, [targetId, user.id]);
@@ -54,18 +195,29 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, activeContact]);
 
+  const handleAddFromDevice = async () => {
+    setIsManualInviteOpen(true);
+  };
+
   const handleSendMessage = (text: string, isProductLink = false, productId?: string) => {
     if (!activeContact || (!text.trim() && !isProductLink)) return;
 
-    // Send via service for persistence
+    // Send the message via service
     mockService.sendChatMessage(user.id, activeContact.id, text, isProductLink, productId);
     
-    // Refresh local UI
-    setMessages(mockService.getChatMessages(user.id, activeContact.id));
+    // TRADITIONAL APP BEHAVIOR: Trigger a notification in the receiver's portal
+    mockService.addAppNotification(
+        activeContact.id, 
+        'New Message Received', 
+        `${user.businessName} sent you a message: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"`, 
+        'SYSTEM', 
+        `/contacts?id=${user.id}`
+    );
 
+    setMessages(mockService.getChatMessages(user.id, activeContact.id));
     if (!isProductLink) setInputText('');
     
-    // Auto-reply simulation for specific demo users
+    // Simulate active reply for specific demo wholesaler
     if (activeContact.id === 'u2') {
         setTimeout(() => {
             mockService.sendChatMessage(activeContact.id, user.id, "Thanks, looking into this now. Will confirm details shortly.");
@@ -85,24 +237,103 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
     setIsShareModalOpen(false);
   };
 
+  const filteredDirectory = directory.filter(c => 
+    c.businessName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    c.role.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (!activeContact) {
       return (
-          <div className="flex flex-col items-center justify-center h-[70vh] text-center space-y-4 animate-in fade-in duration-500">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center text-gray-300">
-                  <MessageCircle size={48} />
-              </div>
-              <div>
-                  <h2 className="text-2xl font-black text-gray-900 tracking-tight">Direct Network Messaging</h2>
-                  <p className="text-gray-500 max-w-sm mt-2 font-medium">Select a contact from the sidebar to start negotiating or sharing product links.</p>
-              </div>
+          <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Network Directory</h1>
+                    <p className="text-gray-500 font-medium">Connect with verified farms and wholesalers in the Platform Zero network.</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                    <div className="relative flex-1 md:w-80">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input 
+                            type="text" 
+                            placeholder="Search partners..." 
+                            value={searchTerm} 
+                            onChange={(e) => setSearchTerm(e.target.value)} 
+                            className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl text-sm font-bold text-gray-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm"
+                        />
+                    </div>
+                    
+                    <button 
+                        onClick={handleAddFromDevice}
+                        className="bg-[#000000] text-white px-10 py-4 rounded-full font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[#111111] transition-all shadow-xl active:scale-95 min-w-[200px]"
+                    >
+                        <UserPlus size={18} strokeWidth={2.5}/>
+                        <span>Add Contact</span>
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredDirectory.map(contact => (
+                    <div 
+                        key={contact.id} 
+                        onClick={() => navigate(`/contacts?id=${contact.id}`)}
+                        className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all group cursor-pointer flex flex-col justify-between"
+                    >
+                        <div className="flex items-start justify-between mb-6">
+                            <div className={`w-16 h-16 rounded-[1.25rem] flex items-center justify-center font-black text-2xl shadow-inner-sm ${
+                                contact.role === UserRole.FARMER ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                            }`}>
+                                {contact.businessName.charAt(0)}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-emerald-500 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 shadow-sm">
+                                <UserCheck size={14}/>
+                                <span className="text-[10px] font-black uppercase tracking-widest">Verified</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 className="text-2xl font-black text-gray-900 tracking-tight group-hover:text-emerald-900 mb-1">{contact.businessName}</h3>
+                            <p className="text-sm font-bold text-indigo-600 uppercase tracking-[0.15em] opacity-60 mb-6">{contact.role}</p>
+                            
+                            <div className="space-y-2 mb-8">
+                                <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase">
+                                    <MapPin size={16} className="text-gray-300"/> Melbourne Regional
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase">
+                                    <Tag size={16} className="text-gray-300"/> 12+ Seasonal Products
+                                </div>
+                            </div>
+                        </div>
+
+                        <button className="w-full py-4 bg-gray-50 text-gray-400 group-hover:bg-emerald-600 group-hover:text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-emerald-100">
+                            <MessageCircle size={18}/> Start Conversation
+                        </button>
+                    </div>
+                ))}
+                
+                <div 
+                    onClick={() => setIsManualInviteOpen(true)}
+                    className="border-4 border-dashed border-gray-100 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center group hover:bg-emerald-50/30 hover:border-emerald-200 transition-all cursor-pointer min-h-[360px]"
+                >
+                    <div className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <Plus size={32} className="text-gray-300 group-hover:text-emerald-500"/>
+                    </div>
+                    <h3 className="text-xl font-black text-gray-400 group-hover:text-emerald-900 tracking-tight uppercase mb-2">Invite Others</h3>
+                    <p className="text-sm text-gray-400 font-medium max-w-[200px]">Send an SMS invitation to any wholesaler or farmer.</p>
+                </div>
+            </div>
+
+            <ManualInviteModal 
+                isOpen={isManualInviteOpen} 
+                onClose={() => setIsManualInviteOpen(false)} 
+                user={user} 
+            />
           </div>
       );
   }
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-      
-      {/* HEADER */}
       <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
         <div className="flex items-center gap-4">
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm ${
@@ -119,22 +350,22 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
           </div>
         </div>
         <div className="flex gap-2">
+            <button 
+                onClick={() => navigate('/contacts')}
+                className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-400 hover:text-gray-600 transition-all shadow-sm flex items-center gap-2 px-4"
+            >
+                <ArrowLeft size={18}/>
+                <span className="text-xs font-black uppercase tracking-widest hidden sm:block">Back to directory</span>
+            </button>
             <button className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-400 hover:text-indigo-600 transition-all shadow-sm"><Phone size={18}/></button>
             <button className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-400 hover:text-indigo-600 transition-all shadow-sm"><Info size={18}/></button>
         </div>
       </div>
 
-      {/* CHAT AREA */}
       <div 
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/30 custom-scrollbar"
       >
-        <div className="text-center py-4">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] bg-white border border-gray-100 px-4 py-1.5 rounded-full shadow-sm">
-                Messaging encrypted via Platform Zero Secure
-            </span>
-        </div>
-
         {messages.map(msg => {
           const isMe = msg.senderId === user.id;
           return (
@@ -165,7 +396,6 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
         })}
       </div>
 
-      {/* INPUT AREA */}
       <div className="p-6 border-t border-gray-100 bg-white">
         <div className="flex gap-4 items-center">
             <button 
@@ -178,7 +408,7 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
             <div className="flex-1 relative">
                 <input 
                     type="text" 
-                    placeholder="Type a message or share a link..."
+                    placeholder="Type a message..."
                     className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl p-4 pr-12 font-bold text-gray-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all placeholder-gray-400"
                     value={inputText}
                     onChange={e => setInputText(e.target.value)}
@@ -195,9 +425,8 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
         </div>
       </div>
 
-      {/* SHARE PRODUCT MODAL */}
       {isShareModalOpen && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-md p-4">
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
               <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                   <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                       <div>

@@ -57,14 +57,14 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
       reader.onloadend = () => {
         const base64String = reader.result as string;
         setImage(base64String);
-        analyzeImage(base64String.split(',')[1]); 
+        analyseImage(base64String.split(',')[1]); 
       };
       reader.readAsDataURL(file);
     }
     setShowSourceMenu(false);
   };
 
-  const analyzeImage = async (base64Data: string) => {
+  const analyseImage = async (base64Data: string) => {
     setIsAnalyzing(true);
     setAnalysisResult(null);
     setMatchedBuyers([]);
@@ -78,7 +78,7 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
         setMatchedBuyers(buyers);
     } catch (error) {
         console.error("Analysis failed", error);
-        alert("Could not analyze image. Please try again.");
+        alert("Could not analyse image. Please try again.");
     } finally {
         setIsAnalyzing(false);
     }
@@ -133,7 +133,7 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
         reader.onloadend = () => {
           const base64String = reader.result as string;
           setImage(base64String);
-          analyzeImage(base64String.split(',')[1]);
+          analyseImage(base64String.split(',')[1]);
         };
         reader.readAsDataURL(file);
     }

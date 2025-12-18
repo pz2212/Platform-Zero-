@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Order, InventoryItem, Product, SupplierPriceRequest, Driver, Packer, OrderItem, Customer } from '../types';
+import { User, Order, InventoryItem, Product, SupplierPriceRequest, Driver, Packer, OrderItem, Customer, SupplierPriceRequestItem } from '../types';
 import { mockService } from '../services/mockDataService';
 import { AiOpportunityMatcher } from './AiOpportunityMatcher';
 import { ConsumerOnboarding } from './ConsumerOnboarding';
@@ -9,12 +9,142 @@ import { Settings as SettingsComponent } from './Settings';
 import { 
   Package, Truck, MapPin, AlertTriangle, LayoutDashboard, 
   Tags, Users, Clock, CheckCircle, Store, X, UploadCloud, 
-  DollarSign, Camera, Check, ChevronDown, Info, Trash2, Search, Bell, Settings, GitPullRequest, ScanLine, FileWarning, Lock
+  DollarSign, Camera, Check, ChevronDown, Info, Trash2, Search, Bell, Settings, GitPullRequest, ScanLine, FileWarning, Lock, Send, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
 }
+
+/* MODAL FOR PARTNERS TO REVIEW AND SUBMIT PRICING */
+const PriceRequestModal: React.FC<{
+    request: SupplierPriceRequest;
+    onClose: () => void;
+    onSubmit: (requestId: string, items: SupplierPriceRequestItem[]) => void;
+}> = ({ request, onClose, onSubmit }) => {
+    const [matchStatus, setMatchStatus] = useState<Record<string, 'YES' | 'NO' | null>>({});
+    const [customPrices, setCustomPrices] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        const initialMatch: Record<string, 'YES' | 'NO' | null> = {};
+        const initialPrices: Record<string, string> = {};
+        request.items.forEach(item => {
+            initialMatch[item.productId] = null;
+            initialPrices[item.productId] = '';
+        });
+        setMatchStatus(initialMatch);
+        setCustomPrices(initialPrices);
+    }, [request]);
+
+    const handleMatchChoice = (productId: string, choice: 'YES' | 'NO') => {
+        setMatchStatus(prev => ({ ...prev, [productId]: choice }));
+        if (choice === 'YES') {
+            const item = request.items.find(i => i.productId === productId);
+            setCustomPrices(prev => ({ ...prev, [productId]: item?.targetPrice.toString() || '' }));
+        }
+    };
+
+    const handlePriceChange = (productId: string, val: string) => {
+        setCustomPrices(prev => ({ ...prev, [productId]: val }));
+    };
+
+    const isFormValid = request.items.every(item => matchStatus[item.productId] !== null);
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-gray-100">
+                <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <div>
+                        <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Bulk Pricing Request</h2>
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Lead: {request.customerContext} • {request.customerLocation}</p>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm border border-gray-100"><X size={20}/></button>
+                </div>
+
+                <div className="p-8 flex-1 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-8 border-l-4 border-indigo-500 pl-4">
+                        Please review our target prices. Select 'YES' to match or 'NO' to provide your best alternative.
+                    </p>
+                    
+                    <div className="space-y-6">
+                        {request.items.map((item, idx) => (
+                            <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group transition-all hover:bg-white hover:shadow-md">
+                                <div className="mb-4 sm:mb-0">
+                                    <h4 className="font-black text-gray-900 text-lg tracking-tight leading-tight">{item.productName}</h4>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Target Price:</span>
+                                        <span className="text-sm font-black text-indigo-600">${item.targetPrice.toFixed(2)} / kg</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="flex bg-white p-1 rounded-xl border border-gray-200 shadow-inner-sm">
+                                        <button 
+                                            onClick={() => handleMatchChoice(item.productId, 'YES')}
+                                            className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                                                matchStatus[item.productId] === 'YES' 
+                                                ? 'bg-emerald-600 text-white shadow-lg' 
+                                                : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
+                                            }`}
+                                        >
+                                            <ThumbsUp size={14}/> YES
+                                        </button>
+                                        <button 
+                                            onClick={() => handleMatchChoice(item.productId, 'NO')}
+                                            className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                                                matchStatus[item.productId] === 'NO' 
+                                                ? 'bg-red-600 text-white shadow-lg' 
+                                                : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                                            }`}
+                                        >
+                                            <ThumbsDown size={14}/> NO
+                                        </button>
+                                    </div>
+
+                                    {matchStatus[item.productId] === 'NO' && (
+                                        <div className="relative w-32 animate-in slide-in-from-right-2">
+                                            <span className="absolute left-3 top-2.5 text-gray-400 font-bold text-xs">$</span>
+                                            <input 
+                                                type="number"
+                                                step="0.01"
+                                                placeholder="Offer"
+                                                className="w-full pl-6 pr-3 py-2 bg-white border-2 border-red-100 rounded-xl text-sm font-black text-right focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none"
+                                                value={customPrices[item.productId]}
+                                                onChange={(e) => handlePriceChange(item.productId, e.target.value)}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="p-8 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row justify-between items-center gap-6">
+                    <div className="flex items-center gap-3 text-gray-400">
+                        <Info size={18}/>
+                        <p className="text-[10px] font-bold uppercase tracking-widest leading-tight max-w-[200px]">
+                            Once submitted, PZ Admin will review your offers to finalize the lead.
+                        </p>
+                    </div>
+                    
+                    <div className="flex gap-3 w-full sm:w-auto">
+                        <button onClick={onClose} className="flex-1 sm:flex-none px-8 py-4 bg-white border border-gray-200 rounded-2xl font-black text-[10px] uppercase tracking-widest text-gray-500 hover:bg-gray-100 transition-all">
+                            Cancel
+                        </button>
+                        <button 
+                            disabled={!isFormValid}
+                            onClick={() => onSubmit(request.id, request.items.map(i => ({...i, offeredPrice: parseFloat(customPrices[i.productId])})))}
+                            className="flex-[2] sm:flex-none px-12 py-4 bg-[#0F172A] text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:scale-100"
+                        >
+                            <Send size={16}/> Submit Quote
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 /* HIGH FIDELITY PACKING LIST MODAL */
 const PackingListModal: React.FC<{
@@ -44,8 +174,8 @@ const PackingListModal: React.FC<{
         const product = mockService.getProduct(productId);
         const productName = product?.name || 'Unknown Item';
         
-        mockService.addNotification('u1', `URGENT: Order #${order.id} - Issue reported for ${productName}: ${issue}`);
-        mockService.addNotification(order.buyerId, `Status update for Order #${order.id}: A packing issue has been reported for ${productName} (${issue}). Platform Zero is resolving this for you.`);
+        mockService.addAppNotification('u1', 'Packing Issue Reported', `URGENT: Order #${order.id} - Issue reported for ${productName}: ${issue}`, 'SYSTEM', '/');
+        mockService.addAppNotification(order.buyerId, 'Order Update', `Status update for Order #${order.id}: A packing issue has been reported for ${productName} (${issue}). Platform Zero is resolving this for you.`, 'ORDER', '/orders');
         setPackedItems(prev => ({ ...prev, [productId]: false }));
     };
 
@@ -232,7 +362,7 @@ const PackingListModal: React.FC<{
                     <button 
                         onClick={() => onComplete(selectedPacker, selectedDriver, proofPhoto || '')}
                         disabled={packedCount + Object.keys(itemIssues).length < totalItems || !selectedDriver || !selectedPacker}
-                        className="px-10 py-3 bg-[#0F172A] text-white rounded-xl font-bold shadow-lg hover:bg-black disabled:opacity-50 transition-all uppercase tracking-widest text-xs"
+                        className="px-10 py-3 bg-[#0F172A] text-white rounded-xl font-black uppercase tracking-widest text-xs"
                     >
                         Packing completed
                     </button>
@@ -255,6 +385,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   // UI / Modal States
   const [packingOrder, setPackingOrder] = useState<Order | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<SupplierPriceRequest | null>(null);
 
   useEffect(() => {
     loadData();
@@ -304,6 +435,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     alert(`Order #${packingOrder.id.split('-')[1]} is fully packed and ready!`);
   };
 
+  const handleSubmitOffer = (reqId: string, updatedItems: SupplierPriceRequestItem[]) => {
+      const original = priceRequests.find(r => r.id === reqId);
+      if (original) {
+          mockService.updateSupplierPriceRequest(reqId, {
+              ...original,
+              items: updatedItems,
+              status: 'SUBMITTED'
+          });
+          setSelectedRequest(null);
+          loadData();
+          alert("Offer submitted to Platform Zero Admin!");
+      }
+  };
+
   const pendingAcceptance = orders.filter(o => o.status === 'Pending');
   const acceptedOrders = orders.filter(o => o.status === 'Confirmed' || o.status === 'Ready for Delivery' || o.status === 'Shipped');
   const fulfilledOrders = orders.filter(o => o.status === 'Delivered');
@@ -316,42 +461,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <div className="mb-6 flex justify-between items-end">
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-            <h1 className="text-3xl font-extrabold text-[#0F172A] tracking-tight">Partner Operations</h1>
-            <p className="text-gray-500 mt-1 text-lg">Manage orders, price requests, and network.</p>
+            <h1 className="text-2xl md:text-3xl font-black text-[#0F172A] tracking-tight">Partner Operations</h1>
+            <p className="text-gray-500 mt-1 text-base md:text-lg">Manage orders, price requests, and network.</p>
         </div>
-        <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 rounded-xl text-blue-600 font-bold text-sm hover:bg-blue-50 shadow-sm transition-all">
-                <Truck size={18}/> Driver Logistics
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600 border border-emerald-500 rounded-xl text-white font-bold text-sm hover:bg-emerald-700 shadow-md transition-all">
-                <ScanLine size={18}/> Rapid Capture
+        <div className="flex gap-2 w-full md:w-auto">
+            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-blue-200 rounded-xl text-blue-600 font-bold text-xs md:text-sm hover:bg-blue-50 shadow-sm transition-all whitespace-nowrap">
+                <Truck size={16}/> Driver Logistics
             </button>
         </div>
       </div>
 
-      {/* ONBOARDING WARNING BANNER */}
+      {/* ONBOARDING WARNING BANNER - COMPACTED */}
       {!isProfileComplete && (
-          <div className="bg-amber-50 border-2 border-amber-200 rounded-[2rem] p-8 flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4">
-              <div className="bg-white p-4 rounded-2xl text-amber-600 shadow-sm border border-amber-100">
-                  <FileWarning size={32} />
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 animate-in slide-in-from-top-4">
+              <div className="bg-white p-3 rounded-xl text-amber-600 shadow-sm border border-amber-100 hidden md:block">
+                  <FileWarning size={24} />
               </div>
               <div className="flex-1 text-center md:text-left">
-                  <h2 className="text-xl font-black text-amber-900 uppercase tracking-tight">Onboarding Documents Pending</h2>
-                  <p className="text-amber-800 font-medium mt-1">Platform Zero has connected you to marketplace traffic, but you cannot <span className="font-black">Accept</span> or <span className="font-black">Pack</span> orders until your business profile is complete.</p>
+                  <h2 className="text-sm md:text-base font-black text-amber-900 uppercase tracking-tight">Onboarding Documents Pending</h2>
+                  <p className="text-amber-800 text-xs md:text-sm font-medium mt-0.5">Please complete your business profile in settings to unlock full marketplace fulfillment.</p>
               </div>
               <button 
                 onClick={() => setActiveTab('Settings')}
-                className="px-8 py-3 bg-amber-600 text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg hover:bg-amber-700 transition-all whitespace-nowrap"
+                className="w-full md:w-auto px-6 py-2 bg-amber-600 text-white rounded-lg font-black uppercase tracking-widest text-[10px] shadow-md hover:bg-amber-700 transition-all whitespace-nowrap"
               >
-                  Complete Setup Now
+                  Complete Setup
               </button>
           </div>
       )}
 
       {/* Tabs Row */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         {[
             { name: 'Order Management', icon: LayoutDashboard },
             { name: 'Sell', icon: Package },
@@ -362,13 +504,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           <button 
             key={tab.name}
             onClick={() => setActiveTab(tab.name)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap ${
                 activeTab === tab.name 
                 ? 'bg-[#0F172A] text-white shadow-lg' 
                 : 'text-[#64748B] hover:bg-gray-100'
             }`}
           >
-            <tab.icon size={18} />
+            <tab.icon size={16} />
             {tab.name}
             {tab.badge ? <span className="bg-red-50 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{tab.badge}</span> : null}
           </button>
@@ -376,38 +518,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       </div>
 
       {activeTab === 'Order Management' && (
-        <div className="space-y-8">
+        <div className="space-y-6">
           
-          {/* URGENT RED BANNER */}
+          {/* URGENT RED BANNER - NEAT & TIDY */}
           {pendingAcceptance.length > 0 && (
-            <div className="bg-[#FEF2F2] border border-[#FEE2E2] rounded-[2rem] p-8 space-y-6 animate-in slide-in-from-top-4 duration-500 shadow-sm">
-              <div className="flex items-start gap-4">
-                <div className="bg-white p-2.5 rounded-full shadow-md text-red-600 border border-red-100">
-                  <AlertTriangle size={24} />
+            <div className="bg-[#FEF2F2] border border-[#FEE2E2] rounded-2xl p-4 md:p-6 space-y-4 animate-in slide-in-from-top-4 duration-500 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="bg-white p-1.5 rounded-lg shadow-sm text-red-600 border border-red-100">
+                  <AlertTriangle size={20} />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-[#991B1B]">Urgent: Orders Awaiting Acceptance</h2>
-                  <p className="text-[#B91C1C] font-semibold mt-1">You have {pendingAcceptance.length} orders that need to be accepted within 60 minutes</p>
+                  <h2 className="text-sm md:text-base font-black text-[#991B1B] uppercase tracking-tight">Orders Awaiting Acceptance</h2>
+                  <p className="text-[#B91C1C] text-xs md:text-sm font-semibold">{pendingAcceptance.length} orders need acceptance within 60 minutes</p>
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {pendingAcceptance.map(order => {
                   const customer = mockService.getCustomers().find(c => c.id === order.buyerId);
                   return (
-                    <div key={order.id} className="bg-white rounded-2xl p-5 border border-red-100 shadow-sm flex justify-between items-center hover:shadow-md transition-all group cursor-pointer" onClick={() => setPackingOrder(order)}>
-                      <div>
-                        <h4 className="text-lg font-black text-gray-900 tracking-tight">{customer?.businessName || 'Fresh Market Co'}</h4>
-                        <p className="text-xs text-red-600 font-bold mt-0.5 uppercase tracking-wider">Order #{order.id.split('-')[1] || '1001'} • ${order.totalAmount.toFixed(2)}</p>
+                    <div key={order.id} className="bg-white rounded-xl p-3 md:p-4 border border-red-100 shadow-sm flex justify-between items-center hover:border-red-300 transition-all group cursor-pointer" onClick={() => setPackingOrder(order)}>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm md:text-base font-black text-gray-900 tracking-tight truncate">{customer?.businessName || 'Fresh Market Co'}</h4>
+                        <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider">#{order.id.split('-')[1] || '1001'} • ${order.totalAmount.toFixed(2)}</p>
                       </div>
-                      <div className="text-right flex flex-col items-end">
-                        <div className="flex items-center gap-2 text-red-600 font-black mb-1">
-                          <Clock size={18} className="animate-pulse" />
-                          <span>30 min left</span>
+                      <div className="text-right flex flex-col items-end ml-4">
+                        <div className="flex items-center gap-1.5 text-red-600 font-black text-xs">
+                          <Clock size={14} className="animate-pulse" />
+                          <span>30m left</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                           <span className="text-[10px] font-black uppercase text-red-400 tracking-[0.2em]">URGENT • {order.items.length} items</span>
-                        </div>
+                        <span className="text-[9px] font-black uppercase text-red-400 tracking-widest mt-1 hidden sm:block">URGENT</span>
                       </div>
                     </div>
                   );
@@ -416,53 +556,49 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
               <button 
                 onClick={() => setOrderSubTab('Pending Acceptance')}
-                className="w-full py-4 bg-[#EF4444] hover:bg-[#DC2626] text-white font-black rounded-2xl shadow-xl shadow-red-100 transition-all uppercase tracking-[0.2em] text-xs"
+                className="w-full py-2.5 bg-[#EF4444] hover:bg-[#DC2626] text-white font-black rounded-xl shadow-md transition-all uppercase tracking-widest text-[10px]"
               >
-                View All Pending Orders
+                View All Pending
               </button>
             </div>
           )}
 
-          {/* MAIN WORKSPACE */}
-          <div className="bg-white border border-gray-100 rounded-[2.5rem] p-10 shadow-sm space-y-10">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          {/* MAIN WORKSPACE - REFACTORED TO BE NEATER */}
+          <div className="bg-white border border-gray-100 rounded-3xl p-4 md:p-8 shadow-sm space-y-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-50 pb-4">
                 <div>
-                    <h2 className="text-3xl font-black text-gray-900 tracking-tight">Order Management</h2>
-                    <p className="text-gray-600 font-medium mt-1">Manage orders assigned to you by Platform Zero. Accept, fulfill, and track orders.</p>
+                    <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Order Queue</h2>
+                    <p className="text-gray-500 font-medium text-xs md:text-sm mt-0.5">Assigned by Platform Zero Marketplace.</p>
                 </div>
-                <div className="flex items-center gap-6 self-end md:self-center">
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                        Auto-refresh: 30 seconds | <span className="text-emerald-500">Live countdown updates</span>
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="hidden lg:flex items-center gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Live Updates
                     </div>
-                    {pendingAcceptance.length > 0 && (
-                        <div className="bg-[#FFF7ED] text-[#EA580C] px-5 py-2.5 rounded-full border border-[#FED7AA] flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-sm animate-pulse">
-                            <Bell size={16}/> {pendingAcceptance.length} orders need acceptance
-                        </div>
-                    )}
                 </div>
               </div>
 
-              {/* Sub-Tabs */}
-              <div className="flex flex-wrap bg-gray-100/50 p-1.5 rounded-2xl w-fit border border-gray-100">
-                  {['Pending Acceptance', 'Accepted', 'Fulfilled', 'Expired'].map(t => (
+              {/* Sub-Tabs - NEATER */}
+              <div className="flex gap-1 bg-gray-100/50 p-1 rounded-xl w-full md:w-fit overflow-x-auto no-scrollbar">
+                  {['Pending Acceptance', 'Accepted', 'Fulfilled'].map(t => (
                       <button 
                         key={t}
                         onClick={() => setOrderSubTab(t)}
-                        className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-3 ${orderSubTab === t ? 'bg-white text-gray-900 shadow-md border border-gray-100 scale-105' : 'text-gray-400 hover:text-gray-600'}`}
+                        className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 whitespace-nowrap ${orderSubTab === t ? 'bg-white text-gray-900 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'}`}
                       >
-                          {t}
-                          {t === 'Pending Acceptance' && pendingAcceptance.length > 0 && <span className="bg-orange-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center animate-bounce">{pendingAcceptance.length}</span>}
-                          {t === 'Accepted' && acceptedOrders.length > 0 && <span className="bg-blue-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{acceptedOrders.length}</span>}
+                          {t.split(' ')[0]}
+                          {t === 'Pending Acceptance' && pendingAcceptance.length > 0 && <span className="bg-orange-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{pendingAcceptance.length}</span>}
+                          {t === 'Accepted' && acceptedOrders.length > 0 && <span className="bg-blue-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{acceptedOrders.length}</span>}
                       </button>
                   ))}
               </div>
 
-              {/* YELLOW CARDS LIST */}
-              <div className="space-y-8">
+              {/* REFACTORED COMPACT CARDS */}
+              <div className="space-y-4">
                 {displayedOrders.length === 0 ? (
-                    <div className="py-24 text-center flex flex-col items-center">
-                        <div className="bg-gray-50 p-6 rounded-full text-gray-200 mb-6"><CheckCircle size={80}/></div>
-                        <p className="text-gray-400 font-black uppercase tracking-[0.3em] text-xs">No orders in this category.</p>
+                    <div className="py-16 text-center flex flex-col items-center">
+                        <div className="bg-gray-50 p-4 rounded-full text-gray-200 mb-4"><CheckCircle size={40}/></div>
+                        <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">No orders currently</p>
                     </div>
                 ) : displayedOrders.map(order => {
                     const customer = mockService.getCustomers().find(c => c.id === order.buyerId);
@@ -471,84 +607,80 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                     return (
                         <div 
                             key={order.id} 
-                            className="bg-[#FFFDF0] rounded-[2rem] border-2 border-[#FDE68A] p-10 shadow-sm hover:shadow-xl transition-all relative group animate-in fade-in zoom-in-95 duration-300"
+                            className="bg-[#FFFDF6] rounded-2xl border border-[#FDE68A] p-4 md:p-6 shadow-sm hover:border-[#FBBF24] transition-all relative group animate-in fade-in zoom-in-95 duration-200"
                         >
-                            <div className="flex flex-col lg:flex-row justify-between gap-12">
-                                <div className="flex-1 space-y-10">
-                                    <div className="flex items-center gap-5">
-                                        <h3 className="text-3xl font-black text-[#1E293B] tracking-tight">{customer?.businessName || 'Healthy Eats Restaurant'}</h3>
+                            <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start md:items-center">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                                        <h3 className="text-base md:text-lg font-black text-[#1E293B] tracking-tight truncate">{customer?.businessName || 'Healthy Eats Restaurant'}</h3>
                                         {order.priority && (
-                                            <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] shadow-sm ${order.priority === 'URGENT' ? 'bg-[#EF4444] text-white' : 'bg-[#EA580C] text-white'}`}>
+                                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${order.priority === 'URGENT' ? 'bg-[#EF4444] text-white' : 'bg-[#EA580C] text-white'}`}>
                                                 {order.priority}
                                             </span>
                                         )}
                                     </div>
+                                    <p className="text-[10px] text-[#B45309]/60 font-black uppercase tracking-widest">ORDER #{order.id.split('-')[1] || '1002'}</p>
                                     
-                                    <p className="text-[#B45309] font-black text-xs uppercase tracking-[0.2em] opacity-60">Order #{order.id.split('-')[1] || '1002'}</p>
-
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-12 border-t border-[#FEF3C7] pt-8">
+                                    <div className="mt-4 flex flex-wrap gap-4 md:gap-8">
                                         <div>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Total Amount</p>
-                                            <p className="text-3xl font-black text-[#1E293B]">${order.totalAmount.toFixed(2)}</p>
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Amount</p>
+                                            <p className="text-sm md:text-base font-black text-[#1E293B]">${order.totalAmount.toFixed(2)}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Items</p>
-                                            <p className="text-3xl font-black text-[#1E293B]">{order.items.length} products</p>
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Qty</p>
+                                            <p className="text-sm md:text-base font-black text-[#1E293B]">{order.items.length} skus</p>
                                         </div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Delivery Date</p>
-                                            <p className="text-3xl font-black text-[#1E293B]">Dec 18, 2025</p>
+                                        <div className="hidden sm:block">
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Delivery</p>
+                                            <p className="text-sm md:text-base font-black text-[#1E293B]">Dec 18</p>
                                         </div>
                                     </div>
-
-                                    {order.customerNotes && (
-                                        <div className="bg-[#EFF6FF] border border-[#BFDBFE] p-8 rounded-2xl shadow-inner-sm">
-                                            <p className="text-xs font-black text-[#1D4ED8] uppercase tracking-[0.1em] mb-2 flex items-center gap-2"><Info size={14}/> Customer Notes:</p>
-                                            <p className="text-sm text-[#1E40AF] font-medium leading-relaxed italic">"{order.customerNotes}"</p>
-                                        </div>
-                                    )}
                                 </div>
 
-                                <div className="w-full lg:w-64 flex flex-col justify-between items-end border-l border-[#FEF3C7] lg:pl-10">
-                                    <div className="text-right">
-                                        <p className="text-5xl font-black text-[#B45309] tracking-tighter mb-1">30 min</p>
-                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em]">Time remaining</p>
+                                {/* RIGHT SIDE - ACTIONS & STATUS */}
+                                <div className="w-full md:w-auto flex flex-col md:items-end justify-between min-h-[80px] md:border-l border-[#FEF3C7] md:pl-8">
+                                    <div className="text-left md:text-right mb-4 md:mb-0 flex md:flex-col items-center md:items-end gap-2 md:gap-0">
+                                        <p className="text-2xl md:text-3xl font-black text-[#B45309] tracking-tighter">30 min</p>
+                                        <p className="text-[8px] text-gray-400 font-black uppercase tracking-widest">Fulfillment Window</p>
                                     </div>
 
-                                    <div className="w-full space-y-4">
+                                    <div className="flex gap-2 w-full md:w-auto">
                                         <button 
                                             onClick={() => setPackingOrder(order)}
-                                            className="w-full py-3.5 bg-white border-2 border-gray-200 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:bg-gray-50 transition-all shadow-sm"
+                                            className="p-2.5 md:p-3 bg-white border border-gray-200 rounded-xl text-gray-400 hover:text-gray-600 transition-all hover:bg-gray-50 flex items-center justify-center"
+                                            title="Order Details"
                                         >
-                                            View Full Details
+                                            <Search size={16}/>
                                         </button>
-                                        <div className="flex gap-3">
-                                            {!isAccepted && (
-                                                <button 
-                                                    onClick={() => handleRejectOrder(order)}
-                                                    className="flex-1 py-4 bg-white border-2 border-red-100 text-red-500 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-50 transition-all shadow-sm"
-                                                >
-                                                    Reject
-                                                </button>
-                                            )}
+
+                                        {!isAccepted && (
                                             <button 
-                                                onClick={() => isAccepted ? setPackingOrder(order) : handleAcceptOrder(order)}
-                                                className={`flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:scale-105 transition-all text-white flex items-center justify-center gap-2 ${
-                                                    !isAccepted && !isProfileComplete ? 'bg-gray-400 cursor-not-allowed' :
-                                                    isAccepted ? 'bg-blue-600 hover:bg-blue-700' : 'bg-[#22C55E] hover:bg-[#16A34A]'
-                                                }`}
+                                                onClick={() => handleRejectOrder(order)}
+                                                className="flex-1 md:flex-none px-4 py-2.5 md:py-3 bg-white border border-red-100 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all whitespace-nowrap"
                                             >
-                                                {!isAccepted && !isProfileComplete ? (
-                                                    <><Lock size={14}/> Setup Required</>
-                                                ) : (
-                                                    isAccepted ? 'Pack Order' : 'Accept Order'
-                                                )}
+                                                Reject
                                             </button>
-                                        </div>
-                                        {!isAccepted && !isProfileComplete && (
-                                            <p className="text-[9px] text-red-500 font-bold uppercase tracking-tight text-center mt-2 animate-pulse">Complete Profile to Unlock</p>
                                         )}
+                                        
+                                        <button 
+                                            onClick={() => isAccepted ? setPackingOrder(order) : handleAcceptOrder(order)}
+                                            disabled={!isAccepted && !isProfileComplete}
+                                            className={`flex-1 md:flex-none px-6 md:px-8 py-2.5 md:py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md transition-all text-white flex items-center justify-center gap-2 whitespace-nowrap ${
+                                                !isAccepted && !isProfileComplete ? 'bg-gray-300 cursor-not-allowed shadow-none' :
+                                                isAccepted ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-[#22C55E] hover:bg-[#16A34A]'
+                                            }`}
+                                        >
+                                            {!isAccepted && !isProfileComplete ? (
+                                                <><Lock size={12}/> Setup Required</>
+                                            ) : (
+                                                isAccepted ? 'Start Packing' : 'Accept Order'
+                                            )}
+                                        </button>
                                     </div>
+                                    
+                                    {!isAccepted && !isProfileComplete && (
+                                        <p className="text-[8px] text-red-500 font-bold uppercase text-center mt-1.5 md:w-full block">Sign Docs to Unlock</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -566,39 +698,44 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
       )}
 
-      {/* PRICE REQUESTS TAB */}
+      {/* PRICE REQUESTS TAB - UPDATED TO MATCH SCREENSHOT */}
       {activeTab === 'Price Requests' && (
-        <div className="bg-white border border-gray-100 rounded-[2.5rem] p-10 shadow-sm animate-in fade-in duration-500">
-            <div className="flex justify-between items-center mb-8">
+        <div className="bg-white border border-gray-100 rounded-3xl p-6 md:p-10 shadow-sm animate-in fade-in duration-500">
+            <div className="flex justify-between items-center mb-10">
                 <div>
-                    <h2 className="text-3xl font-black text-gray-900 tracking-tight">Price Requests</h2>
-                    <p className="text-gray-500 font-medium">Respond to bulk pricing inquiries from Platform Zero Admin.</p>
+                    <h2 className="text-xl md:text-3xl font-black text-gray-900 tracking-tight">Price Requests</h2>
+                    <p className="text-gray-500 font-medium text-sm md:text-base">Respond to bulk pricing inquiries from Platform Zero Admin.</p>
                 </div>
             </div>
             {priceRequests.length === 0 ? (
-                <div className="py-32 text-center text-gray-400">
+                <div className="py-20 text-center text-gray-400">
                     <GitPullRequest size={48} className="mx-auto mb-4 opacity-20"/>
                     <p className="font-bold uppercase tracking-widest text-xs">No active price requests.</p>
                 </div>
             ) : (
                 <div className="space-y-4">
                     {priceRequests.map(req => (
-                        <div key={req.id} className="p-6 border border-gray-200 rounded-2xl hover:border-blue-400 transition-all group bg-gray-50/30">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-1">
-                                        <h3 className="font-bold text-gray-900 text-lg">{req.customerContext}</h3>
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${req.status === 'WON' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{req.status}</span>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                                        <span className="flex items-center gap-1"><MapPin size={12}/> {req.customerLocation}</span>
-                                        <span className="flex items-center gap-1"><Clock size={12}/> Received: {new Date(req.createdAt).toLocaleDateString()}</span>
-                                    </div>
+                        <div key={req.id} className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:shadow-md transition-all animate-in zoom-in-95">
+                            <div className="flex flex-wrap items-center gap-4">
+                                <h3 className="font-black text-gray-900 text-lg tracking-tight">{req.customerContext}</h3>
+                                <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                                    req.status === 'PENDING' ? 'bg-orange-50 text-orange-600 border-orange-100' : 
+                                    req.status === 'SUBMITTED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                    'bg-green-50 text-green-700 border-green-100'
+                                }`}>
+                                    {req.status}
+                                </span>
+                                <div className="flex items-center gap-6 text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-wide ml-2">
+                                    <span className="flex items-center gap-1.5"><MapPin size={16} className="text-gray-300"/> {req.customerLocation}</span>
+                                    <span className="flex items-center gap-1.5"><Clock size={16} className="text-gray-300"/> Received: {new Date(req.createdAt).toLocaleDateString()}</span>
                                 </div>
-                                <button className="bg-[#0F172A] text-white px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-black transition-colors">
-                                    Review Items
-                                </button>
                             </div>
+                            <button 
+                                onClick={() => setSelectedRequest(req)}
+                                className="w-full md:w-auto bg-[#0F172A] text-white px-10 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-sm active:scale-95"
+                            >
+                                REVIEW ITEMS
+                            </button>
                         </div>
                     ))}
                 </div>
@@ -608,14 +745,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       {/* CUSTOMERS TAB */}
       {activeTab === 'Customers' && (
-          <div className="bg-white border border-gray-100 rounded-[2.5rem] p-10 shadow-sm animate-in fade-in duration-500">
+          <div className="bg-white border border-gray-100 rounded-3xl p-6 md:p-10 shadow-sm animate-in fade-in duration-500">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h2 className="text-3xl font-black text-gray-900 tracking-tight">Connected Network</h2>
-                    <p className="text-gray-500 font-medium">Manage your relationships and set custom pricing tiers.</p>
+                    <h2 className="text-xl md:text-3xl font-black text-gray-900 tracking-tight">Connected Network</h2>
+                    <p className="text-gray-500 font-medium text-sm md:text-base">Manage your relationships and set custom pricing tiers.</p>
                 </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {customers.filter(c => c.connectedSupplierId === user.id).map(customer => (
                     <div key={customer.id} className="p-6 border border-gray-200 rounded-3xl hover:shadow-lg transition-all bg-white relative group overflow-hidden">
                         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -624,14 +761,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 font-black text-xl">
                             {customer.businessName.charAt(0)}
                         </div>
-                        <h3 className="font-black text-gray-900 text-xl tracking-tight mb-1">{customer.businessName}</h3>
-                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-4">{customer.category}</p>
+                        <h3 className="font-black text-gray-900 text-lg md:text-xl tracking-tight mb-1">{customer.businessName}</h3>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-4">{customer.category}</p>
                         
                         <div className="space-y-2 mb-6">
                             <div className="flex items-center gap-2 text-xs text-gray-600">
                                 <MapPin size={14} className="text-gray-400"/> {customer.location || 'Melbourne, VIC'}
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <div className="flex items-center gap-2 text-xs text-gray-600 font-bold">
                                 <DollarSign size={14} className="text-emerald-500"/> Tier: Premium Wholesale
                             </div>
                         </div>
@@ -648,7 +785,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       {/* SETTINGS TAB */}
       {activeTab === 'Settings' && (
-          <div className="bg-white border border-gray-100 rounded-[2.5rem] p-10 shadow-sm animate-in fade-in duration-500">
+          <div className="bg-white border border-gray-100 rounded-3xl p-6 md:p-10 shadow-sm animate-in fade-in duration-500">
             <SettingsComponent user={user} onRefreshUser={loadData} />
           </div>
       )}
@@ -661,6 +798,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
               onComplete={handleCompletePacking}
               drivers={drivers}
               packers={packers}
+          />
+      )}
+
+      {/* PRICE REQUEST REVIEW MODAL */}
+      {selectedRequest && (
+          <PriceRequestModal 
+            request={selectedRequest}
+            onClose={() => setSelectedRequest(null)}
+            onSubmit={handleSubmitOffer}
           />
       )}
     </div>

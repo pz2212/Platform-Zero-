@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { UserRole, User } from './types';
+import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { UserRole, User, AppNotification } from './types';
 import { mockService } from './services/mockDataService';
 import { Dashboard } from './components/Dashboard';
 import { ConsumerDashboard } from './components/ConsumerDashboard';
@@ -19,11 +19,13 @@ import { CustomerPortals } from './components/CustomerPortals';
 import { AiOpportunityMatcher } from './components/AiOpportunityMatcher';
 import { Accounts } from './components/Accounts';
 import { PricingRequests } from './components/PricingRequests';
+import { AdminPriceRequests } from './components/AdminPriceRequests';
 import { ConsumerLanding } from './components/ConsumerLanding';
 import { SellerDashboardV1 } from './components/SellerDashboardV1';
 import { CustomerOrders } from './components/CustomerOrders'; 
 import { AdminRepManagement } from './components/AdminRepManagement';
 import { TradingInsights } from './components/TradingInsights';
+import { AdminSuppliers } from './components/AdminSuppliers';
 import { 
   LayoutDashboard, 
   Package, 
@@ -61,23 +63,112 @@ import {
   FileText,
   Gift,
   Truck,
-  Sparkles
+  Sparkles,
+  Calculator,
+  Clock
 } from 'lucide-react';
 
-const SidebarLink = ({ to, icon: Icon, label, active, onClick }: any) => (
+const SidebarLink = ({ to, icon: Icon, label, active, onClick, isSubItem = false, badge = 0 }: any) => (
   <Link 
     to={to} 
     onClick={onClick}
-    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+    className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
       active 
         ? 'bg-emerald-50 text-[#043003] font-bold' 
         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-    }`}
+    } ${isSubItem ? 'pl-10 py-2.5 text-sm' : ''}`}
   >
-    <Icon size={20} />
-    <span className="font-medium">{label}</span>
+    <div className="flex items-center space-x-3">
+        <Icon size={isSubItem ? 16 : 20} className={active ? 'text-emerald-600' : 'text-gray-400'} />
+        <span className="font-medium">{label}</span>
+    </div>
+    {badge > 0 && (
+        <span className="bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+            {badge}
+        </span>
+    )}
   </Link>
 );
+
+const NotificationDropdown = ({ user, onClose }: { user: User, onClose: () => void }) => {
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        setNotifications(mockService.getAppNotifications(user.id));
+        const interval = setInterval(() => {
+            setNotifications(mockService.getAppNotifications(user.id));
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [user.id]);
+
+    const handleRead = (notif: AppNotification) => {
+        mockService.markNotificationAsRead(notif.id);
+        if (notif.link) {
+            navigate(notif.link);
+        }
+        onClose();
+    };
+
+    const handleReadAll = () => {
+        mockService.markAllNotificationsRead(user.id);
+        setNotifications(mockService.getAppNotifications(user.id));
+    };
+
+    return (
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-[100] animate-in zoom-in-95 duration-200 origin-top-right overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h3 className="font-black text-gray-900 uppercase text-[10px] tracking-widest flex items-center gap-2">
+                    <Bell size={14} className="text-emerald-600"/> Notifications
+                </h3>
+                <button onClick={handleReadAll} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">Mark all read</button>
+            </div>
+            <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                {notifications.length === 0 ? (
+                    <div className="p-12 text-center text-gray-400">
+                        <Bell size={32} className="mx-auto mb-3 opacity-20"/>
+                        <p className="text-xs font-bold uppercase tracking-widest">No notifications yet.</p>
+                    </div>
+                ) : (
+                    notifications.map(n => (
+                        <div 
+                            key={n.id} 
+                            onClick={() => handleRead(n)}
+                            className={`p-4 border-b border-gray-50 cursor-pointer transition-all hover:bg-emerald-50/30 relative group ${!n.isRead ? 'bg-white' : 'bg-gray-50/20'}`}
+                        >
+                            {!n.isRead && <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full"></div>}
+                            <div className="flex gap-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+                                    n.type === 'ORDER' ? 'bg-blue-100 text-blue-600' :
+                                    n.type === 'APPLICATION' ? 'bg-orange-100 text-orange-600' :
+                                    n.type === 'PRICE_REQUEST' ? 'bg-indigo-100 text-indigo-600' :
+                                    'bg-emerald-100 text-emerald-600'
+                                }`}>
+                                    {n.type === 'ORDER' ? <ShoppingCart size={20}/> :
+                                     n.type === 'APPLICATION' ? <UserPlus size={20}/> :
+                                     n.type === 'PRICE_REQUEST' ? <Calculator size={20}/> :
+                                     <Sparkles size={20}/>}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-start mb-0.5">
+                                        <p className="text-sm font-black text-gray-900 truncate pr-4">{n.title}</p>
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter whitespace-nowrap pt-0.5">{new Date(n.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 leading-snug line-clamp-2">{n.message}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+            {notifications.length > 0 && (
+                <div className="p-3 bg-gray-50 border-t border-gray-100 text-center">
+                    <button onClick={onClose} className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors">Dismiss</button>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const NetworkSignalsWidget = ({ user, mode = 'sidebar', onFinish }: { user: User, mode?: 'sidebar' | 'popup', onFinish?: () => void }) => {
   const [sellingTags, setSellingTags] = useState<string[]>(user.activeSellingInterests || []);
@@ -214,6 +305,16 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   const isActive = (path: string) => location.pathname === path;
   
   const [showDailyPopup, setShowDailyPopup] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMarketplaceMenuOpen, setIsMarketplaceMenuOpen] = useState(true);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
+
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  // Quote Notification Count (Admin)
+  const submittedQuotesCount = mockService.getAllSupplierPriceRequests().filter(r => r.status === 'SUBMITTED').length;
 
   useEffect(() => {
     if (user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) {
@@ -225,6 +326,29 @@ const AppLayout = ({ children, user, onLogout }: any) => {
     }
   }, [user]);
 
+  useEffect(() => {
+    const updateNotifs = () => {
+        const notifs = mockService.getAppNotifications(user.id);
+        setNotifCount(notifs.filter(n => !n.isRead).length);
+    };
+    updateNotifs();
+    const interval = setInterval(updateNotifs, 5000);
+    return () => clearInterval(interval);
+  }, [user.id]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleClosePopup = () => {
       const today = new Date().toLocaleDateString();
       localStorage.setItem(`pz_daily_signal_${user.id}`, today);
@@ -232,6 +356,15 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   };
 
   const isPartner = user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER;
+
+  const partnerLinks = [
+    { to: '/', label: 'Order Management', icon: LayoutDashboard },
+    { to: '/pricing', label: 'Inventory & Price', icon: Tags },
+    { to: '/accounts', label: 'Financials', icon: DollarSign },
+    { to: '/market', label: 'Supplier Market', icon: Store },
+    { to: '/trading-insights', label: 'Market Intelligence', icon: BarChart4 },
+    { to: '/settings', label: 'Settings', icon: Settings },
+  ];
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -247,9 +380,45 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                     <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Platform Admin</div>
                     <SidebarLink to="/" icon={LayoutDashboard} label="Overview" active={isActive('/')} />
                     <SidebarLink to="/marketplace" icon={Layers} label="Catalog Manager" active={isActive('/marketplace')} />
-                    <SidebarLink to="/login-requests" icon={UserPlus} label="Login Requests" active={isActive('/login-requests')} />
-                    <SidebarLink to="/pricing-requests" icon={FileText} label="Quote Generator" active={isActive('/pricing-requests')} />
-                    <SidebarLink to="/consumer-onboarding" icon={Handshake} label="Marketplace Manager" active={isActive('/consumer-onboarding')} />
+                    
+                    {/* NESTED MARKETPLACE MANAGER MENU */}
+                    <div className="space-y-1">
+                        <button 
+                            onClick={() => setIsMarketplaceMenuOpen(!isMarketplaceMenuOpen)}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 ${isMarketplaceMenuOpen ? 'bg-gray-50/50' : ''}`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Handshake size={20} className="text-gray-400" />
+                                <span className="font-medium">Marketplace Manager</span>
+                            </div>
+                            <ChevronDown size={16} className={`transition-transform duration-200 ${isMarketplaceMenuOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        {isMarketplaceMenuOpen && (
+                            <div className="space-y-1 animate-in slide-in-from-top-2 duration-200">
+                                <SidebarLink to="/consumer-onboarding" icon={Users} label="Customers" active={isActive('/consumer-onboarding')} isSubItem />
+                                <SidebarLink to="/admin/suppliers" icon={Store} label="Suppliers" active={isActive('/admin/suppliers')} isSubItem />
+                                <SidebarLink 
+                                    to="/login-requests" 
+                                    icon={UserPlus} 
+                                    label="Lead Requests" 
+                                    active={isActive('/login-requests')} 
+                                    isSubItem 
+                                    badge={mockService.getRegistrationRequests().filter(r => r.status === 'Pending').length}
+                                />
+                                <SidebarLink to="/pricing-requests" icon={Calculator} label="Quote Generator" active={isActive('/pricing-requests')} isSubItem />
+                                <SidebarLink 
+                                    to="/admin/negotiations" 
+                                    icon={Tags} 
+                                    label="Price Requests" 
+                                    active={isActive('/admin/negotiations')} 
+                                    isSubItem 
+                                    badge={submittedQuotesCount}
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     <SidebarLink to="/customer-portals" icon={Gift} label="Growth & Portals" active={isActive('/customer-portals')} />
                     <SidebarLink to="/admin-reps" icon={Award} label="Rep Management" active={isActive('/admin-reps')} />
                   </>
@@ -260,12 +429,13 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                     <SidebarLink to="/orders" icon={ShoppingCart} label="Track Orders" active={isActive('/orders')} />
                     <SidebarLink to="/marketplace" icon={ShoppingBag} label="Fresh Catalog" active={isActive('/marketplace')} />
                 </>
-              ) : (user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) ? (
+              ) : isPartner ? (
                 <>
                   <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Partner Operations</div>
-                  <SidebarLink to="/" icon={LayoutDashboard} label="Order Management" active={isActive('/')} />
+                  <SidebarLink to="/" icon={LayoutDashboard} label="Order Management" active={isActive('/')} badge={mockService.getOrders(user.id).filter(o => o.sellerId === user.id && o.status === 'Pending').length} />
                   <SidebarLink to="/pricing" icon={Tags} label="Inventory & Price" active={isActive('/pricing')} />
                   <SidebarLink to="/accounts" icon={DollarSign} label="Financials" active={isActive('/accounts')} />
+                  <SidebarLink to="/trading-insights" icon={BarChart4} label="Market Intelligence" active={isActive('/trading-insights')} />
                   <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Network</div>
                   <SidebarLink to="/market" icon={Store} label="Supplier Market" active={isActive('/market')} />
                 </>
@@ -292,25 +462,80 @@ const AppLayout = ({ children, user, onLogout }: any) => {
         </div>
       </aside>
       
-      <main className="flex-1 md:ml-64 p-8 w-full overflow-x-hidden relative">
-        {isPartner && (
-            <div className="flex justify-end mb-6 absolute top-8 right-8 z-20">
-                <Link 
-                    to="/trading-insights"
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-sm border ${
-                        isActive('/trading-insights')
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                    }`}
-                >
-                    <BarChart4 size={14} className={isActive('/trading-insights') ? 'text-emerald-400' : 'text-slate-400'}/>
-                    Market Intelligence
-                    {isActive('/trading-insights') && <Sparkles size={12} className="text-emerald-400 animate-pulse"/>}
-                </Link>
-            </div>
-        )}
+      <main className="flex-1 md:ml-64 p-4 md:p-8 w-full overflow-x-hidden relative">
+        <div className="flex justify-end mb-6 sticky top-0 md:absolute md:top-8 md:right-8 z-40 bg-gray-50/80 md:bg-transparent backdrop-blur-sm md:backdrop-blur-0 py-2 md:py-0 -mx-4 md:mx-0 px-4 md:px-0">
+            <div className="flex items-center gap-3">
+                {/* Global Notification Bell */}
+                <div className="relative" ref={notifRef}>
+                    <button 
+                        onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                        className={`p-2.5 rounded-full transition-all shadow-sm border ${showNotifDropdown ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                    >
+                        <Bell size={18} className={notifCount > 0 ? "animate-swing" : ""}/>
+                        {notifCount > 0 && (
+                            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full border-2 border-white flex items-center justify-center">
+                                {notifCount}
+                            </span>
+                        )}
+                    </button>
 
-        <div className={isPartner ? "mt-12" : ""}>
+                    {showNotifDropdown && (
+                        <NotificationDropdown user={user} onClose={() => setShowNotifDropdown(false)} />
+                    )}
+                </div>
+
+                {/* Market Intelligence Pill */}
+                {isPartner && (
+                    <>
+                        <div className="hidden md:block">
+                            <Link 
+                                to="/trading-insights"
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-sm border ${
+                                    isActive('/trading-insights')
+                                    ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                }`}
+                            >
+                                <BarChart4 size={14} className={isActive('/trading-insights') ? 'text-emerald-400' : 'text-slate-400'}/>
+                                Market Intelligence
+                                {isActive('/trading-insights') && <Sparkles size={12} className="text-emerald-400 animate-pulse"/>}
+                            </Link>
+                        </div>
+                        <div className="md:hidden relative" ref={mobileMenuRef}>
+                            <button 
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-black uppercase tracking-widest shadow-sm text-slate-700 active:bg-gray-100 transition-all"
+                            >
+                                <Menu size={16} className="text-emerald-600"/>
+                                Menu
+                                <ChevronDown size={14} className={`transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-180' : ''}`}/>
+                            </button>
+                            {isMobileMenuOpen && (
+                                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 animate-in zoom-in-95 duration-150 origin-top-right">
+                                    {partnerLinks.map((link) => (
+                                        <Link 
+                                            key={link.to}
+                                            to={link.to}
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className={`flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors ${
+                                                isActive(link.to) 
+                                                ? 'bg-emerald-50 text-emerald-900 border-r-4 border-emerald-500' 
+                                                : 'text-slate-600 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            <link.icon size={18} className={isActive(link.to) ? 'text-emerald-600' : 'text-slate-400'}/>
+                                            {link.label}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+
+        <div className={isPartner ? "mt-4 md:mt-12" : ""}>
             {children}
         </div>
         
@@ -331,7 +556,6 @@ const App = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // FIX: Use service to search all users including newly created ones
     const found = mockService.getAllUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
     if (found) {
         setUser(found);
@@ -453,7 +677,9 @@ const App = () => {
                 <Route path="/marketplace" element={<Marketplace user={user} />} />
                 <Route path="/login-requests" element={<LoginRequests />} />
                 <Route path="/pricing-requests" element={<PricingRequests user={user} />} />
+                <Route path="/admin/negotiations" element={<AdminPriceRequests />} />
                 <Route path="/consumer-onboarding" element={<ConsumerOnboarding />} />
+                <Route path="/admin/suppliers" element={<AdminSuppliers />} />
                 <Route path="/customer-portals" element={<CustomerPortals />} />
                 <Route path="/admin-reps" element={<AdminRepManagement />} />
                 <Route path="/trading-insights" element={<TradingInsights user={user} />} />

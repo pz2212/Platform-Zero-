@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RegistrationRequest, UserRole } from '../types';
 import { mockService } from '../services/mockDataService';
-import { Check, X, Clock, UserCheck, UserX, Info, ShoppingBag, FileText, Calculator, UserPlus, Link as LinkIcon, Copy, Building, User, Mail, Smartphone, MapPin, ChevronRight, CheckCircle } from 'lucide-react';
+import { Check, X, Clock, UserCheck, UserX, Info, ShoppingBag, FileText, Calculator, UserPlus, Link as LinkIcon, Copy, Building, User, Mail, Smartphone, MapPin, ChevronRight, CheckCircle, Trash2 } from 'lucide-react';
 
 const ManualInviteModal = ({ isOpen, onClose, onInvite }: { isOpen: boolean, onClose: () => void, onInvite: (data: any) => void }) => {
     const [formData, setFormData] = useState({
@@ -124,6 +124,10 @@ export const LoginRequests: React.FC = () => {
 
   useEffect(() => {
     setRequests(mockService.getRegistrationRequests());
+    const interval = setInterval(() => {
+        setRequests(mockService.getRegistrationRequests());
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleApprove = (id: string) => {
@@ -137,6 +141,13 @@ export const LoginRequests: React.FC = () => {
         mockService.rejectRegistration(id);
         setRequests(mockService.getRegistrationRequests());
     }
+  };
+
+  const handleDeleteRecord = (id: string) => {
+      if (confirm("Permanently delete this record? This will remove all history associated with this application.")) {
+          mockService.deleteRegistrationRequest(id);
+          setRequests(mockService.getRegistrationRequests());
+      }
   };
 
   const handleManualInvite = (data: any) => {
@@ -182,7 +193,7 @@ export const LoginRequests: React.FC = () => {
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex justify-between items-end">
         <div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Login Requests & Leads</h1>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Lead Requests</h1>
             <p className="text-gray-500 font-medium mt-1">Review and approve new Business applications and inbound Consumer leads.</p>
         </div>
         <button 
@@ -279,6 +290,13 @@ export const LoginRequests: React.FC = () => {
                                             <LinkIcon size={14} /> Copy Invite Link
                                         </button>
                                     )}
+                                    <button 
+                                        onClick={() => handleDeleteRecord(req.id)}
+                                        className="text-gray-300 hover:text-red-500 px-2 py-2 transition-all"
+                                        title="Delete Lead Permanent"
+                                    >
+                                        <Trash2 size={16}/>
+                                    </button>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 self-start lg:self-center bg-white p-2 rounded-2xl border border-gray-100 shadow-inner-sm">
@@ -302,13 +320,14 @@ export const LoginRequests: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-200 overflow-hidden opacity-80">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <h2 className="font-black text-gray-400 uppercase tracking-widest text-xs">Application History</h2>
+            <span className="text-[10px] text-gray-300 font-bold uppercase">Manual cleanup required to remove</span>
         </div>
         <div className="divide-y divide-gray-100">
             {historyRequests.map(req => (
-                 <div key={req.id} className="p-6 flex justify-between items-center text-sm">
+                 <div key={req.id} className="p-6 flex justify-between items-center text-sm group">
                     <div>
                         <span className="font-black text-gray-900">{req.businessName}</span> <span className="text-gray-400 mx-2">•</span> <span className="text-xs font-black text-gray-400 uppercase tracking-widest">{req.requestedRole}</span>
                     </div>
@@ -319,6 +338,12 @@ export const LoginRequests: React.FC = () => {
                             <span className="flex items-center gap-1.5 text-red-500 font-black uppercase text-[10px] tracking-[0.2em] bg-red-50 px-3 py-1 rounded-full border border-red-100"><X size={14}/> Rejected</span>
                         )}
                         <span className="text-gray-300 font-bold tabular-nums">{new Date(req.submittedDate).toLocaleDateString()}</span>
+                        <button 
+                            onClick={() => handleDeleteRecord(req.id)}
+                            className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
+                        >
+                            <Trash2 size={16}/>
+                        </button>
                     </div>
                  </div>
             ))}

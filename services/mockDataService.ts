@@ -3,7 +3,7 @@ import {
   User, UserRole, Product, InventoryItem, Order, Customer, 
   RegistrationRequest, Driver, Packer, Lead, SupplierPriceRequest,
   PricingRule, OnboardingFormTemplate, BusinessProfile,
-  SupplierPriceRequestItem
+  SupplierPriceRequestItem, AppNotification
 } from '../types';
 
 export const USERS: User[] = [
@@ -11,6 +11,7 @@ export const USERS: User[] = [
   { id: 'u2', name: 'Sarah Wholesaler', businessName: 'Fresh Wholesalers', role: UserRole.WHOLESALER, email: 'sarah@fresh.com', dashboardVersion: 'v2', businessProfile: { isComplete: true } as any },
   { id: 'u3', name: 'Bob Farmer', businessName: 'Green Valley Farms', role: UserRole.FARMER, email: 'bob@greenvalley.com', dashboardVersion: 'v2', businessProfile: { isComplete: true } as any },
   { id: 'u4', name: 'Alice Consumer', businessName: 'The Morning Cafe', role: UserRole.CONSUMER, email: 'alice@cafe.com' },
+  { id: 'u5', name: 'Pippa', businessName: "Pippa's Farm", role: UserRole.WHOLESALER, email: 'alex@platformzerosolutions.com', dashboardVersion: 'v2', businessProfile: { isComplete: true, businessLocation: 'N/A' } as any },
   { id: 'rep1', name: 'Rep User', businessName: 'Platform Zero', role: UserRole.PZ_REP, email: 'rep1@pz.com', commissionRate: 5.0 },
   { id: 'd1', name: 'Dave Driver', businessName: 'Fresh Wholesalers', role: UserRole.DRIVER, email: 'dave@fresh.com' }
 ];
@@ -47,7 +48,23 @@ class MockDataService {
   private leads: Lead[] = [
       { id: 'l1', businessName: 'Downtown Bistro', location: 'CBD', weeklySpend: 3000, deliveryTimePref: 'Early Morning', requestedProducts: [{productId: 'p1', productName: 'Tomatoes', currentPrice: 5.00}] }
   ];
-  private registrationRequests: RegistrationRequest[] = [];
+  private registrationRequests: RegistrationRequest[] = [
+    {
+      id: 'req-florence',
+      name: 'Florence',
+      businessName: 'FLORENCE',
+      email: 'florence@example.com',
+      requestedRole: UserRole.CONSUMER,
+      submittedDate: new Date().toISOString(),
+      status: 'Pending',
+      consumerData: {
+        mobile: '0400 000 000',
+        location: 'Melbourne',
+        weeklySpend: 5000,
+        orderFrequency: 'Daily'
+      }
+    }
+  ];
   private drivers: Driver[] = [
       { id: 'd1', wholesalerId: 'u2', name: 'Dave Driver', email: 'dave@fresh.com', phone: '0400123456', licenseNumber: 'DL123456', vehicleRegistration: 'ABC-123', vehicleType: 'Van', status: 'Active' }
   ];
@@ -56,7 +73,7 @@ class MockDataService {
   ];
   private supplierPriceRequests: SupplierPriceRequest[] = [];
   private pricingRules: PricingRule[] = [];
-  private notifications: {userId: string, message: string}[] = [];
+  private notifications: AppNotification[] = [];
   
   private formTemplates: Record<string, OnboardingFormTemplate> = {
       'CONSUMER': { role: UserRole.CONSUMER, sections: [{ id: 's1', title: 'Basic Info', fields: [{ id: 'f1', label: 'Business Name', type: 'text', required: true }] }] },
@@ -68,14 +85,29 @@ class MockDataService {
       try {
           const storedRequests = localStorage.getItem('pz_registrationRequests');
           if (storedRequests) this.registrationRequests = JSON.parse(storedRequests);
+          
           const storedCustomers = localStorage.getItem('pz_customers');
           if (storedCustomers) this.customers = JSON.parse(storedCustomers);
+          
           const storedOrders = localStorage.getItem('pz_orders');
           if (storedOrders) this.orders = JSON.parse(storedOrders);
+          
           const storedProducts = localStorage.getItem('pz_products');
           if (storedProducts) this.products = JSON.parse(storedProducts);
+          
           const storedUsers = localStorage.getItem('pz_users');
           if (storedUsers) this.users = JSON.parse(storedUsers);
+          
+          const storedNotifs = localStorage.getItem('pz_notifications');
+          if (storedNotifs) this.notifications = JSON.parse(storedNotifs);
+
+          const storedPriceReqs = localStorage.getItem('pz_supplierPriceRequests');
+          if (storedPriceReqs) this.supplierPriceRequests = JSON.parse(storedPriceReqs);
+
+          // Seed initial admin notification if empty
+          if (this.notifications.length === 0) {
+              this.addAppNotification('u1', 'New Business Application', 'FLORENCE has submitted a login request.', 'APPLICATION', '/login-requests');
+          }
       } catch (e) {
           console.error("Failed to load mock data from storage", e);
       }
@@ -88,9 +120,58 @@ class MockDataService {
         localStorage.setItem('pz_orders', JSON.stringify(this.orders));
         localStorage.setItem('pz_products', JSON.stringify(this.products));
         localStorage.setItem('pz_users', JSON.stringify(this.users));
+        localStorage.setItem('pz_notifications', JSON.stringify(this.notifications));
+        localStorage.setItem('pz_supplierPriceRequests', JSON.stringify(this.supplierPriceRequests));
     } catch (e) {
         console.error("Failed to persist mock data", e);
     }
+  }
+
+  // --- DELETE METHODS FOR MANUAL CONTROL ---
+  deleteUser(userId: string) {
+      this.users = this.users.filter(u => u.id !== userId);
+      this.customers = this.customers.filter(c => c.id !== userId);
+      this.persistData();
+  }
+
+  deleteRegistrationRequest(requestId: string) {
+      this.registrationRequests = this.registrationRequests.filter(r => r.id !== requestId);
+      this.persistData();
+  }
+
+  // --- NOTIFICATION ENGINE ---
+  getAppNotifications(userId: string) {
+      return this.notifications.filter(n => n.userId === userId).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  addAppNotification(userId: string, title: string, message: string, type: AppNotification['type'], link?: string) {
+      const newNotif: AppNotification = {
+          id: `notif-${Date.now()}`,
+          userId,
+          title,
+          message,
+          type,
+          timestamp: new Date().toISOString(),
+          isRead: false,
+          link
+      };
+      this.notifications.push(newNotif);
+      this.persistData();
+  }
+
+  markNotificationAsRead(notifId: string) {
+      const n = this.notifications.find(x => x.id === notifId);
+      if (n) {
+          n.isRead = true;
+          this.persistData();
+      }
+  }
+
+  markAllNotificationsRead(userId: string) {
+      this.notifications.forEach(n => {
+          if (n.userId === userId) n.isRead = true;
+      });
+      this.persistData();
   }
 
   getAllUsers() { return this.users; }
@@ -168,7 +249,7 @@ class MockDataService {
               agreeTo14DayTerms: false,
               agreeTo20PercentDiscount: null,
               acceptedTandCs: false,
-              isComplete: false // MUST COMPLETE DOCUMENTS IN THEIR PORTAL
+              isComplete: false 
           }
       };
 
@@ -303,7 +384,7 @@ class MockDataService {
           paymentMethod
       };
       this.orders.push(newOrder);
-      this.addNotification(sellerId, `New Order received from ${logistics.contactName || 'Buyer'}`);
+      this.addAppNotification(sellerId, 'New Order Received', `Order #${newOrder.id.split('-')[1]} received from ${logistics.contactName || 'Buyer'}. Action required.`, 'ORDER', '/');
       this.persistData();
   }
 
@@ -321,7 +402,7 @@ class MockDataService {
           paymentMethod: 'invoice'
       };
       this.orders.push(newOrder);
-      this.addNotification(item.ownerId, "Instant Order received!");
+      this.addAppNotification(item.ownerId, 'Instant Sale Recorded', `Quantity of ${quantity}kg sold via Direct Link.`, 'ORDER', '/');
       this.persistData();
   }
 
@@ -341,6 +422,7 @@ class MockDataService {
           order.deliveredAt = new Date().toISOString();
           order.deliveryDriverName = deliveredBy;
           order.deliveryPhotoUrl = photoUrl;
+          this.addAppNotification(order.buyerId, 'Order Delivered', `Order #${order.id.split('-')[1]} has been delivered by ${deliveredBy}.`, 'ORDER', '/orders');
           this.persistData();
       }
   }
@@ -349,7 +431,7 @@ class MockDataService {
       const order = this.orders.find(o => o.id === orderId);
       if (order) {
           order.status = 'Confirmed';
-          this.addNotification('u1', `Partner confirmed fulfillment for Order #${orderId.split('-')[1] || orderId}`);
+          this.addAppNotification('u1', 'Order Acceptance', `Partner confirmed fulfillment for Order #${orderId.split('-')[1] || orderId}.`, 'SYSTEM', '/');
           this.persistData();
       }
   }
@@ -455,6 +537,7 @@ class MockDataService {
           consumerData: { ...data }
       };
       this.registrationRequests.push(req);
+      this.addAppNotification('u1', 'New Business Application', `${req.businessName} has submitted a new ${req.requestedRole} request.`, 'APPLICATION', '/login-requests');
       this.persistData();
   }
 
@@ -543,11 +626,18 @@ class MockDataService {
 
   getAllSupplierPriceRequests() { return this.supplierPriceRequests; }
   getSupplierPriceRequests(supplierId: string) { return this.supplierPriceRequests.filter(r => r.supplierId === supplierId); }
-  createSupplierPriceRequest(req: SupplierPriceRequest) { this.supplierPriceRequests.push(req); this.persistData(); }
+  createSupplierPriceRequest(req: SupplierPriceRequest) { 
+      this.supplierPriceRequests.push(req); 
+      this.addAppNotification(req.supplierId, 'New Price Request', `PZ Admin has requested custom pricing for a new lead (${req.customerContext}).`, 'PRICE_REQUEST', '/');
+      this.persistData(); 
+  }
   updateSupplierPriceRequest(id: string, updates: Partial<SupplierPriceRequest>) {
       const req = this.supplierPriceRequests.find(r => r.id === id);
       if (req) {
         Object.assign(req, updates);
+        if (updates.status === 'SUBMITTED') {
+            this.addAppNotification('u1', 'Price Offer Received', `Partner has submitted pricing for lead: ${req.customerContext}.`, 'PRICE_REQUEST', '/pricing-requests');
+        }
         this.persistData();
       }
   }
@@ -556,6 +646,9 @@ class MockDataService {
       const req = this.supplierPriceRequests.find(r => r.id === reqId);
       if (req) {
           req.status = 'WON';
+          
+          const supplier = this.users.find(u => u.id === req.supplierId);
+
           const newCustomer: Customer = {
               id: `c-won-${Date.now()}`,
               businessName: req.customerContext,
@@ -564,6 +657,8 @@ class MockDataService {
               connectionStatus: 'Pending Connection',
               joinedDate: new Date().toISOString(),
               connectedSupplierId: req.supplierId,
+              connectedSupplierName: supplier?.businessName || 'Supplier',
+              connectedSupplierRole: supplier?.role === UserRole.FARMER ? 'Farmer' : 'Wholesaler',
               email: 'pending@setup.com'
           };
           this.customers.push(newCustomer);
@@ -571,6 +666,20 @@ class MockDataService {
           return newCustomer;
       }
       return null;
+  }
+
+  sendOnboardingComms(customerId: string) {
+      const customer = this.customers.find(c => c.id === customerId);
+      if (customer) {
+          const link = `https://portal.platformzero.io/setup/${customer.id.split('-').pop()}`;
+          console.log(`[SIMULATED SMS] Sent to ${customer.phone || 'Customer'}: Hello ${customer.contactName}, your Platform Zero account is up and running! Set up your profile here: ${link}`);
+          console.log(`[SIMULATED EMAIL] Sent to ${customer.email}: Welcome to Platform Zero! Your wholesale procurement portal is ready.`);
+          
+          customer.connectionStatus = 'Active';
+          this.persistData();
+          return true;
+      }
+      return false;
   }
 
   getRepStats(repId: string) {
@@ -609,14 +718,6 @@ class MockDataService {
 
   findBuyersForProduct(productName: string) {
       return this.customers.slice(0, 3);
-  }
-
-  getNotifications(userId: string) {
-      return this.notifications.filter(n => n.userId === userId).map(n => n.message);
-  }
-
-  addNotification(userId: string, message: string) {
-      this.notifications.push({ userId, message });
   }
 }
 

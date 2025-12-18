@@ -8,6 +8,17 @@ export enum UserRole {
   PZ_REP = 'PZ_REP'
 }
 
+export interface AppNotification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'ORDER' | 'LEAD' | 'SYSTEM' | 'APPLICATION' | 'PRICE_REQUEST';
+  timestamp: string;
+  isRead: boolean;
+  link?: string;
+}
+
 export interface BusinessProfile {
   companyName: string;
   tradingName: string;

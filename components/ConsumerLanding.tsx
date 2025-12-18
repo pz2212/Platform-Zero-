@@ -67,7 +67,7 @@ www.platformzero.com.au
 `;
 
 export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => {
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1=Form, 2=Analyzing, 3=Results, 4=Booking
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1=Form, 2=Analysing, 3=Results, 4=Booking
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -130,7 +130,6 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    // Clear specific error when user types
     if (e.target.name === 'weeklySpend') {
         setErrors(prev => ({...prev, weeklySpend: ''}));
     }
@@ -180,11 +179,10 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
   };
 
   const removeFile = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent label click
-    e.stopPropagation(); // Stop bubbling
+    e.preventDefault();
+    e.stopPropagation();
     setFile(null);
     setErrors(prev => ({...prev, file: ''}));
-    // Reset input value to allow re-selection
     if (fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -209,18 +207,7 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
         return;
     }
 
-    // Submit Initial Lead Data - Only storing basic info now, full with file later
-    mockService.submitConsumerSignup({
-        name: formData.name || 'Unknown Contact',
-        businessName: formData.businessName || 'Unknown Business',
-        email: formData.email,
-        mobile: formData.mobile,
-        location: formData.location,
-        weeklySpend: parseFloat(formData.weeklySpend),
-        orderFrequency: formData.orderFreq
-    });
-
-    setStep(2); // Show loading/analyzing state
+    setStep(2);
 
     try {
         if (file) {
@@ -228,20 +215,32 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
             
             reader.onload = async () => {
                 const base64Data = (reader.result as string).split(',')[1];
+                const fullBase64 = reader.result as string;
                 const mimeType = file.type;
 
-                // Call Gemini Service to analyze real file content
+                // AS SOON AS PRESSED: Submit lead to the system immediately
+                mockService.submitConsumerSignup({
+                    name: formData.name,
+                    businessName: formData.businessName,
+                    email: formData.email,
+                    mobile: formData.mobile,
+                    location: formData.location,
+                    weeklySpend: parseFloat(formData.weeklySpend),
+                    orderFrequency: formData.orderFreq,
+                    invoiceFile: fullBase64,
+                    isAutomatedLead: true // Flag to show it's an initial capture
+                });
+
+                // Then proceed with analysis UI for the user
                 const realItems = await extractInvoiceItems(base64Data, mimeType);
 
                 if (realItems && realItems.length > 0) {
                     setAnalyzedItems(realItems);
                     
-                    // Calculate savings percentage based on the invoice content
                     const totalMarket = realItems.reduce((sum, i) => sum + (i.marketRate * i.qty), 0);
                     const totalPZ = realItems.reduce((sum, i) => sum + (i.pzRate * i.qty), 0);
                     const realSavingRate = totalMarket > 0 ? (totalMarket - totalPZ) / totalMarket : 0.18;
 
-                    // Project this rate onto their reported weekly spend for the big cards
                     const spend = parseFloat(formData.weeklySpend);
                     const weeklySave = spend * realSavingRate;
 
@@ -253,7 +252,6 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
                     
                     setStep(3);
                 } else {
-                    // Fallback to simulation if analysis fails or no key
                     runSimulation();
                 }
             };
@@ -264,27 +262,23 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
             runSimulation();
         }
     } catch (e) {
-        console.error("Error reading file", e);
         runSimulation();
     }
   };
 
   const runSimulation = () => {
-    // Simulate AI Analysis of Invoice (Fallback)
     setTimeout(() => {
       const spend = parseFloat(formData.weeklySpend);
-      // Assumption: Platform Zero saves approx 18% on average
       const savingRate = 0.18; 
       
       const weeklySave = spend * savingRate;
       
       setSavings({
         weekly: weeklySave,
-        monthly: weeklySave * 4.33, // avg weeks in month
+        monthly: weeklySave * 4.33,
         annually: weeklySave * 52
       });
 
-      // Generate Mock Extracted Items scaled to spend
       const products = [
           { name: 'Premium Tomatoes (Truss)', mkt: 9.90, pz: 8.40 },
           { name: 'Avocados (Tray 20ct)', mkt: 45.00, pz: 38.50 },
@@ -294,7 +288,7 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
           { name: 'Mushrooms (Swiss Brown)', mkt: 14.00, pz: 11.50 }
       ];
 
-      const factor = spend / 1500; // Scale factor
+      const factor = spend / 1500;
       const multiplier = factor < 0.5 ? 0.5 : factor;
 
       const items = products.map(p => ({
@@ -305,7 +299,7 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
       }));
       
       setAnalyzedItems(items);
-      setStep(3); // Show Results
+      setStep(3);
     }, 2500);
   };
 
@@ -321,10 +315,9 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
   const handleStartToday = () => {
       setShowBookingChoice(false);
       setShowOnboardingForm(true);
-      // Pre-fill extended data with basic data if appropriate
       setExtendedData(prev => ({
           ...prev,
-          deliveryAddress: formData.location // Suggest location as initial address
+          deliveryAddress: formData.location 
       }));
   };
 
@@ -346,7 +339,7 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
           return;
       }
 
-      // 0. Convert file to base64 for admin viewing
+      // Convert file to base64 to ensure it's saved in the mock request record
       let invoiceBase64 = '';
       if (file) {
           invoiceBase64 = await new Promise((resolve) => {
@@ -356,7 +349,6 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
           });
       }
 
-      // 1. Submit Full Data to Backend (Simulates Notification to Admin Dashboard)
       mockService.submitConsumerSignup({
         name: formData.name,
         businessName: formData.businessName,
@@ -366,7 +358,7 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
         weeklySpend: parseFloat(formData.weeklySpend),
         orderFrequency: formData.orderFreq,
         ...extendedData,
-        invoiceFile: invoiceBase64 // Pass the file
+        invoiceFile: invoiceBase64
       });
 
       setShowOnboardingForm(false);
@@ -416,7 +408,6 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 flex flex-col relative">
-      {/* Navbar / Header */}
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
            <div className="w-8 h-8 bg-[#043003] rounded-lg flex items-center justify-center text-white font-bold text-lg">P</div>
@@ -433,10 +424,8 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
         </div>
       </nav>
 
-      {/* Main Content Area */}
       <div className="max-w-6xl mx-auto px-4 py-12 flex-1 relative z-0">
         
-        {/* STEP 1: FORM */}
         {step === 1 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div>
@@ -467,7 +456,7 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
                     <Star size={18} fill="currentColor" /> Limited Offer
                  </p>
                  <p className="text-emerald-800 text-sm">
-                    Book an onboarding call today and receive <strong>$1,000 credit</strong> in your portal.
+                    Analyse your invoice today and get instant results. Our team will capture your lead and prepare a custom quote.
                  </p>
               </div>
             </div>
@@ -603,7 +592,7 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
                                     <CheckCircle size={32} className="text-emerald-600" />
                                 </div>
                                 <p className="text-sm font-bold text-gray-900">{file.name}</p>
-                                <p className="text-xs text-gray-500">Ready to analyze</p>
+                                <p className="text-xs text-gray-500">Ready to analyse</p>
                                 <button 
                                     onClick={removeFile}
                                     className="mt-3 text-xs text-red-500 hover:text-red-700 font-bold hover:underline z-10"
@@ -628,18 +617,13 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
                     onClick={calculateAndProceed}
                     className="w-full py-4 bg-secondary text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2 group mt-2"
                 >
-                    Analyze & See Savings <ArrowRight className="group-hover:translate-x-1 transition-transform"/>
+                    Analyse & See Savings <ArrowRight className="group-hover:translate-x-1 transition-transform"/>
                 </button>
-                
-                <p className="text-xs text-center text-gray-400 mt-2">
-                    Your data is secure. We use AI to analyze line items strictly for price comparison.
-                </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 2: ANALYZING */}
         {step === 2 && (
             <div className="flex flex-col items-center justify-center min-h-[500px] animate-in fade-in duration-500 text-center">
                 <div className="relative">
@@ -647,19 +631,11 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
                     <div className="w-24 h-24 border-4 border-emerald-500 rounded-full border-t-transparent animate-spin absolute top-0 left-0"></div>
                     <Loader2 size={40} className="text-emerald-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-2">Analyzing Your Invoice...</h2>
-                <p className="text-gray-500 max-w-md">
-                    Our AI is extracting line items, matching varieties, and comparing your current rates against the Platform Zero marketplace.
-                </p>
-                <div className="mt-8 space-y-2 text-sm text-gray-400 font-mono">
-                    <p className="animate-pulse delay-75">Extracting products...</p>
-                    <p className="animate-pulse delay-150">Identifying quantities...</p>
-                    <p className="animate-pulse delay-300">Calculating potential savings...</p>
-                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-2">Analysing Your Invoice...</h2>
+                <p className="text-gray-500 max-w-md">Our AI is extracting line items, matching varieties, and comparing your current rates against the Platform Zero marketplace.</p>
             </div>
         )}
 
-        {/* STEP 3: COST ANALYSIS RESULTS */}
         {step === 3 && (
             <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
                 <div className="text-center mb-10">
@@ -677,9 +653,6 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-indigo-500"></div>
                         <p className="text-gray-500 font-medium mb-1">Annual Savings</p>
                         <h3 className="text-4xl font-extrabold text-gray-900">${savings.annually.toLocaleString(undefined, {maximumFractionDigits: 0})}</h3>
-                        <p className="text-xs text-emerald-600 font-bold mt-2 flex items-center justify-center gap-1">
-                            <TrendingUp size={14}/> That's pure profit
-                        </p>
                     </div>
                     <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-lg text-center transform hover:scale-105 transition-transform">
                         <p className="text-gray-500 font-medium mb-1">Monthly Savings</p>
@@ -692,9 +665,6 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
                         <h3 className="font-bold text-gray-800 flex items-center gap-2">
                             <FileText size={20} className="text-gray-400"/> Price Breakdown
                         </h3>
-                        <span className="text-xs text-gray-500 font-medium bg-white px-3 py-1 rounded-full border border-gray-200">
-                            Based on uploaded invoice
-                        </span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
@@ -710,22 +680,13 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
                                 {analyzedItems.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
-                                        <td className="px-6 py-4 text-right text-gray-500 decoration-gray-300 line-through">
-                                            ${item.marketRate.toFixed(2)}
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-bold text-emerald-600">
-                                            ${item.pzRate.toFixed(2)}
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-bold text-gray-900">
-                                            {((1 - item.pzRate / item.marketRate) * 100).toFixed(0)}%
-                                        </td>
+                                        <td className="px-6 py-4 text-right text-gray-500 decoration-gray-300 line-through">${item.marketRate.toFixed(2)}</td>
+                                        <td className="px-6 py-4 text-right font-bold text-emerald-600">${item.pzRate.toFixed(2)}</td>
+                                        <td className="px-6 py-4 text-right font-bold text-gray-900">{((1 - item.pzRate / item.marketRate) * 100).toFixed(0)}%</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-                    </div>
-                    <div className="p-4 bg-gray-50 text-center text-xs text-gray-400 border-t border-gray-100">
-                        * Prices are indicative based on current market rates and may vary slightly by region.
                     </div>
                 </div>
 
@@ -736,290 +697,91 @@ export const ConsumerLanding: React.FC<ConsumerLandingProps> = ({ onLogin }) => 
                     >
                         Unlock These Prices <ArrowRight size={24}/>
                     </button>
-                    <button 
-                        onClick={handleBackToHome}
-                        className="mt-6 text-gray-400 hover:text-gray-600 text-sm font-medium"
-                    >
-                        Start Over
-                    </button>
                 </div>
             </div>
         )}
 
-        {/* STEP 4: BOOKING / ONBOARDING */}
         {step === 4 && (
             <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500 font-sans">
                 {!showOnboardingForm && !onboardingComplete ? (
                     <div className="text-center space-y-8">
-                        <div>
-                            <h2 className="text-3xl font-bold text-gray-900 mb-4">How would you like to proceed?</h2>
-                            <p className="text-gray-500">You can start ordering immediately or book a call with our team.</p>
-                        </div>
-
+                        <div><h2 className="text-3xl font-bold text-gray-900 mb-4">How would you like to proceed?</h2><p className="text-gray-500">You can start ordering immediately or book a call with our team.</p></div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <button 
-                                onClick={handleStartToday}
-                                className="bg-white p-8 rounded-2xl border-2 border-emerald-500 shadow-lg hover:shadow-xl transition-all group text-left relative overflow-hidden"
-                            >
+                            <button onClick={handleStartToday} className="bg-white p-8 rounded-2xl border-2 border-emerald-500 shadow-lg hover:shadow-xl transition-all group text-left relative overflow-hidden">
                                 <div className="absolute top-0 right-0 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-bl-xl">POPULAR</div>
-                                <div className="bg-emerald-100 w-12 h-12 rounded-full flex items-center justify-center text-emerald-600 mb-4 group-hover:scale-110 transition-transform">
-                                    <Rocket size={24}/>
-                                </div>
+                                <div className="bg-emerald-100 w-12 h-12 rounded-full flex items-center justify-center text-emerald-600 mb-4 group-hover:scale-110 transition-transform"><Rocket size={24}/></div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Start Today</h3>
                                 <p className="text-sm text-gray-500 mb-4">Complete your profile and access the marketplace instantly.</p>
-                                <span className="text-emerald-600 font-bold text-sm flex items-center gap-1">
-                                    Create Account <ArrowRight size={16}/>
-                                </span>
+                                <span className="text-emerald-600 font-bold text-sm flex items-center gap-1">Create Account <ArrowRight size={16}/></span>
                             </button>
-
-                            <button 
-                                onClick={handleBookingClick}
-                                className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all group text-left"
-                            >
-                                <div className="bg-indigo-50 w-12 h-12 rounded-full flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
-                                    <Calendar size={24}/>
-                                </div>
+                            <button onClick={handleBookingClick} className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all group text-left">
+                                <div className="bg-indigo-50 w-12 h-12 rounded-full flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform"><Calendar size={24}/></div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Book a Demo</h3>
                                 <p className="text-sm text-gray-500 mb-4">Schedule a 15-min call with a specialist to walk you through the platform.</p>
-                                <span className="text-indigo-600 font-bold text-sm flex items-center gap-1">
-                                    Select Time <ArrowRight size={16}/>
-                                </span>
+                                <span className="text-indigo-600 font-bold text-sm flex items-center gap-1">Select Time <ArrowRight size={16}/></span>
                             </button>
                         </div>
-                        
-                        {/* CALENDLY EMBED (Visual Mock) */}
                         {showBookingChoice && (
                             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
                                 <div className="bg-white w-full max-w-lg rounded-xl p-8 text-center animate-in zoom-in-95">
-                                    <Calendar size={48} className="mx-auto text-indigo-600 mb-4"/>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Schedule Your Demo</h3>
-                                    <p className="text-gray-500 mb-6">We'll redirect you to our calendar to pick a time that works best.</p>
-                                    <div className="flex gap-3 justify-center">
-                                        <button onClick={() => setShowBookingChoice(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium">Cancel</button>
-                                        <button onClick={handleOpenCalendly} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">Open Calendar</button>
-                                    </div>
+                                    <Calendar size={48} className="mx-auto text-indigo-600 mb-4"/><h3 className="text-2xl font-bold text-gray-900 mb-2">Schedule Your Demo</h3><p className="text-gray-500 mb-6">We'll redirect you to our calendar to pick a time that works best.</p>
+                                    <div className="flex gap-3 justify-center"><button onClick={() => setShowBookingChoice(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium">Cancel</button><button onClick={handleOpenCalendly} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">Open Calendar</button></div>
                                 </div>
                             </div>
                         )}
                     </div>
                 ) : !onboardingComplete ? (
                     <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
-                        <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
-                            <h2 className="text-2xl font-bold text-gray-900">Complete Business Profile</h2>
-                            <button onClick={() => setShowOnboardingForm(false)} className="text-gray-400 hover:text-gray-600">
-                                <X size={24}/>
-                            </button>
-                        </div>
-
+                        <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4"><h2 className="text-2xl font-bold text-gray-900">Complete Business Profile</h2><button onClick={() => setShowOnboardingForm(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button></div>
                         <form onSubmit={submitFinalOnboarding} className="space-y-6 font-sans">
-                            {/* SECTION 1: BUSINESS DETAILS */}
                             <div>
-                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2">
-                                    <Building size={16} className="text-emerald-600"/> Business Details
-                                </h3>
+                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2"><Building size={16} className="text-emerald-600"/> Business Details</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <input 
-                                        required
-                                        name="abn"
-                                        placeholder="ABN / Tax ID"
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-sans"
-                                        value={extendedData.abn} onChange={handleExtendedChange}
-                                    />
-                                    <input 
-                                        required
-                                        name="deliveryAddress"
-                                        placeholder="Full Delivery Address"
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-sans"
-                                        value={extendedData.deliveryAddress} onChange={handleExtendedChange}
-                                    />
+                                    <input required name="abn" placeholder="ABN / Tax ID" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-sans" value={extendedData.abn} onChange={handleExtendedChange} />
+                                    <input required name="deliveryAddress" placeholder="Full Delivery Address" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-sans" value={extendedData.deliveryAddress} onChange={handleExtendedChange} />
                                 </div>
                             </div>
-
-                            {/* SECTION 2: OPERATIONS */}
                             <div>
-                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2">
-                                    <Truck size={16} className="text-emerald-600"/> Operations
-                                </h3>
+                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2"><Truck size={16} className="text-emerald-600"/> Operations</h3>
                                 <div className="space-y-4">
-                                    <textarea 
-                                        name="productsList"
-                                        placeholder="List your most commonly ordered products (e.g. Tomatoes, Milk, Eggs...)"
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none h-24 resize-none font-sans"
-                                        value={extendedData.productsList} onChange={handleExtendedChange}
-                                    />
-                                    
+                                    <textarea name="productsList" placeholder="Commonly ordered products..." className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none h-24 resize-none font-sans" value={extendedData.productsList} onChange={handleExtendedChange} />
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 mb-2">Delivery Days</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                                                <button
-                                                    type="button"
-                                                    key={day}
-                                                    onClick={() => handleDayToggle(day)}
-                                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                                                        extendedData.deliveryDays.includes(day)
-                                                        ? 'bg-emerald-600 text-white'
-                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                    }`}
-                                                >
-                                                    {day}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <select 
-                                            name="deliveryTimeSlot"
-                                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-sans"
-                                            value={extendedData.deliveryTimeSlot} onChange={handleExtendedChange}
-                                        >
-                                            <option value="">Preferred Delivery Window</option>
-                                            <option>6am - 8am</option>
-                                            <option>8am - 10am</option>
-                                            <option>10am - 12pm</option>
-                                            <option>After 12pm</option>
-                                        </select>
-                                        <input 
-                                            name="deliveryInstructions"
-                                            placeholder="Gate code / Instructions"
-                                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-sans"
-                                            value={extendedData.deliveryInstructions} onChange={handleExtendedChange}
-                                        />
+                                        <div className="flex flex-wrap gap-2">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (<button type="button" key={day} onClick={() => handleDayToggle(day)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${extendedData.deliveryDays.includes(day) ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{day}</button>))}</div>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* SECTION 3: KEY CONTACTS */}
                             <div>
-                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2">
-                                    <Users size={16} className="text-emerald-600"/> Key Contacts
-                                </h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input 
-                                        name="chefName"
-                                        placeholder="Head Chef Name"
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-sans"
-                                        value={extendedData.chefName} onChange={handleExtendedChange}
-                                    />
-                                    <input 
-                                        name="chefMobile"
-                                        placeholder="Chef Mobile"
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-sans"
-                                        value={extendedData.chefMobile} onChange={handleExtendedChange}
-                                    />
-                                    <input 
-                                        name="accountsEmail"
-                                        placeholder="Accounts Email (Invoices)"
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-sans"
-                                        value={extendedData.accountsEmail} onChange={handleExtendedChange}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* SECTION 4: TERMS & FINANCIALS */}
-                            <div>
-                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2">
-                                    <CreditCard size={16} className="text-emerald-600"/> Terms & Conditions
-                                </h3>
+                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2"><CreditCard size={16} className="text-emerald-600"/> Terms & Conditions</h3>
                                 <div className="space-y-3">
-                                    <label className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
-                                        <input 
-                                            type="checkbox" 
-                                            name="accept7DayTerms"
-                                            className="mt-1 w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
-                                            checked={extendedData.accept7DayTerms} onChange={handleCheckboxChange}
-                                        />
-                                        <span className="text-sm text-gray-700">I agree to <strong>7-Day Payment Terms</strong> via Direct Debit.</span>
-                                    </label>
-
-                                    <label className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border border-blue-100">
-                                        <input 
-                                            type="checkbox" 
-                                            name="want55DayTerms"
-                                            className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                            checked={extendedData.want55DayTerms} onChange={handleCheckboxChange}
-                                        />
-                                        <div>
-                                            <span className="text-sm text-gray-900 font-bold block mb-1">Request 55-Day Terms?</span>
-                                            <span className="text-xs text-gray-600">Pay later with our American Express partnership. (Subject to approval)</span>
-                                        </div>
-                                    </label>
-
+                                    <label className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"><input type="checkbox" name="accept7DayTerms" className="mt-1 w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500" checked={extendedData.accept7DayTerms} onChange={handleCheckboxChange} /><span className="text-sm text-gray-700">I agree to <strong>7-Day Payment Terms</strong>.</span></label>
                                     <div className="flex items-center justify-between pt-2">
-                                        <button 
-                                            type="button"
-                                            onClick={() => setShowTermsModal(true)}
-                                            className="text-sm text-indigo-600 font-bold hover:underline flex items-center gap-1"
-                                        >
-                                            <BookOpen size={16}/> Read Terms & Conditions
-                                        </button>
-                                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                                            Status: 
-                                            {termsAccepted ? (
-                                                <span className="text-emerald-600 font-bold flex items-center gap-1"><CheckCircle size={14}/> Accepted</span>
-                                            ) : (
-                                                <span className="text-red-500 font-bold">Pending</span>
-                                            )}
-                                        </div>
+                                        <button type="button" onClick={() => setShowTermsModal(true)} className="text-sm text-indigo-600 font-bold hover:underline flex items-center gap-1"><BookOpen size={16}/> Read Terms</button>
+                                        <div className="text-sm text-gray-500">{termsAccepted ? <span className="text-emerald-600 font-bold flex items-center gap-1"><CheckCircle size={14}/> Accepted</span> : <span className="text-red-500 font-bold">Pending</span>}</div>
                                     </div>
                                 </div>
                             </div>
-
-                            <button 
-                                type="submit"
-                                className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg hover:bg-emerald-700 hover:shadow-xl transition-all"
-                            >
-                                Submit Application
-                            </button>
+                            <button type="submit" className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg hover:bg-emerald-700 hover:shadow-xl transition-all">Submit Application</button>
                         </form>
                     </div>
                 ) : (
                     <div className="text-center bg-white p-12 rounded-2xl shadow-xl border border-emerald-100 animate-in zoom-in duration-300">
-                        <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <CheckCircle size={48} className="text-emerald-600"/>
-                        </div>
+                        <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle size={48} className="text-emerald-600"/></div>
                         <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Application Received!</h2>
-                        <p className="text-lg text-gray-500 mb-8 max-w-md mx-auto">
-                            Thank you, {formData.name}. Our team is reviewing your profile. You will receive an email shortly with your login credentials and initial credit limit.
-                        </p>
-                        <button 
-                            onClick={handleBackToHome}
-                            className="px-8 py-3 bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 transition-colors"
-                        >
-                            Back to Home
-                        </button>
+                        <p className="text-lg text-gray-500 mb-8 max-w-md mx-auto">Thank you, {formData.name}. Our team is reviewing your profile. You will receive an email shortly with login credentials.</p>
+                        <button onClick={handleBackToHome} className="px-8 py-3 bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 transition-colors">Back to Home</button>
                     </div>
                 )}
             </div>
         )}
       </div>
 
-      {/* TERMS AND CONDITIONS MODAL */}
       {showTermsModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
               <div className="bg-white w-full max-w-2xl h-[80vh] rounded-2xl flex flex-col shadow-2xl animate-in zoom-in-95">
-                  <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                      <h2 className="text-xl font-bold text-gray-900">Terms & Conditions</h2>
-                      <button onClick={() => setShowTermsModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-8 bg-gray-50 text-sm text-gray-700 leading-relaxed whitespace-pre-line font-serif">
-                      {TERMS_CONTENT}
-                  </div>
-                  <div className="p-6 border-t border-gray-100 bg-white rounded-b-2xl flex justify-end gap-3">
-                      <button 
-                          onClick={() => setShowTermsModal(false)}
-                          className="px-6 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium"
-                      >
-                          Cancel
-                      </button>
-                      <button 
-                          onClick={handleAcceptTerms}
-                          className="px-8 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 shadow-sm"
-                      >
-                          I Accept
-                      </button>
-                  </div>
+                  <div className="p-6 border-b border-gray-100 flex justify-between items-center"><h2 className="text-xl font-bold text-gray-900">Terms & Conditions</h2><button onClick={() => setShowTermsModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button></div>
+                  <div className="flex-1 overflow-y-auto p-8 bg-gray-50 text-sm text-gray-700 leading-relaxed whitespace-pre-line font-serif">{TERMS_CONTENT}</div>
+                  <div className="p-6 border-t border-gray-100 bg-white rounded-b-2xl flex justify-end gap-3"><button onClick={() => setShowTermsModal(false)} className="px-6 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium">Cancel</button><button onClick={handleAcceptTerms} className="px-8 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 shadow-sm">I Accept</button></div>
               </div>
           </div>
       )}

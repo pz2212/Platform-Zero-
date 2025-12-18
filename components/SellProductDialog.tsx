@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Product, Customer, LogisticsDetails, Driver } from '../types';
 import { mockService } from '../services/mockDataService';
-import { X, Truck, Hand, Calendar, Clock, MapPin, User as UserIcon, Plus, Smartphone, CheckCircle, DollarSign, CreditCard, FileText } from 'lucide-react';
+import { triggerNativeSms, generateProductDeepLink } from '../services/smsService';
+import { X, Truck, Hand, Calendar, Clock, MapPin, User as UserIcon, Plus, Smartphone, CheckCircle, DollarSign, CreditCard, FileText, Send } from 'lucide-react';
 
 interface SellProductDialogProps {
   isOpen: boolean;
@@ -11,16 +12,10 @@ interface SellProductDialogProps {
   onComplete: (data: any) => void;
 }
 
-const LOCATIONS = ['Adelaide', 'Melbourne', 'Brisbane', 'Sydney', 'Perth', 'Darwin'];
-
 export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, onClose, product, onComplete }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  
-  // Sale State
   const [quantity, setQuantity] = useState<number>(1);
   const [pricePerKg, setPricePerKg] = useState<number>(product.defaultPricePerKg);
-  
-  // Customer State
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
@@ -29,14 +24,10 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
       mobile: '',
       email: ''
   });
-
-  // Logistics State
   const [logisticsMethod, setLogisticsMethod] = useState<'PICKUP' | 'LOGISTICS'>('PICKUP');
   const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
   const [deliveryTime, setDeliveryTime] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
-
-  // Payment State
   const [paymentMethod, setPaymentMethod] = useState('invoice');
 
   useEffect(() => {
@@ -48,7 +39,8 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
   const totalAmount = (quantity * pricePerKg).toFixed(2);
 
   const handleSubmit = (action: 'QUOTE' | 'SALE') => {
-    // Validation
+    const targetMobile = isNewCustomer ? newCustomer.mobile : customers.find(c => c.id === selectedCustomerId)?.phone;
+
     if (!isNewCustomer && !selectedCustomerId) {
         alert("Please select a customer.");
         return;
@@ -70,8 +62,14 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
             deliveryLocation: logisticsMethod === 'LOGISTICS' ? deliveryAddress : 'Pickup from Warehouse'
         },
         paymentMethod,
-        action // 'QUOTE' or 'SALE'
+        action
     };
+
+    if (action === 'QUOTE' && targetMobile) {
+        const link = generateProductDeepLink('quote', Math.random().toString(36).substr(2, 9));
+        const msg = `PZ QUOTE: ${product.name} (${quantity}kg) available for $${pricePerKg}/kg. Total: $${totalAmount}. Click to accept & confirm delivery: ${link}`;
+        triggerNativeSms(targetMobile, msg);
+    }
 
     onComplete(saleData);
     onClose();
@@ -80,7 +78,6 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
-        {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50">
           <div>
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -94,7 +91,6 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
         </div>
 
         <div className="p-6 space-y-8">
-            {/* 1. Customer Selection */}
             <div className="space-y-3">
                 <div className="flex justify-between items-center">
                     <label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Customer</label>
@@ -143,14 +139,13 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
                         >
                             <option value="">Search existing customers...</option>
                             {customers.map(c => (
-                                <option key={c.id} value={c.id}>{c.businessName} ({c.contactName})</option>
+                                <option key={c.id} value={c.id}>{c.businessName} ({c.contactName}) - {c.phone}</option>
                             ))}
                         </select>
                     </div>
                 )}
             </div>
 
-            {/* 2. Order Details */}
             <div className="grid grid-cols-3 gap-6">
                 <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Quantity (kg)</label>
@@ -178,7 +173,6 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
                 </div>
             </div>
 
-            {/* 3. Fulfillment & Payment */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
                     <label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Fulfillment</label>
@@ -196,7 +190,6 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
                             <Truck size={16}/> Delivery
                         </button>
                     </div>
-                    
                     {logisticsMethod === 'LOGISTICS' && (
                         <div className="space-y-2 animate-in fade-in">
                             <input 
@@ -206,18 +199,8 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
                                 className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900"
                             />
                             <div className="grid grid-cols-2 gap-2">
-                                <input 
-                                    type="date"
-                                    value={deliveryDate}
-                                    onChange={e => setDeliveryDate(e.target.value)}
-                                    className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900"
-                                />
-                                <input 
-                                    type="time"
-                                    value={deliveryTime}
-                                    onChange={e => setDeliveryTime(e.target.value)}
-                                    className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900"
-                                />
+                                <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900"/>
+                                <input type="time" value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)} className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm text-gray-900"/>
                             </div>
                         </div>
                     )}
@@ -228,11 +211,7 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
                     <div className="grid grid-cols-1 gap-2">
                         <button 
                             onClick={() => setPaymentMethod('invoice')}
-                            className={`px-4 py-2.5 rounded-lg border text-left text-sm font-medium flex items-center gap-3 transition-all ${
-                                paymentMethod === 'invoice' 
-                                ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
-                                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                            }`}
+                            className={`px-4 py-2.5 rounded-lg border text-left text-sm font-medium flex items-center gap-3 transition-all ${paymentMethod === 'invoice' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                         >
                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'invoice' ? 'border-indigo-500' : 'border-gray-400'}`}>
                                 {paymentMethod === 'invoice' && <div className="w-2 h-2 rounded-full bg-indigo-500"></div>}
@@ -241,11 +220,7 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
                         </button>
                         <button 
                             onClick={() => setPaymentMethod('card')}
-                            className={`px-4 py-2.5 rounded-lg border text-left text-sm font-medium flex items-center gap-3 transition-all ${
-                                paymentMethod === 'card' 
-                                ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
-                                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                            }`}
+                            className={`px-4 py-2.5 rounded-lg border text-left text-sm font-medium flex items-center gap-3 transition-all ${paymentMethod === 'card' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                         >
                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'card' ? 'border-indigo-500' : 'border-gray-400'}`}>
                                 {paymentMethod === 'card' && <div className="w-2 h-2 rounded-full bg-indigo-500"></div>}
@@ -257,7 +232,6 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
             </div>
         </div>
 
-        {/* Footer Actions */}
         <div className="p-6 border-t border-gray-100 bg-gray-50 mt-auto flex gap-4">
             <button 
                 onClick={() => handleSubmit('SALE')}
@@ -269,7 +243,7 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
                 onClick={() => handleSubmit('QUOTE')}
                 className="flex-[2] py-3 bg-[#043003] text-white font-bold rounded-lg hover:bg-[#064004] shadow-md flex items-center justify-center gap-2"
             >
-                <Smartphone size={18}/> Send Quote to Customer
+                <Smartphone size={18}/> Send Quote via SMS
             </button>
         </div>
       </div>

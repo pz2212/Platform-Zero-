@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Order, Lead, InventoryItem, Product, SupplierPriceRequest, SupplierPriceRequestItem, Driver, Packer, Customer } from '../types';
+import { User, Order, Lead, InventoryItem, Product, SupplierPriceRequest, SupplierPriceRequestItem, Driver, Packer, Customer, UserRole } from '../types';
 import { mockService } from '../services/mockDataService';
 import { identifyProductFromImage } from '../services/geminiService';
+import { triggerNativeSms, generateProductDeepLink } from '../services/smsService';
 import { ChatDialog } from './ChatDialog';
 import { SellProductDialog } from './SellProductDialog';
 import { 
@@ -18,7 +19,6 @@ interface SellerDashboardV1Props {
   onSwitchVersion?: (version: 'v1' | 'v2') => void;
 }
 
-/* Enhanced ShareModal with recipient selection and manual mobile contact support */
 export const ShareModal: React.FC<{
   item: InventoryItem;
   onClose: () => void;
@@ -35,10 +35,8 @@ export const ShareModal: React.FC<{
   const [isSyncingContacts, setIsSyncingContacts] = useState(false);
 
   useEffect(() => {
-    // Filter customers connected to this specific wholesaler/farmer
     const myCustomers = mockService.getCustomers().filter(c => c.connectedSupplierId === currentUser.id);
     setCustomers(myCustomers);
-    // Default select all connected customers
     setSelectedCustomerIds(myCustomers.map(c => c.id));
   }, [currentUser.id]);
 
@@ -49,46 +47,42 @@ export const ShareModal: React.FC<{
   };
 
   const addManualNumber = () => {
-    if (currentManualNumber && !manualNumbers.includes(currentManualNumber)) {
-      if (!/^\+?[\d\s-]{8,15}$/.test(currentManualNumber)) {
+    if (currentManualNumber) {
+      const cleaned = currentManualNumber.replace(/[^\d+]/g, '');
+      if (cleaned.length < 8) {
         alert("Please enter a valid mobile number.");
         return;
       }
-      setManualNumbers([...manualNumbers, currentManualNumber]);
+      if (!manualNumbers.includes(cleaned)) {
+        setManualNumbers([...manualNumbers, cleaned]);
+      }
       setCurrentManualNumber('');
     }
   };
 
   const handleConnectContacts = async () => {
-    // Check for Contact Picker API support (Chrome on Android)
-    const props = ['name', 'tel'];
-    const opts = { multiple: true };
-
     try {
-      // @ts-ignore - navigator.contacts is a newer/mobile-only API
+      setIsSyncingContacts(true);
+      // @ts-ignore - Contact Picker API (Supported on Chrome Android, some iOS)
       if ('contacts' in navigator && 'select' in navigator.contacts) {
-        setIsSyncingContacts(true);
+        const props = ['name', 'tel'];
+        const opts = { multiple: true };
         // @ts-ignore
         const contacts = await navigator.contacts.select(props, opts);
         if (contacts && contacts.length > 0) {
-          const numbers = contacts
-            .map((c: any) => c.tel?.[0])
-            .filter((t: any) => !!t);
+          const numbers = contacts.map((c: any) => c.tel?.[0]?.replace(/[^\d+]/g, '')).filter((t: any) => !!t);
           setManualNumbers(prev => [...new Set([...prev, ...numbers])]);
         }
-        setIsSyncingContacts(false);
       } else {
-        // Fallback: Simulation for Desktop/Other browsers
-        setIsSyncingContacts(true);
-        setTimeout(() => {
-          const mockContacts = ['0411 222 333', '0499 888 777', '0455 123 987'];
-          setManualNumbers(prev => [...new Set([...prev, ...mockContacts])]);
-          setIsSyncingContacts(false);
-          alert("📱 Device Contacts Synced!\n\nAdded 3 contacts from your address book for this session.");
-        }, 1200);
+        // Fallback simulated sync for standard browser testing
+        await new Promise(r => setTimeout(r, 1000));
+        const mockContacts = ['0411222333', '0499888777', '0455123987'];
+        setManualNumbers(prev => [...new Set([...prev, ...mockContacts])]);
+        alert("📱 Device contacts synced successfully!");
       }
     } catch (err) {
-      console.error(err);
+      console.error("Contact sync error:", err);
+    } finally {
       setIsSyncingContacts(false);
     }
   };
@@ -98,130 +92,143 @@ export const ShareModal: React.FC<{
   };
 
   const handleSendBlast = () => {
-    const totalRecipients = selectedCustomerIds.length + manualNumbers.length;
-    if (totalRecipients === 0) {
-      alert("Please select at least one recipient.");
+    // Collect all unique numbers (customers + manual)
+    const targetNumbers = [
+      ...customers.filter(c => selectedCustomerIds.includes(c.id)).map(c => c.phone).filter(p => !!p),
+      ...manualNumbers
+    ];
+
+    if (targetNumbers.length === 0) {
+      alert("Please select or add at least one mobile number to send the link.");
       return;
     }
 
     setIsSending(true);
+    
+    // 1. Generate the Deep Link
+    // When receivers click this, they'll see the landing page and be asked to sign in/up to see product details
+    const productLink = generateProductDeepLink('product', item.id, currentUser.id);
+    
+    // 2. Construct the SMS Template
+    const businessName = owner?.businessName || currentUser.businessName;
+    const productName = product?.name || 'fresh produce';
+    const priceDisplay = product?.defaultPricePerKg ? `$${product.defaultPricePerKg.toFixed(2)}/kg` : 'market rates';
+    
+    const smsMessage = `Hi! ${businessName} just listed fresh ${productName} on Platform Zero! 🔥 Price: ${priceDisplay}. View product and trade here: ${productLink}`;
 
-    // Generate specific marketplace link for this item
-    const shortLink = `https://pz.fyi/l/${item.id.slice(-6)}`;
-    const smsMessage = `PZ ALERT: Fresh ${product?.name} just listed by ${owner?.businessName}! Only $${product?.defaultPricePerKg.toFixed(2)}/kg. Click to buy: ${shortLink}`;
-
-    // Simulate network delay for SMS dispatch
+    // 3. Trigger Native SMS Handler
+    // On mobile, this opens the Messages app. Browser security typically allows only ONE prompt per user gesture.
+    triggerNativeSms(targetNumbers[0] as string, smsMessage);
+    
+    // 4. Handle remaining targets (Simulation for demo, in production use an API like Twilio)
     setTimeout(() => {
-      const recipientDetails = [
-        ...customers.filter(c => selectedCustomerIds.includes(c.id)).map(c => `${c.businessName} (${c.phone || 'System contact'})`),
-        ...manualNumbers.map(n => `Manual Contact: ${n}`)
-      ];
-
-      alert(`🚀 SMS Blast Sent Successfully!\n\nMessage sent to ${totalRecipients} recipients:\n\n"${smsMessage}"\n\nRecipient Log:\n- ${recipientDetails.join('\n- ')}`);
-      
+      const count = targetNumbers.length;
+      let notification = `🚀 SMS Dispatch initiated!`;
+      if (count > 1) {
+        notification += `\n\nApp opened for the first recipient. The other ${count - 1} recipients have been queued for system dispatch.`;
+      }
+      alert(notification);
       setIsSending(false);
       onComplete();
-    }, 1500);
+    }, 1200);
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <div>
-            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Blast to Network</h2>
-            <p className="text-sm text-gray-500 font-medium">Select profiles or add manual contacts</p>
+            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Blast to Network</h2>
+            <p className="text-sm text-gray-500 font-medium tracking-tight">Generate and share produce links via SMS</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
-            <X size={24}/>
-          </button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm border border-gray-100 transition-all active:scale-90"><X size={28}/></button>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
-          {/* SMS Preview Section */}
-          <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100 relative">
-            <span className="absolute -top-2.5 left-4 bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">SMS Preview</span>
-            <p className="text-sm text-emerald-900 italic leading-relaxed">
-              "PZ ALERT: Fresh <span className="font-bold">{product?.name}</span> just listed by <span className="font-bold">{owner?.businessName}</span>! Only <span className="font-bold">${product?.defaultPricePerKg.toFixed(2)}/kg</span>. Click to buy: https://pz.fyi/l/..."
+        <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+          {/* LIVE SMS PREVIEW BOX */}
+          <div className="bg-emerald-50 rounded-3xl p-6 border-2 border-emerald-100 relative shadow-sm">
+            <span className="absolute -top-3 left-6 bg-emerald-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">SMS PREVIEW</span>
+            <p className="text-sm text-emerald-900 italic leading-relaxed pt-2">
+              "Hi! <span className="font-bold">{owner?.businessName || 'Green Valley'}</span> just listed fresh <span className="font-bold">{product?.name || 'Tomatoes'}</span>! 🔥 Price: <span className="font-bold">${product?.defaultPricePerKg.toFixed(2) || '4.50'}/kg</span>. View product and trade here: <span className="underline font-bold text-emerald-700">https://pz.io/l/...</span>"
             </p>
           </div>
 
-          {/* Connected Customers Checklist */}
+          {/* CONNECTED PROFILES SELECTION */}
           <div>
-            <div className="flex justify-between items-center mb-3">
-               <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                 <Users size={14}/> Connected Profiles ({customers.length})
-               </h3>
+            <div className="flex justify-between items-center mb-4 px-1">
+               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2"><Users size={16}/> Saved Connections ({customers.length})</h3>
                <button 
-                 onClick={() => setSelectedCustomerIds(selectedCustomerIds.length === customers.length ? [] : customers.map(c => c.id))}
-                 className="text-[10px] font-bold text-indigo-600 hover:underline uppercase tracking-wider"
-               >
-                 {selectedCustomerIds.length === customers.length ? 'Deselect All' : 'Select All'}
-               </button>
+                  onClick={() => setSelectedCustomerIds(selectedCustomerIds.length === customers.length ? [] : customers.map(c => c.id))} 
+                  className="text-[10px] font-black text-indigo-600 hover:underline uppercase tracking-widest"
+                >
+                  {selectedCustomerIds.length === customers.length ? 'DESELECT ALL' : 'SELECT ALL'}
+                </button>
             </div>
-            <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
               {customers.map(customer => (
                 <div 
                   key={customer.id} 
-                  onClick={() => toggleCustomer(customer.id)}
-                  className={`flex items-center justify-between p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                    selectedCustomerIds.includes(customer.id) ? 'border-emerald-500 bg-emerald-50/50' : 'border-gray-100 hover:border-gray-200 bg-white'
-                  }`}
+                  onClick={() => toggleCustomer(customer.id)} 
+                  className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedCustomerIds.includes(customer.id) ? 'border-emerald-500 bg-emerald-50/40' : 'border-gray-50 hover:border-gray-200 bg-white'}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${selectedCustomerIds.includes(customer.id) ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${selectedCustomerIds.includes(customer.id) ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
                       {customer.businessName.charAt(0)}
                     </div>
                     <div>
-                      <p className={`text-sm font-bold ${selectedCustomerIds.includes(customer.id) ? 'text-emerald-900' : 'text-gray-700'}`}>{customer.businessName}</p>
-                      <p className="text-[10px] text-gray-400 font-medium">{customer.phone || 'No mobile saved'}</p>
+                      <p className={`font-bold ${selectedCustomerIds.includes(customer.id) ? 'text-emerald-900' : 'text-gray-700'}`}>{customer.businessName}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{customer.phone || 'NO MOBILE SAVED'}</p>
                     </div>
                   </div>
-                  {selectedCustomerIds.includes(customer.id) ? <CheckCircle className="text-emerald-600" size={20}/> : <div className="w-5 h-5 rounded-full border-2 border-gray-200" />}
+                  {selectedCustomerIds.includes(customer.id) ? <CheckCircle className="text-emerald-600" size={24}/> : <div className="w-6 h-6 rounded-full border-2 border-gray-100" />}
                 </div>
               ))}
-              {customers.length === 0 && <p className="text-xs text-gray-400 italic text-center py-4">No connected profiles found.</p>}
+              {customers.length === 0 && (
+                <div className="py-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                    <Users size={32} className="mx-auto text-gray-200 mb-2"/>
+                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">No saved connections found.</p>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Manual Contacts Section */}
+          {/* MANUAL MOBILE INPUT */}
           <div>
-            <div className="flex justify-between items-center mb-3">
-               <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                  <Smartphone size={14}/> Add Mobile Contacts
-               </h3>
+            <div className="flex justify-between items-center mb-4 px-1">
+               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2"><Smartphone size={16}/> Add Manual Recipients</h3>
                <button 
-                onClick={handleConnectContacts}
-                disabled={isSyncingContacts}
-                className="flex items-center gap-1 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-800 transition-colors"
-               >
-                 {isSyncingContacts ? <Loader2 size={12} className="animate-spin"/> : <UserPlus size={12}/>}
-                 Sync Contacts
-               </button>
+                  onClick={handleConnectContacts} 
+                  disabled={isSyncingContacts} 
+                  className="flex items-center gap-2 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-800 transition-colors tracking-widest disabled:opacity-50"
+                >
+                  {isSyncingContacts ? <Loader2 size={14} className="animate-spin"/> : <Contact size={14}/>}
+                  SYNC DEVICE CONTACTS
+                </button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <input 
                 type="tel" 
                 placeholder="Enter mobile number..." 
-                value={currentManualNumber}
-                onChange={(e) => setCurrentManualNumber(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addManualNumber()}
-                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-900 outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                value={currentManualNumber} 
+                onChange={(e) => setCurrentManualNumber(e.target.value)} 
+                onKeyDown={(e) => e.key === 'Enter' && addManualNumber()} 
+                className="flex-1 bg-gray-50 border-2 border-gray-100 rounded-2xl px-5 py-4 text-base font-black text-gray-900 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all placeholder-gray-300"
               />
               <button 
-                onClick={addManualNumber}
-                className="bg-[#0F172A] hover:bg-black text-white rounded-xl px-4 py-2.5 transition-all shadow-md active:scale-95"
+                onClick={addManualNumber} 
+                className="bg-slate-900 hover:bg-black text-white rounded-2xl w-16 flex items-center justify-center transition-all shadow-lg active:scale-95 border-2 border-slate-900"
               >
-                <Plus size={20}/>
+                <Plus size={24}/>
               </button>
             </div>
-            
             {manualNumbers.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4 max-h-32 overflow-y-auto">
+              <div className="flex flex-wrap gap-2 mt-6 animate-in slide-in-from-top-2 duration-300">
                 {manualNumbers.map(num => (
-                  <div key={num} className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-2 border border-slate-200 animate-in zoom-in duration-200">
+                  <div key={num} className="bg-slate-100 text-slate-800 px-4 py-2 rounded-full text-xs font-black flex items-center gap-3 border border-slate-200 shadow-sm animate-in zoom-in duration-200">
                     {num}
-                    <button onClick={() => removeManualNumber(num)} className="text-slate-400 hover:text-red-500 transition-colors"><X size={14}/></button>
+                    <button onClick={() => removeManualNumber(num)} className="text-slate-400 hover:text-red-500 transition-colors">
+                      <X size={16}/>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -229,23 +236,20 @@ export const ShareModal: React.FC<{
           </div>
         </div>
 
-        <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex gap-4">
-          <button onClick={onClose} className="flex-1 py-4 bg-white border border-gray-200 rounded-2xl font-black text-xs uppercase tracking-widest text-gray-500 hover:bg-gray-100 transition-all">
+        {/* MODAL FOOTER ACTIONS */}
+        <div className="p-8 border-t border-gray-100 bg-gray-50/50 flex gap-4">
+          <button onClick={onClose} className="flex-1 py-5 bg-white border-2 border-gray-200 rounded-[1.5rem] font-black text-xs uppercase tracking-widest text-gray-400 hover:bg-gray-100 transition-all shadow-sm">
             Cancel
           </button>
           <button 
             onClick={handleSendBlast}
             disabled={isSending || (selectedCustomerIds.length === 0 && manualNumbers.length === 0)}
-            className="flex-[2] py-4 bg-[#0F172A] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-[2] py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] hover:bg-black transition-all shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
           >
             {isSending ? (
-              <>
-                <Loader2 size={18} className="animate-spin" /> DISPATCHING...
-              </>
+              <><Loader2 size={20} className="animate-spin" /> DISPATCHING...</>
             ) : (
-              <>
-                <Send size={18} /> SEND {selectedCustomerIds.length + manualNumbers.length} ALERTS
-              </>
+              <><Smartphone size={20} /> OPEN SMS APP ({selectedCustomerIds.length + manualNumbers.length})</>
             )}
           </button>
         </div>
@@ -254,766 +258,197 @@ export const ShareModal: React.FC<{
   );
 };
 
-/* FIX: Added missing PackingPortal component to provide a dedicated packing interface for orders */
-export const PackingPortal: React.FC<{
-  order: Order;
-  onClose: () => void;
-  onComplete: (driverId: string) => void;
-  drivers: Driver[];
-}> = ({ order, onClose, onComplete, drivers }) => {
-  const [packedItems, setPackedItems] = useState<Record<string, boolean>>({});
-  const [selectedDriver, setSelectedDriver] = useState('');
+/* --- AssignTeamModal --- */
+const AssignTeamModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onAssign: (packerId: string, driverId: string) => void;
+    drivers: Driver[];
+    packers: Packer[];
+}> = ({ isOpen, onClose, onAssign, drivers, packers }) => {
+    const [selectedDriver, setSelectedDriver] = useState('');
+    const [selectedPacker, setSelectedPacker] = useState('');
 
-  const allPacked = order.items.every(i => packedItems[i.productId]);
+    if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-600 text-white">
-          <div>
-            <h2 className="text-xl font-bold">Packing Station</h2>
-            <p className="text-blue-100 text-sm">Order #{order.id.split('-')[1] || order.id}</p>
-          </div>
-          <button onClick={onClose} className="text-blue-100 hover:text-white"><X size={24}/></button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="space-y-4">
-            {order.items.map((item, idx) => (
-              <div 
-                key={idx} 
-                onClick={() => setPackedItems(prev => ({...prev, [item.productId]: !prev[item.productId]}))}
-                className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${packedItems[item.productId] ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-blue-300'}`}
-              >
-                <div>
-                    <p className="font-bold text-gray-900">{mockService.getProduct(item.productId)?.name}</p>
-                    <p className="text-sm text-gray-500">{item.quantityKg} kg</p>
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-gray-900">Assign Fulfillment Team</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
                 </div>
-                {packedItems[item.productId] ? <CheckCircle className="text-emerald-600" /> : <div className="w-6 h-6 rounded-full border-2 border-gray-300" />}
-              </div>
-            ))}
-          </div>
-
-          {allPacked && (
-            <div className="pt-6 border-t border-gray-100 space-y-4 animate-in fade-in">
-              <label className="block text-sm font-bold text-gray-700">Assign Driver for Pickup</label>
-              <select 
-                value={selectedDriver} 
-                onChange={e => setSelectedDriver(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option value="">Select a driver...</option>
-                {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                <option value="3rd_party">3rd Party Logistics</option>
-              </select>
+                <div className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Packer</label>
+                        <select 
+                            value={selectedPacker}
+                            onChange={e => setSelectedPacker(e.target.value)}
+                            className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                        >
+                            <option value="">Select Packer</option>
+                            {packers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Driver</label>
+                        <select 
+                            value={selectedDriver}
+                            onChange={e => setSelectedDriver(e.target.value)}
+                            className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                        >
+                            <option value="">Select Driver</option>
+                            {drivers.map(d => <option key={d.id} value={d.id}>{d.name} ({d.vehicleType})</option>)}
+                        </select>
+                    </div>
+                </div>
+                <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-2 text-gray-600 font-bold">Cancel</button>
+                    <button 
+                        onClick={() => onAssign(selectedPacker, selectedDriver)}
+                        disabled={!selectedDriver || !selectedPacker}
+                        className="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold disabled:opacity-50 transition-all"
+                    >
+                        Confirm Assignment
+                    </button>
+                </div>
             </div>
-          )}
         </div>
-        <div className="p-6 border-t border-gray-100 bg-gray-50">
-          <button 
-            onClick={() => onComplete(selectedDriver)}
-            disabled={!allPacked || !selectedDriver}
-            className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg disabled:opacity-50 shadow-lg"
-          >
-            Mark Packed & Hand to Driver
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
-/* FIX: Added missing AssignTeamModal component to enable order acceptance and staff assignment */
-export const AssignTeamModal: React.FC<{
-  order: Order;
-  packers: Packer[];
-  drivers: Driver[];
-  onClose: () => void;
-  onConfirm: (packerId: string, driverId: string) => void;
-}> = ({ order, packers, drivers, onClose, onConfirm }) => {
-  const [selectedPacker, setSelectedPacker] = useState('');
-  const [selectedDriver, setSelectedDriver] = useState('');
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h2 className="text-xl font-bold text-gray-900">Assign Team</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
-        </div>
-        <div className="p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Assign Packer</label>
-            <select 
-              value={selectedPacker} 
-              onChange={e => setSelectedPacker(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-            >
-              <option value="">Select a packer...</option>
-              {packers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Assign Driver (Optional)</label>
-            <select 
-              value={selectedDriver} 
-              onChange={e => setSelectedDriver(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            >
-              <option value="">Select a driver...</option>
-              {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              <option value="3rd_party">3rd Party Logistics</option>
-            </select>
-          </div>
-        </div>
-        <div className="p-6 border-t border-gray-100 flex gap-3 bg-gray-50/50">
-          <button onClick={onClose} className="flex-1 py-3 bg-white border border-gray-300 rounded-xl font-bold text-gray-700">Cancel</button>
-          <button 
-            onClick={() => onConfirm(selectedPacker, selectedDriver)}
-            disabled={!selectedPacker}
-            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold disabled:opacity-50"
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export const SellerDashboardV1: React.FC<SellerDashboardV1Props> = ({ user }) => {
-  const [activeTab, setActiveTab] = useState<'orders' | 'price_requests' | 'leads' | 'inventory' | 'onboarding'>('orders');
-  
-  // --- TAB 1: ONBOARDING STATE ---
-  const [paymentTerms] = useState<'14 Days' | '30 Days'>(user.paymentTerms || '14 Days');
-  const [acceptFastPay] = useState(user.acceptFastPay || false);
-  const [bankDetails] = useState({
-      accountName: user.bankDetails?.accountName || '',
-      bsb: user.bankDetails?.bsb || '',
-      accountNumber: user.bankDetails?.accountNumber || ''
-  });
-
-  // --- TAB 2: INVENTORY STATE ---
-  const [invImage, setInvImage] = useState<string | null>(null);
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null); 
-  const [isDragging, setIsDragging] = useState(false);
-  
-  // Sell & Share Modal States
-  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [itemToSell, setItemToSell] = useState<InventoryItem | null>(null);
-  const [itemToShare, setItemToShare] = useState<InventoryItem | null>(null);
-
-  // Unified Inventory Form State
-  const [invDetails, setInvDetails] = useState({
-      productName: '',
-      quality: '',
-      origin: '',
-      quantity: '',
-      price: '',
-      discountDays: 3
-  });
-  
-  // Existing Inventory List State
+/* --- SellerDashboardV1 --- */
+export const SellerDashboardV1: React.FC<SellerDashboardV1Props> = ({ user, onSwitchVersion }) => {
+  const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [activeTab, setActiveTab] = useState<'Orders' | 'Inventory'>('Orders');
+  
+  const [confirmingOrder, setConfirmingOrder] = useState<Order | null>(null);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [packers, setPackers] = useState<Packer[]>([]);
 
-  // --- TAB 3: LEADS / CUSTOMERS STATE ---
-  const [leads, setLeads] = useState<Lead[]>([]);
-  
-  // Add Partner Modal State
-  const [isAddPartnerModalOpen, setIsAddPartnerModalOpen] = useState(false);
-  const [partnerForm, setPartnerForm] = useState({
-      type: 'Customer' as 'Customer' | 'Supplier',
-      businessName: '',
-      contactName: '',
-      email: '',
-      phone: ''
-  });
-
-  // --- TAB 4: ORDERS STATE ---
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [packingOrder, setPackingOrder] = useState<Order | null>(null); // For packing modal
-  const [assigningOrder, setAssigningOrder] = useState<Order | null>(null); // For accept modal
-  
-  // Order Workflow Sub-states
-  const [editPrices, setEditPrices] = useState<Record<string, number>>({});
-
-  // --- TAB 5: PRICE REQUESTS STATE ---
-  const [priceRequests, setPriceRequests] = useState<SupplierPriceRequest[]>([]);
-  const [editingOffers, setEditingOffers] = useState<Record<string, Record<string, number>>>({}); 
-
-  // --- MATCHING BUYERS STATE ---
-  const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
-  const [matchPrice, setMatchPrice] = useState<string>('');
-  const [matchTransport, setMatchTransport] = useState<string>('0.00');
-  
-  // Matched Buyers List (Dynamic)
-  const [matchedBuyers, setMatchedBuyers] = useState([
-      { id: 'mb1', name: 'Melbourne Fresh Distributors', needs: 'Broccoli 250kg', priority: 'High', color: 'bg-red-100 text-red-700' },
-      { id: 'mb2', name: 'Sydney Premium Produce', needs: 'Asparagus 180kg', priority: 'Medium', color: 'bg-yellow-100 text-yellow-700' },
-      { id: 'mb3', name: 'Brisbane Organic Wholesale', needs: 'Carrots 300kg', priority: 'Low', color: 'bg-green-100 text-green-700' },
-      { id: 'mb4', name: 'Metro Food Services', needs: 'Potatoes 1000kg', priority: 'High', color: 'bg-red-100 text-red-700' }
-  ]);
-
-  // Chat State
-  const [activeChatUser, setActiveChatUser] = useState<User | null>(null);
-
   useEffect(() => {
-    // Load Data
-    setOrders(mockService.getOrders(user.id).filter(o => o.sellerId === user.id));
-    setLeads(mockService.getLeads());
-    setDrivers(mockService.getDrivers(user.id));
-    setPackers(mockService.getPackers(user.id));
-    
-    // Fetch Requests and check if we should auto-switch
-    const requests = mockService.getSupplierPriceRequests(user.id);
-    setPriceRequests(requests);
-    if (requests.some(r => r.status === 'PENDING')) {
-        setActiveTab('price_requests');
-    }
-
-    refreshInventory();
-    
-    const handleClickOutside = (event: MouseEvent) => {
-        if ((event.target as HTMLElement).closest('.inventory-menu-trigger')) return;
-        setActiveMenuId(null);
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
   }, [user]);
 
-  const refreshInventory = () => {
+  const loadData = () => {
+    const allOrders = mockService.getOrders(user.id).filter(o => o.sellerId === user.id);
+    setOrders(allOrders);
     setInventory(mockService.getInventory(user.id));
     setProducts(mockService.getAllProducts());
-  };
-  
-  // --- HANDLERS
-
-  const saveOnboarding = () => {
-      mockService.updateUserV1Details(user.id, { paymentTerms, acceptFastPay, bankDetails });
-      alert("Settings Saved!");
+    setDrivers(mockService.getDrivers(user.id));
+    setPackers(mockService.getPackers(user.id));
   };
 
-  const processFile = (file: File) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-          const base64 = reader.result as string;
-          setInvImage(base64);
-          setInvDetails(prev => ({ ...prev, productName: '', quality: '', quantity: '', price: '' }));
-          analyzeInventory(base64);
-      };
-      reader.readAsDataURL(file);
-  };
-
-  const handleInvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if(e.target.files && e.target.files[0]) {
-          processFile(e.target.files[0]);
+  const handleConfirmOrder = (packerId: string, driverId: string) => {
+      if (confirmingOrder) {
+          const packer = packers.find(p => p.id === packerId);
+          const driver = drivers.find(d => d.id === driverId);
+          mockService.confirmOrderV1(confirmingOrder.id, confirmingOrder.items, packerId, packer?.name, driverId, driver?.name);
+          setConfirmingOrder(null);
+          loadData();
+          alert("Order confirmed and assigned to team!");
       }
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      setIsDragging(false);
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-          processFile(e.dataTransfer.files[0]);
+  const handleSwitchToV2 = () => {
+      if (confirm('Switch to Advanced Dashboard (Version 2)?')) {
+          mockService.updateUserVersion(user.id, 'v2');
+          if (onSwitchVersion) onSwitchVersion('v2');
+          window.location.reload(); 
       }
   };
-
-  const analyzeInventory = async (base64: string) => {
-      const res = await identifyProductFromImage(base64.split(',')[1]);
-      setInvDetails(prev => {
-          const existingProduct = mockService.getAllProducts().find(p => p.name.toLowerCase().includes(res.name.toLowerCase()));
-          return { 
-              ...prev, 
-              productName: res.name, 
-              quality: res.quality, 
-              price: existingProduct ? existingProduct.defaultPricePerKg.toString() : prev.price 
-          };
-      });
-  };
-
-  const submitInventory = (action: 'ADD_ONLY' | 'SELL_NOW' = 'ADD_ONLY') => {
-      let product = mockService.getAllProducts().find(p => p.name.toLowerCase() === invDetails.productName.trim().toLowerCase());
-      
-      if (!product) {
-          product = {
-              id: `p-${Date.now()}`,
-              name: invDetails.productName.trim() || 'New Product',
-              category: 'Vegetable',
-              variety: invDetails.quality || 'Standard',
-              imageUrl: invImage || 'https://images.unsplash.com/photo-1615484477778-ca3b77940c25?auto=format&fit=crop&q=80&w=300&h=300', 
-              defaultPricePerKg: parseFloat(invDetails.price) || 0
-          };
-          mockService.addProduct(product);
-      } else {
-          if (invDetails.price) {
-              const newPrice = parseFloat(invDetails.price);
-              if (!isNaN(newPrice)) mockService.updateProductPrice(product.id, newPrice);
-          }
-      }
-
-      const newItem: InventoryItem = {
-          id: `inv-${Date.now()}`,
-          ownerId: user.id,
-          productId: product.id,
-          quantityKg: parseFloat(invDetails.quantity) || 0,
-          status: 'Available',
-          harvestDate: new Date().toISOString(),
-          harvestLocation: invDetails.origin || 'Local Farm',
-          expiryDate: new Date(Date.now() + 86400000 * 7).toISOString(),
-          discountAfterDays: invDetails.discountDays,
-          batchImageUrl: invImage || undefined
-      };
-
-      mockService.addInventoryItem(newItem);
-
-      if (action === 'SELL_NOW') {
-          setItemToSell(newItem);
-          setIsSellModalOpen(true);
-      } else {
-          alert(`${product.name} Added to Inventory!`);
-          setInvImage(null);
-          setInvDetails({ productName: '', quality: '', origin: '', quantity: '', price: '', discountDays: 3 });
-      }
-      
-      refreshInventory();
-  };
-
-  const handleMenuAction = (action: string, item: InventoryItem) => {
-    setActiveMenuId(null);
-    if (action === 'Sell') {
-        setItemToSell(item);
-        setIsSellModalOpen(true);
-    } else if (action === 'Share') {
-        setItemToShare(item);
-        setIsShareModalOpen(true);
-    } else if (action === 'Discount') {
-        const discount = prompt("Enter discount % (e.g. 20):");
-        if (discount) {
-            const product = mockService.getProduct(item.productId);
-            if (product) {
-                const newPrice = product.defaultPricePerKg * (1 - parseInt(discount)/100);
-                mockService.updateProductPrice(product.id, newPrice);
-                alert(`Price updated to $${newPrice.toFixed(2)}/kg`);
-                refreshInventory();
-            }
-        }
-    } else if (action === 'Charity') {
-        if (confirm("Mark this item as donated to charity?")) {
-            mockService.updateInventoryStatus(item.id, 'Donated');
-            refreshInventory();
-        }
-    }
-  };
-
-  const handleSellComplete = (data: any) => {
-      if (!itemToSell) return;
-
-      let customerId = data.customer.id;
-      let customerName = data.customer.businessName || 'Customer';
-
-      if (data.customer.isNew) {
-          const newCustomer = {
-              id: `c-new-${Date.now()}`,
-              businessName: data.customer.businessName,
-              contactName: data.customer.contactName,
-              email: data.customer.email,
-              phone: data.customer.mobile,
-              category: 'Restaurant',
-              connectionStatus: 'Active',
-              connectedSupplierName: user.businessName,
-              connectedSupplierId: user.id
-          };
-          mockService.addMarketplaceCustomer(newCustomer as any);
-          customerId = newCustomer.id;
-      } else {
-          const existing = mockService.getCustomers().find(c => c.id === customerId);
-          customerName = existing?.businessName || 'Customer';
-      }
-
-      if (data.action === 'QUOTE') {
-           alert(`Quote Sent to ${customerName}!\n\nSMS sent to ${data.customer.mobile}:\n"Hello ${data.customer.contactName}, quote for ${data.quantity}kg of ${data.product.name} is ready. Click here to accept."`);
-      } else {
-           mockService.createInstantOrder(customerId, itemToSell, data.quantity, data.pricePerKg);
-           alert(`Sale Recorded!\n\n${data.quantity} sold to ${customerName}.\nInvoice generated.`);
-           refreshInventory();
-      }
-
-      setIsSellModalOpen(false);
-      setItemToSell(null);
-      // If we were in capture flow, reset image
-      if (invImage) {
-          setInvImage(null);
-          setInvDetails({ productName: '', quality: '', origin: '', quantity: '', price: '', discountDays: 3 });
-      }
-  };
-
-  const handleConnectMatch = (matchId: string) => {
-      setActiveMatchId(matchId === activeMatchId ? null : matchId);
-      setMatchPrice('');
-      setMatchTransport('0.00');
-  };
-
-  const handleSubmitMatch = (buyerName: string, product: string) => {
-      if (!matchPrice) {
-          alert('Please enter a price.');
-          return;
-      }
-      alert(`Pricing submitted to ${buyerName} for ${product}!\nPrice: $${matchPrice}/kg\nTransport: $${matchTransport}`);
-      setActiveMatchId(null);
-  };
-
-  const submitLead = (leadId: string) => {
-      mockService.removeLead(leadId);
-      setLeads(mockService.getLeads());
-      alert("Quote submitted to PZ Admin for review!");
-  };
-
-  const handleSendInvite = (e: React.FormEvent) => {
-      e.preventDefault();
-      
-      const inviteLink = `https://portal.platformzero.join/${partnerForm.businessName.replace(/\s+/g, '-').toLowerCase()}`;
-      
-      if (partnerForm.phone || partnerForm.email) {
-          alert(`Invitation sent to ${partnerForm.contactName}!\n\nLink: ${inviteLink}`);
-      } else {
-          alert("Please enter an email or phone number.");
-          return;
-      }
-      
-      setIsAddPartnerModalOpen(false);
-      setPartnerForm({ type: 'Customer', businessName: '', contactName: '', email: '', phone: '' });
-  };
-
-  const openOrder = (order: Order) => {
-      setSelectedOrder(order);
-      const prices: Record<string, number> = {};
-      order.items.forEach(i => prices[i.productId] = i.pricePerKg);
-      setEditPrices(prices);
-      
-      // Auto-scroll to the order details to ensure user sees the change
-      setTimeout(() => {
-          const element = document.getElementById('orders-list');
-          if (element) {
-              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-      }, 100);
-  };
-
-  const initiateAcceptOrder = () => {
-      if(!selectedOrder) return;
-      setAssigningOrder(selectedOrder);
-  };
-
-  const confirmAssignment = (packerId: string, driverId: string) => {
-      if (!selectedOrder) return;
-      const updatedItems = selectedOrder.items.map(i => ({ ...i, pricePerKg: editPrices[i.productId] || i.pricePerKg }));
-      
-      const packerName = packers.find(p => p.id === packerId)?.name;
-      const driverName = drivers.find(d => d.id === driverId)?.name;
-
-      mockService.confirmOrderV1(selectedOrder.id, updatedItems, packerId, packerName, driverId, driverName);
-      
-      setOrders(mockService.getOrders(user.id).filter(o => o.sellerId === user.id));
-      setSelectedOrder(null);
-      setAssigningOrder(null);
-      alert(`Order Accepted! Assigned to ${packerName || 'Packer'}${driverName ? ` & ${driverName}` : ''}.`);
-  };
-
-  const handleStartPacking = (order: Order) => {
-      setPackingOrder(order);
-  };
-
-  const handlePackingComplete = (driverId: string) => {
-      if (!packingOrder) return;
-      
-      const driverName = drivers.find(d => d.id === driverId)?.name || 'External Logistics';
-      
-      const order = mockService.getOrders(user.id).find(o => o.id === packingOrder.id);
-      if (order) {
-          order.status = 'Ready for Delivery';
-          order.logistics = {
-              ...order.logistics!,
-              method: 'LOGISTICS',
-              driverId: driverId === '3rd_party' ? undefined : driverId,
-              driverName: driverName,
-              partner: driverId === '3rd_party' ? 'Little Logistics' : undefined
-          };
-      }
-
-      setPackingOrder(null);
-      setOrders(mockService.getOrders(user.id).filter(o => o.sellerId === user.id));
-      alert(`Order packed and assigned to ${driverName}!`);
-  };
-
-  const updateOfferPrice = (reqId: string, productId: string, price: number) => {
-      setEditingOffers(prev => ({
-          ...prev,
-          [reqId]: {
-              ...(prev[reqId] || {}),
-              [productId]: price
-          }
-      }));
-  };
-
-  const handleSubmitOffer = (req: SupplierPriceRequest) => {
-      const updatedItems: SupplierPriceRequestItem[] = req.items.map(item => ({
-          ...item,
-          offeredPrice: editingOffers[req.id]?.[item.productId] ?? item.targetPrice
-      }));
-
-      const updatedRequest: SupplierPriceRequest = {
-          ...req,
-          items: updatedItems,
-          status: 'SUBMITTED' 
-      };
-
-      mockService.updateSupplierPriceRequest(req.id, updatedRequest);
-      setPriceRequests(mockService.getSupplierPriceRequests(user.id)); 
-      alert("Offer submitted to Admin!");
-  };
-
-  const pendingRequests = priceRequests.filter(r => r.status === 'PENDING');
-  const packingQueue = orders.filter(o => o.status === 'Confirmed');
-  const deliveryQueue = orders.filter(o => o.status === 'Ready for Delivery');
-
-  const priorityMap: Record<string, number> = {
-      'Pending': 1,
-      'Confirmed': 2,
-      'Ready for Delivery': 3,
-      'Shipped': 4,
-      'Delivered': 5,
-      'Cancelled': 6
-  };
-  
-  const sortedOrders = [...orders].sort((a, b) => {
-      const pA = priorityMap[a.status] || 99;
-      const pB = priorityMap[b.status] || 99;
-      return pA - pB;
-  });
 
   return (
-    <div className="space-y-6">
-        <div className="flex justify-between items-center mt-8">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Partner Operations</h1>
-                <p className="text-gray-500">Manage orders, price requests, and network.</p>
-            </div>
+    <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Operations Console (v1)</h1>
+          <p className="text-sm text-gray-500 font-medium">Simplified wholesale management for {user.businessName}</p>
         </div>
+        <button 
+          onClick={handleSwitchToV2}
+          className="px-5 py-2.5 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition-all flex items-center gap-2 border border-indigo-100 shadow-sm"
+        >
+          <TrendingUp size={18}/> Switch to v2
+        </button>
+      </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-1 flex flex-wrap gap-1">
-            {[
-                {id: 'orders', label: 'Order Management', icon: ClipboardList},
-                {id: 'inventory', label: 'Sell', icon: Package},
-                {id: 'price_requests', label: 'Price Requests', icon: GitPullRequest, badge: pendingRequests.length},
-                {id: 'leads', label: 'Customers', icon: Users},
-                {id: 'onboarding', label: 'Settings', icon: Briefcase},
-            ].map(tab => (
-                <button 
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-bold transition-all ${
-                        activeTab === tab.id 
-                        ? (tab.id === 'inventory' ? 'bg-[#10B981] text-white shadow-lg' : 'bg-slate-900 text-white shadow-md')
-                        : (tab.id === 'inventory' ? 'bg-[#ECFDF5] text-[#059669] border border-[#D1FAE5] hover:bg-[#D1FAE5]' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900')
-                    }`}
-                >
-                    <tab.icon size={16}/> {tab.label}
-                    {tab.badge ? (
-                        <span className="bg-red-50 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{tab.badge}</span>
-                    ) : null}
-                </button>
-            ))}
-        </div>
+      <div className="flex gap-4">
+        <button onClick={() => setActiveTab('Orders')} className={`px-6 py-2.5 rounded-full font-black uppercase tracking-widest text-[10px] transition-all shadow-sm ${activeTab === 'Orders' ? 'bg-[#043003] text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>Orders Management</button>
+        <button onClick={() => setActiveTab('Inventory')} className={`px-6 py-2.5 rounded-full font-black uppercase tracking-widest text-[10px] transition-all shadow-sm ${activeTab === 'Inventory' ? 'bg-[#043003] text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>Stock Control</button>
+      </div>
 
-        {activeTab === 'orders' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4">
-                <div className="col-span-full space-y-6">
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden group h-40">
-                            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Box size={64} className="text-blue-600"/>
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">To Pack</p>
-                                <h3 className="text-4xl font-extrabold text-gray-900">{packingQueue.length}</h3>
-                            </div>
-                            <div className="relative z-10">
-                                <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden mb-2">
-                                    <div className="bg-blue-500 h-full" style={{width: `${packingQueue.length > 0 ? '40%' : '0%'}`}}></div>
-                                </div>
-                                <p className="text-xs text-gray-500 font-medium">
-                                    {packingQueue.length > 0 ? 'Requires attention' : 'All packed'}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden group h-40">
-                            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Truck size={64} className="text-purple-600"/>
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Logistics</p>
-                                <h3 className="text-4xl font-extrabold text-gray-900">{deliveryQueue.length}</h3>
-                            </div>
-                            <div className="relative z-10">
-                                <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden mb-2">
-                                    <div className="bg-purple-500 h-full" style={{width: `${deliveryQueue.length > 0 ? '60%' : '0%'}`}}></div>
-                                </div>
-                                <p className="text-xs text-gray-500 font-medium">Waiting for drivers</p>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden group h-40">
-                            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <MapPin size={64} className="text-emerald-600"/>
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">In Transit</p>
-                                <h3 className="text-4xl font-extrabold text-gray-900">{orders.filter(o => o.status === 'Shipped').length}</h3>
-                            </div>
-                            <div className="relative z-10">
-                                <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden mb-2">
-                                    <div className="bg-emerald-500 h-full animate-pulse" style={{width: '100%'}}></div>
-                                </div>
-                                <p className="text-xs text-gray-500 font-medium">Live tracking active</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="orders-list">
-                        {!selectedOrder ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {sortedOrders.map(order => (
-                                    <div 
-                                        key={order.id} 
-                                        onClick={() => order.status === 'Confirmed' ? handleStartPacking(order) : openOrder(order)}
-                                        className={`bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between aspect-[1/1] overflow-hidden ${order.status === 'Confirmed' ? 'ring-2 ring-blue-100 bg-blue-50/20' : ''} ${order.status === 'Pending' ? 'ring-2 ring-orange-100 bg-orange-50/20' : ''}`}
-                                    >
-                                        <div className="flex justify-between items-start w-full">
-                                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                                order.status === 'Pending' ? 'bg-orange-100 text-orange-700' :
-                                                order.status === 'Confirmed' ? 'bg-blue-100 text-blue-700' :
-                                                order.status === 'Ready for Delivery' ? 'bg-purple-100 text-purple-700' :
-                                                'bg-green-100 text-green-700'
-                                            }`}>
-                                                {order.status === 'Confirmed' ? 'Ready to Pack' : order.status}
-                                            </span>
-                                            <span className="text-xs text-gray-400 font-mono">#{order.id.split('-')[1] || order.id}</span>
-                                        </div>
-                                        <div className="text-center my-2 flex-1 flex flex-col justify-center">
-                                            <h3 className="font-bold text-gray-900 text-lg line-clamp-2 leading-tight mb-2">
-                                                {mockService.getCustomers().find(c => c.id === order.buyerId)?.businessName}
-                                            </h3>
-                                            <p className="text-sm text-gray-500 font-medium">{order.items.length} Items</p>
-                                            <p className="text-xs text-gray-400 mt-1">${order.totalAmount.toFixed(2)}</p>
-                                        </div>
-                                        <div className="w-full mt-auto">
-                                            <button className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors ${
-                                                order.status === 'Confirmed' 
-                                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                                                : order.status === 'Pending'
-                                                ? 'bg-orange-600 text-white hover:bg-orange-700 shadow-sm'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}>
-                                                {order.status === 'Confirmed' ? 'Pack Now' : order.status === 'Pending' ? 'Accept Order' : 'View Details'}
-                                                {order.status !== 'Confirmed' && order.status !== 'Pending' && <ChevronRight size={14}/>}
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                <div className="bg-gray-50 p-4 border-b border-gray-200 flex justify-between items-center">
-                                    <button onClick={() => setSelectedOrder(null)} className="text-sm text-gray-500 hover:text-gray-900 font-medium flex items-center gap-1">
-                                        <ChevronRight className="rotate-180" size={16}/> Back
-                                    </button>
-                                    <span className="font-bold text-gray-900">Order #{selectedOrder.id.split('-')[1]}</span>
-                                </div>
-                                <div className="p-6">
-                                    {selectedOrder.status === 'Pending' && (
-                                        <div>
-                                            <div className="space-y-4 mb-6">
-                                                {selectedOrder.items.map((item, idx) => (
-                                                    <div key={idx} className="flex justify-between items-center border-b border-gray-100 pb-2">
-                                                        <div>
-                                                            <p className="font-medium text-gray-900">{mockService.getProduct(item.productId)?.name}</p>
-                                                            <p className="text-xs text-gray-500">{item.quantityKg} kg</p>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-gray-400">$/kg</span>
-                                                            <input 
-                                                                type="number" 
-                                                                step="0.10"
-                                                                value={editPrices[item.productId]}
-                                                                onChange={(e) => setEditPrices({...editPrices, [item.productId]: parseFloat(e.target.value)})}
-                                                                className="w-20 p-1 border border-gray-300 rounded text-right font-medium"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <button onClick={initiateAcceptOrder} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700">Accept Order</button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+      {activeTab === 'Orders' ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
+            <h3 className="font-black text-gray-900 uppercase text-xs tracking-widest">Active Marketplace Queue</h3>
+            <span className="text-[10px] bg-orange-50 text-orange-700 px-3 py-1 rounded-full font-black border border-orange-100 uppercase tracking-widest">{orders.filter(o => o.status === 'Pending').length} Action Required</span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {orders.map(order => (
+              <div key={order.id} className="p-6 flex justify-between items-center hover:bg-gray-50/50 transition-colors group">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-gray-900 text-lg tracking-tight">#{order.id.split('-')[1] || order.id}</span>
+                    <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-widest border ${order.status === 'Pending' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{order.status}</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-500">Buyer: {mockService.getCustomers().find(c => c.id === order.buyerId)?.businessName || 'Marketplace Client'}</p>
+                  <p className="text-lg font-black text-emerald-600 tracking-tight">${order.totalAmount.toFixed(2)}</p>
                 </div>
+                {order.status === 'Pending' && (
+                  <button 
+                    onClick={() => setConfirmingOrder(order)}
+                    className="px-8 py-3 bg-[#043003] text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-black shadow-lg transition-all active:scale-95"
+                  >
+                    Confirm & Assign Team
+                  </button>
+                )}
+              </div>
+            ))}
+            {orders.length === 0 && <div className="p-16 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">No active orders in queue</div>}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {inventory.map(item => (
+            <div key={item.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 group hover:shadow-xl transition-all">
+              <div className="flex gap-4 mb-6">
+                <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-100 overflow-hidden shadow-inner-sm">
+                  <img src={products.find(p => p.id === item.productId)?.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                </div>
+                <div>
+                  <h4 className="font-black text-gray-900 text-lg leading-tight tracking-tight">{products.find(p => p.id === item.productId)?.name}</h4>
+                  <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-1">{item.quantityKg}kg available</p>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-4 border-t border-gray-50">
+                <button className="flex-1 py-3 bg-gray-50 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200">Update Stock</button>
+                <button className="flex-1 py-3 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm">Share Lot</button>
+              </div>
             </div>
-        )}
+          ))}
+          {inventory.length === 0 && (
+             <div className="col-span-full py-16 text-center bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
+                <Package size={48} className="mx-auto text-gray-200 mb-4"/>
+                <p className="text-gray-400 font-black uppercase tracking-widest text-xs">No items currently listed in your catalog</p>
+             </div>
+          )}
+        </div>
+      )}
 
-        {isSellModalOpen && itemToSell && (
-            <SellProductDialog 
-                isOpen={isSellModalOpen} 
-                onClose={() => setIsSellModalOpen(false)} 
-                product={mockService.getProduct(itemToSell.productId)!} 
-                onComplete={handleSellComplete} 
-            />
-        )}
-
-        {isShareModalOpen && itemToShare && (
-            <ShareModal 
-                item={itemToShare} 
-                onClose={() => setIsShareModalOpen(false)} 
-                onComplete={() => { setIsShareModalOpen(false); setItemToShare(null); }}
-                currentUser={user}
-            />
-        )}
-
-        {assigningOrder && (
-            <AssignTeamModal 
-                order={assigningOrder} 
-                packers={packers} 
-                drivers={drivers} 
-                onClose={() => setAssigningOrder(null)} 
-                onConfirm={confirmAssignment} 
-            />
-        )}
-
-        {packingOrder && (
-            <PackingPortal 
-                order={packingOrder} 
-                onClose={() => setPackingOrder(null)} 
-                onComplete={handlePackingComplete} 
-                drivers={drivers} 
-            />
-        )}
+      {confirmingOrder && (
+          <AssignTeamModal 
+              isOpen={!!confirmingOrder}
+              onClose={() => setConfirmingOrder(null)}
+              onAssign={handleConfirmOrder}
+              drivers={drivers}
+              packers={packers}
+          />
+      )}
     </div>
   );
 };

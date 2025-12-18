@@ -3,7 +3,7 @@ import {
   User, UserRole, Product, InventoryItem, Order, Customer, 
   RegistrationRequest, Driver, Packer, Lead, SupplierPriceRequest,
   PricingRule, OnboardingFormTemplate, BusinessProfile,
-  SupplierPriceRequestItem, AppNotification
+  SupplierPriceRequestItem, AppNotification, ChatMessage
 } from '../types';
 
 export const USERS: User[] = [
@@ -74,6 +74,7 @@ class MockDataService {
   private supplierPriceRequests: SupplierPriceRequest[] = [];
   private pricingRules: PricingRule[] = [];
   private notifications: AppNotification[] = [];
+  private messages: ChatMessage[] = [];
   
   private formTemplates: Record<string, OnboardingFormTemplate> = {
       'CONSUMER': { role: UserRole.CONSUMER, sections: [{ id: 's1', title: 'Basic Info', fields: [{ id: 'f1', label: 'Business Name', type: 'text', required: true }] }] },
@@ -104,6 +105,9 @@ class MockDataService {
           const storedPriceReqs = localStorage.getItem('pz_supplierPriceRequests');
           if (storedPriceReqs) this.supplierPriceRequests = JSON.parse(storedPriceReqs);
 
+          const storedMessages = localStorage.getItem('pz_chat_messages');
+          if (storedMessages) this.messages = JSON.parse(storedMessages);
+
           // Seed initial admin notification if empty
           if (this.notifications.length === 0) {
               this.addAppNotification('u1', 'New Business Application', 'FLORENCE has submitted a login request.', 'APPLICATION', '/login-requests');
@@ -122,9 +126,33 @@ class MockDataService {
         localStorage.setItem('pz_users', JSON.stringify(this.users));
         localStorage.setItem('pz_notifications', JSON.stringify(this.notifications));
         localStorage.setItem('pz_supplierPriceRequests', JSON.stringify(this.supplierPriceRequests));
+        localStorage.setItem('pz_chat_messages', JSON.stringify(this.messages));
     } catch (e) {
         console.error("Failed to persist mock data", e);
     }
+  }
+
+  // --- CHAT SYSTEM ---
+  getChatMessages(userId1: string, userId2: string): ChatMessage[] {
+    return this.messages.filter(m => 
+      (m.senderId === userId1 && m.receiverId === userId2) ||
+      (m.senderId === userId2 && m.receiverId === userId1)
+    ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  }
+
+  sendChatMessage(senderId: string, receiverId: string, text: string, isProductLink = false, productId?: string) {
+    const newMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      senderId,
+      receiverId,
+      text,
+      timestamp: new Date().toISOString(),
+      isProductLink,
+      productId
+    };
+    this.messages.push(newMessage);
+    this.persistData();
+    return newMessage;
   }
 
   // --- DELETE METHODS FOR MANUAL CONTROL ---
@@ -218,10 +246,15 @@ class MockDataService {
       phone: string,
       abn: string,
       address: string,
-      customerType: string
+      customerType: string,
+      role?: UserRole
   }) {
       const id = `u-man-${Date.now()}`;
-      const role = data.type === 'Buyer' ? UserRole.CONSUMER : UserRole.WHOLESALER;
+      let role = data.role;
+      
+      if (!role) {
+          role = data.type === 'Buyer' ? UserRole.CONSUMER : UserRole.WHOLESALER;
+      }
       
       const newUser: User = {
           id,
@@ -255,7 +288,7 @@ class MockDataService {
 
       this.users.push(newUser);
 
-      if (data.type === 'Buyer') {
+      if (role === UserRole.CONSUMER) {
           const customer: Customer = {
               id: `c-man-${Date.now()}`,
               businessName: data.businessName,

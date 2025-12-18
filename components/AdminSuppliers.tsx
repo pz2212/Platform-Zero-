@@ -8,7 +8,8 @@ import {
   X, Building, Link as LinkIcon, Copy, Filter, Star, Truck, AlertTriangle,
   DollarSign,
   Eye,
-  Trash2
+  Trash2,
+  Sprout
 } from 'lucide-react';
 
 export const AdminSuppliers: React.FC = () => {
@@ -19,7 +20,7 @@ export const AdminSuppliers: React.FC = () => {
 
   // Quick Supplier Modal State
   const [isQuickSupplierModalOpen, setIsQuickSupplierModalOpen] = useState(false);
-  const [quickSupplier, setQuickSupplier] = useState({ businessName: '', email: '' });
+  const [quickSupplier, setQuickSupplier] = useState({ businessName: '', email: '', role: UserRole.WHOLESALER });
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -62,7 +63,8 @@ export const AdminSuppliers: React.FC = () => {
         phone: 'N/A',
         abn: 'N/A',
         address: 'N/A',
-        customerType: 'Supplier'
+        customerType: 'Supplier',
+        role: quickSupplier.role
     });
     
     const link = `https://portal.platformzero.io/setup/${newUser.id}`;
@@ -98,7 +100,7 @@ export const AdminSuppliers: React.FC = () => {
             <p className="text-gray-500 font-medium">Manage network wholesalers and farmers and review fulfillment performance.</p>
         </div>
         <button 
-            onClick={() => { setGeneratedLink(null); setQuickSupplier({businessName: '', email: ''}); setIsQuickSupplierModalOpen(true); }}
+            onClick={() => { setGeneratedLink(null); setQuickSupplier({businessName: '', email: '', role: UserRole.WHOLESALER}); setIsQuickSupplierModalOpen(true); }}
             className="px-6 py-3 bg-[#043003] hover:bg-black text-white font-bold rounded-xl shadow-lg flex items-center gap-2 transition-all"
         >
             <Plus size={20}/> Add New Supplier
@@ -243,22 +245,44 @@ export const AdminSuppliers: React.FC = () => {
       {/* QUICK ADD SUPPLIER MODAL */}
       {isQuickSupplierModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 overflow-hidden">
-                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                      <h2 className="text-xl font-bold text-gray-900">Quick Add Supplier</h2>
-                      <button onClick={() => setIsQuickSupplierModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-200 transition-colors"><X size={24}/></button>
+              <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 overflow-hidden">
+                  <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                      <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Quick Add Business</h2>
+                      <button onClick={() => setIsQuickSupplierModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1 bg-white rounded-full border border-gray-100 shadow-sm"><X size={20}/></button>
                   </div>
                   <div className="p-8 space-y-6">
                       {!generatedLink ? (
-                          <form onSubmit={handleQuickSupplierSubmit} className="space-y-4">
-                              <p className="text-sm text-gray-500">Provide basic details to create a supplier account. They will appear in connection lists immediately.</p>
+                          <form onSubmit={handleQuickSupplierSubmit} className="space-y-6">
+                              <p className="text-xs text-gray-500 font-medium leading-relaxed">Provide basic details to provision a specialized portal for your partner. They will appear in connection lists immediately.</p>
+                              
+                              {/* ROLE SELECTOR */}
+                              <div className="space-y-2">
+                                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Business Role</label>
+                                  <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-2xl">
+                                      <button 
+                                        type="button"
+                                        onClick={() => setQuickSupplier({...quickSupplier, role: UserRole.WHOLESALER})}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${quickSupplier.role === UserRole.WHOLESALER ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                      >
+                                          <Building size={16}/> Wholesaler
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        onClick={() => setQuickSupplier({...quickSupplier, role: UserRole.FARMER})}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${quickSupplier.role === UserRole.FARMER ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-400 hover:text-emerald-600'}`}
+                                      >
+                                          <Sprout size={16}/> Farmer
+                                      </button>
+                                  </div>
+                              </div>
+
                               <div>
-                                  <label className="block text-sm font-bold text-gray-700 mb-1">Business Name</label>
+                                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Trading Name</label>
                                   <div className="relative">
                                       <Building className="absolute left-3 top-3 text-gray-400" size={18}/>
                                       <input 
                                           required 
-                                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900 font-bold" 
+                                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 outline-none text-gray-900 font-bold" 
                                           placeholder="e.g. Green Farms Ltd"
                                           value={quickSupplier.businessName}
                                           onChange={e => setQuickSupplier({...quickSupplier, businessName: e.target.value})}
@@ -266,21 +290,21 @@ export const AdminSuppliers: React.FC = () => {
                                   </div>
                               </div>
                               <div>
-                                  <label className="block text-sm font-bold text-gray-700 mb-1">Email Address</label>
+                                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Login Email</label>
                                   <div className="relative">
                                       <Mail className="absolute left-3 top-3 text-gray-400" size={18}/>
                                       <input 
                                           required 
                                           type="email"
-                                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900 font-bold" 
-                                          placeholder="supplier@email.com"
+                                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 outline-none text-gray-900 font-bold" 
+                                          placeholder="partner@email.com"
                                           value={quickSupplier.email}
                                           onChange={e => setQuickSupplier({...quickSupplier, email: e.target.value})}
                                       />
                                   </div>
                               </div>
-                              <button type="submit" className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2">
-                                  Generate Invite & Create Account
+                              <button type="submit" className="w-full py-4 bg-[#043003] text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-2">
+                                  Generate Invite & Provision Portal
                               </button>
                           </form>
                       ) : (
@@ -289,22 +313,22 @@ export const AdminSuppliers: React.FC = () => {
                                   <LinkIcon size={32} />
                               </div>
                               <div>
-                                  <h3 className="text-lg font-bold text-gray-900">Setup Link Generated</h3>
-                                  <p className="text-sm text-gray-500 mt-1">Share this link with <span className="font-bold">{quickSupplier.businessName}</span> to complete their onboarding.</p>
+                                  <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Portal Link Ready</h3>
+                                  <p className="text-xs text-gray-500 font-medium mt-1">Share this link with <span className="font-bold text-gray-900">{quickSupplier.businessName}</span>. They will be directed to their specialized {quickSupplier.role} dashboard.</p>
                               </div>
                               <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center gap-3">
-                                  <input readOnly value={generatedLink} className="bg-transparent flex-1 text-xs font-mono text-gray-900 font-bold outline-none" />
+                                  <input readOnly value={generatedLink} className="bg-transparent flex-1 text-[10px] font-mono text-gray-900 font-black outline-none" />
                                   <button onClick={copyLink} className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm">
-                                      <Copy size={18}/>
+                                      <Copy size={16}/>
                                   </button>
                               </div>
-                              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-left flex gap-3">
-                                  <CheckCircle size={20} className="text-blue-600 shrink-0 mt-0.5" />
-                                  <p className="text-xs text-blue-800">
-                                      <strong>Instant Availability:</strong> This supplier is now an option in the "Connected Supplier" dropdowns across the platform.
+                              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-left flex gap-3">
+                                  <CheckCircle size={20} className="text-indigo-600 shrink-0 mt-0.5" />
+                                  <p className="text-[10px] text-indigo-800 leading-relaxed font-medium">
+                                      <strong>Instant Availability:</strong> This partner is now an option in connection dropdowns across the platform.
                                   </p>
                               </div>
-                              <button onClick={() => setIsQuickSupplierModalOpen(false)} className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold text-sm">
+                              <button onClick={() => setIsQuickSupplierModalOpen(false)} className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-black transition-all">
                                   Done
                               </button>
                           </div>

@@ -4,6 +4,7 @@ import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNa
 import { UserRole, User, AppNotification } from './types';
 import { mockService } from './services/mockDataService';
 import { Dashboard } from './components/Dashboard';
+import { FarmerDashboard } from './components/FarmerDashboard';
 import { ConsumerDashboard } from './components/ConsumerDashboard';
 import { Inventory } from './components/Inventory';
 import { ProductPricing } from './components/ProductPricing';
@@ -26,6 +27,7 @@ import { CustomerOrders } from './components/CustomerOrders';
 import { AdminRepManagement } from './components/AdminRepManagement';
 import { TradingInsights } from './components/TradingInsights';
 import { AdminSuppliers } from './components/AdminSuppliers';
+import { Contacts } from './components/Contacts';
 import { 
   LayoutDashboard, 
   Package, 
@@ -65,25 +67,31 @@ import {
   Truck,
   Sparkles,
   Calculator,
-  Clock
+  Clock,
+  Building,
+  User as UserIcon,
+  MessageCircle
 } from 'lucide-react';
 
-const SidebarLink = ({ to, icon: Icon, label, active, onClick, isSubItem = false, badge = 0 }: any) => (
+const SidebarLink = ({ to, icon: Icon, label, active, onClick, isSubItem = false, badge = 0, subLabel }: any) => (
   <Link 
     to={to} 
     onClick={onClick}
-    className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+    className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors group ${
       active 
         ? 'bg-emerald-50 text-[#043003] font-bold' 
         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
     } ${isSubItem ? 'pl-10 py-2.5 text-sm' : ''}`}
   >
-    <div className="flex items-center space-x-3">
-        <Icon size={isSubItem ? 16 : 20} className={active ? 'text-emerald-600' : 'text-gray-400'} />
-        <span className="font-medium">{label}</span>
+    <div className="flex items-center space-x-3 min-w-0">
+        <Icon size={isSubItem ? 16 : 20} className={active ? 'text-emerald-600' : 'text-gray-400 group-hover:text-emerald-500 transition-colors'} />
+        <div className="truncate">
+          <span className="block truncate">{label}</span>
+          {subLabel && <span className="block text-[9px] font-black text-gray-400 uppercase tracking-tighter">{subLabel}</span>}
+        </div>
     </div>
     {badge > 0 && (
-        <span className="bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+        <span className="bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-pulse shrink-0">
             {badge}
         </span>
     )}
@@ -302,13 +310,16 @@ const NetworkSignalsWidget = ({ user, mode = 'sidebar', onFinish }: { user: User
 
 const AppLayout = ({ children, user, onLogout }: any) => {
   const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
   const isActive = (path: string) => location.pathname === path;
+  const isChatActive = (id: string) => location.pathname === '/contacts' && queryParams.get('id') === id;
   
   const [showDailyPopup, setShowDailyPopup] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMarketplaceMenuOpen, setIsMarketplaceMenuOpen] = useState(true);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
+  const [directory, setDirectory] = useState<User[]>([]);
 
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -324,6 +335,8 @@ const AppLayout = ({ children, user, onLogout }: any) => {
             setShowDailyPopup(true);
         }
     }
+    // Fetch contacts for sidebar
+    setDirectory(mockService.getWholesalers().filter(u => u.id !== user.id));
   }, [user]);
 
   useEffect(() => {
@@ -373,7 +386,7 @@ const AppLayout = ({ children, user, onLogout }: any) => {
           <div className="w-8 h-8 bg-[#043003] rounded-lg flex items-center justify-center text-white font-bold text-lg">P</div>
           <span className="font-bold text-xl tracking-tight text-gray-900">Platform Zero</span>
         </div>
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto flex flex-col">
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto flex flex-col no-scrollbar">
           <div className="flex-1 space-y-1">
               {user.role === UserRole.ADMIN ? (
                   <>
@@ -381,7 +394,6 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                     <SidebarLink to="/" icon={LayoutDashboard} label="Overview" active={isActive('/')} />
                     <SidebarLink to="/marketplace" icon={Layers} label="Catalog Manager" active={isActive('/marketplace')} />
                     
-                    {/* NESTED MARKETPLACE MANAGER MENU */}
                     <div className="space-y-1">
                         <button 
                             onClick={() => setIsMarketplaceMenuOpen(!isMarketplaceMenuOpen)}
@@ -431,13 +443,26 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                 </>
               ) : isPartner ? (
                 <>
-                  <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Partner Operations</div>
+                  <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">{user.role === UserRole.FARMER ? 'Farmer Operations' : 'Partner Operations'}</div>
                   <SidebarLink to="/" icon={LayoutDashboard} label="Order Management" active={isActive('/')} badge={mockService.getOrders(user.id).filter(o => o.sellerId === user.id && o.status === 'Pending').length} />
                   <SidebarLink to="/pricing" icon={Tags} label="Inventory & Price" active={isActive('/pricing')} />
                   <SidebarLink to="/accounts" icon={DollarSign} label="Financials" active={isActive('/accounts')} />
                   <SidebarLink to="/trading-insights" icon={BarChart4} label="Market Intelligence" active={isActive('/trading-insights')} />
+                  
                   <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Network</div>
                   <SidebarLink to="/market" icon={Store} label="Supplier Market" active={isActive('/market')} />
+                  
+                  <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contacts</div>
+                  {directory.map(s => (
+                    <SidebarLink 
+                      key={s.id} 
+                      to={`/contacts?id=${s.id}`} 
+                      icon={MessageCircle} 
+                      label={s.businessName} 
+                      subLabel={s.role === UserRole.FARMER ? 'Farmer' : 'Wholesaler'}
+                      active={isChatActive(s.id)} 
+                    />
+                  ))}
                 </>
               ) : user.role === UserRole.DRIVER ? (
                 <>
@@ -465,7 +490,6 @@ const AppLayout = ({ children, user, onLogout }: any) => {
       <main className="flex-1 md:ml-64 p-4 md:p-8 w-full overflow-x-hidden relative">
         <div className="flex justify-end mb-6 sticky top-0 md:absolute md:top-8 md:right-8 z-40 bg-gray-50/80 md:bg-transparent backdrop-blur-sm md:backdrop-blur-0 py-2 md:py-0 -mx-4 md:mx-0 px-4 md:px-0">
             <div className="flex items-center gap-3">
-                {/* Global Notification Bell */}
                 <div className="relative" ref={notifRef}>
                     <button 
                         onClick={() => setShowNotifDropdown(!showNotifDropdown)}
@@ -484,7 +508,6 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                     )}
                 </div>
 
-                {/* Market Intelligence Pill */}
                 {isPartner && (
                     <>
                         <div className="hidden md:block">
@@ -550,8 +573,9 @@ const AppLayout = ({ children, user, onLogout }: any) => {
 const App = () => {
   const [user, setUser] = useState<User | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginStep, setLoginStep] = useState<'select' | 'form'>('select');
+  const [loginStep, setLoginStep] = useState<'select' | 'role_select' | 'form'>('select');
   const [portalType, setPortalType] = useState<'PARTNER' | 'MARKETPLACE' | 'ADMIN'>('PARTNER');
+  const [subRole, setSubRole] = useState<'WHOLESALER' | 'FARMER' | null>(null);
   const [email, setEmail] = useState('');
 
   const handleLogin = (e: React.FormEvent) => {
@@ -562,22 +586,33 @@ const App = () => {
         setShowLoginModal(false);
         setLoginStep('select');
     } else {
-        alert("Account not found. Tip: Try 'sarah@fresh.com' for Partners or 'alice@cafe.com' for Buyers.");
+        alert(`Account not found. Tip: Try '${subRole === 'FARMER' ? 'bob@greenvalley.com' : 'sarah@fresh.com'}' for demo access.`);
     }
   };
 
   const selectPortal = (type: 'PARTNER' | 'MARKETPLACE' | 'ADMIN') => {
       setPortalType(type);
+      if (type === 'PARTNER') {
+          setLoginStep('role_select');
+      } else {
+          setLoginStep('form');
+          if (type === 'ADMIN') setEmail('admin@pz.com');
+          else setEmail('alice@cafe.com');
+      }
+  };
+
+  const selectSubRole = (role: 'WHOLESALER' | 'FARMER') => {
+      setSubRole(role);
       setLoginStep('form');
-      if (type === 'ADMIN') setEmail('admin@pz.com');
-      else if (type === 'PARTNER') setEmail('sarah@fresh.com');
-      else setEmail('alice@cafe.com');
+      if (role === 'WHOLESALER') setEmail('sarah@fresh.com');
+      else setEmail('bob@greenvalley.com');
   };
 
   const resetModal = () => {
       setShowLoginModal(false);
       setLoginStep('select');
       setEmail('');
+      setSubRole(null);
   };
 
   return (
@@ -635,11 +670,44 @@ const App = () => {
                                     </button>
                                 </div>
                             </>
-                        ) : (
+                        ) : loginStep === 'role_select' ? (
                             <>
                                 <div className="p-6 border-b border-gray-100 flex items-center gap-4">
                                     <button onClick={() => setLoginStep('select')} className="text-gray-400 hover:text-gray-600"><ArrowLeft size={20}/></button>
-                                    <h2 className="text-xl font-bold text-gray-900">Sign in to {portalType.charAt(0) + portalType.slice(1).toLowerCase()}</h2>
+                                    <h2 className="text-xl font-bold text-gray-900">Partner Login</h2>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <button 
+                                        onClick={() => selectSubRole('WHOLESALER')}
+                                        className="w-full text-left p-5 border border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group flex items-center gap-4"
+                                    >
+                                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                                            <Building size={24} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-gray-900">Wholesaler Portal</h3>
+                                            <p className="text-xs text-gray-500">Manage inventory & staff</p>
+                                        </div>
+                                    </button>
+                                    <button 
+                                        onClick={() => selectSubRole('FARMER')}
+                                        className="w-full text-left p-5 border border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group flex items-center gap-4"
+                                    >
+                                        <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
+                                            <Sprout size={24} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-gray-900">Farmer Portal</h3>
+                                            <p className="text-xs text-gray-500">Manage harvest & direct sales</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="p-6 border-b border-gray-100 flex items-center gap-4">
+                                    <button onClick={() => portalType === 'PARTNER' ? setLoginStep('role_select') : setLoginStep('select')} className="text-gray-400 hover:text-gray-600"><ArrowLeft size={20}/></button>
+                                    <h2 className="text-xl font-bold text-gray-900">Sign in to {subRole ? `${subRole.charAt(0) + subRole.slice(1).toLowerCase()} Portal` : portalType.charAt(0) + portalType.slice(1).toLowerCase()}</h2>
                                 </div>
                                 <form onSubmit={handleLogin} className="p-8 space-y-6">
                                     <div>
@@ -672,6 +740,7 @@ const App = () => {
                   user.role === UserRole.CONSUMER ? <ConsumerDashboard user={user} /> :
                   user.role === UserRole.DRIVER ? <DriverDashboard user={user} /> :
                   user.role === UserRole.PZ_REP ? <RepDashboard user={user} /> :
+                  user.role === UserRole.FARMER ? <FarmerDashboard user={user} /> :
                   user.dashboardVersion === 'v1' ? <SellerDashboardV1 user={user} /> : <Dashboard user={user} />
                 } />
                 <Route path="/marketplace" element={<Marketplace user={user} />} />
@@ -689,6 +758,7 @@ const App = () => {
                 <Route path="/ai-matcher" element={<AiOpportunityMatcher user={user} />} />
                 <Route path="/accounts" element={<Accounts user={user} />} />
                 <Route path="/orders" element={<CustomerOrders user={user} />} />
+                <Route path="/contacts" element={<Contacts user={user} />} />
                 <Route path="/settings" element={<SettingsComponent user={user} onRefreshUser={() => setUser({...user})} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

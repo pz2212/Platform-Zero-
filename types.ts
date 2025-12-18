@@ -19,6 +19,16 @@ export interface AppNotification {
   link?: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  text: string;
+  timestamp: string;
+  isProductLink?: boolean;
+  productId?: string;
+}
+
 export interface BusinessProfile {
   companyName: string;
   tradingName: string;

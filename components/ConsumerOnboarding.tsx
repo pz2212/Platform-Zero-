@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Customer, UserRole, User, RegistrationRequest, Order, Product } from '../types';
 import { mockService } from '../services/mockDataService';
@@ -6,7 +5,7 @@ import {
   Search, MoreVertical, Users, CheckCircle, Clock, ShoppingCart, 
   Eye, Edit, Settings, UserPlus, FileText, 
   ChevronDown, AlertCircle, AlertTriangle, Store, X, Building, MapPin, Truck, Phone, Mail, DollarSign, Calendar, Check, ExternalLink, Download, Printer, Copy, Link as LinkIcon,
-  Plus, Rocket
+  Plus, Rocket, Sprout
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -212,7 +211,7 @@ export const ConsumerOnboarding: React.FC = () => {
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center"><Clock size={24} /></div>
-          <div><p className="text-sm font-medium text-gray-500">Pending Connection</p><h3 className="text-2xl font-bold text-gray-900">{stats.pending}</h3></div>
+          <div><p className="text-sm font-medium text-gray-500">Pending Approval</p><h3 className="text-2xl font-bold text-gray-900">{pendingRequests.length}</h3></div>
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center"><ShoppingCart size={24} /></div>
@@ -220,30 +219,38 @@ export const ConsumerOnboarding: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-gray-100/50 p-1 rounded-lg inline-flex w-full md:w-auto border border-gray-200">
-        <button onClick={() => setActiveTab('customers')} className={`px-6 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'customers' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Customers</button>
-        <button onClick={() => setActiveTab('orders')} className={`px-6 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'orders' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Orders</button>
-        <button onClick={() => setActiveTab('waiting')} className={`px-6 py-2 text-sm font-bold rounded-md transition-all flex items-center gap-2 ${activeTab === 'waiting' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Waiting{pendingRequests.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full animate-pulse shadow-sm">{pendingRequests.length}</span>)}</button>
+      <div className="bg-gray-100/50 p-1 rounded-lg inline-flex w-full md:w-auto border border-gray-200 shadow-sm">
+        <button onClick={() => setActiveTab('customers')} className={`px-8 py-2.5 text-sm font-bold rounded-md transition-all ${activeTab === 'customers' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Current Customers</button>
+        <button onClick={() => setActiveTab('orders')} className={`px-8 py-2.5 text-sm font-bold rounded-md transition-all ${activeTab === 'orders' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Orders</button>
+        <button onClick={() => setActiveTab('waiting')} className={`px-8 py-2.5 text-sm font-bold rounded-md transition-all flex items-center gap-2 ${activeTab === 'waiting' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            Waiting
+            {pendingRequests.length > 0 && (<span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm">{pendingRequests.length}</span>)}
+        </button>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-visible min-h-[500px]">
-        <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2"><Store size={20} className="text-gray-900"/><h2 className="text-lg font-bold text-gray-900">{activeTab === 'waiting' ? 'Pending Applications' : 'Marketplace Customers'}</h2></div>
-          {activeTab !== 'waiting' && (<div className="relative w-full md:w-80"><Search className="absolute left-3 top-2.5 text-gray-400" size={18} /><input type="text" placeholder="Search customers..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm font-black text-slate-900 focus:ring-2 focus:ring-gray-900 outline-none" /></div>)}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-visible min-h-[500px]">
+        <div className="p-8 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-50 rounded-xl text-gray-900 border border-gray-100">
+                  {activeTab === 'waiting' ? <Clock size={24} className="text-orange-500"/> : <Store size={24} className="text-indigo-600"/>}
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">{activeTab === 'waiting' ? 'Pending Applications' : 'Verified Directory'}</h2>
+          </div>
+          {activeTab !== 'waiting' && (<div className="relative w-full md:w-80"><Search className="absolute left-3 top-3 text-gray-400" size={18} /><input type="text" placeholder="Search businesses..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner-sm bg-gray-50/30" /></div>)}
         </div>
 
         {activeTab === 'customers' && (
             <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50/50 border-b border-gray-100">
                 <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Connected Supplier</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Orders</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Outstanding</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Business Detail</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Segment</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Connection</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Supplier Pair</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Orders</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Accounting</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -251,49 +258,48 @@ export const ConsumerOnboarding: React.FC = () => {
                     const metrics = getCustomerMetrics(customer.id);
                     return (
                     <tr key={customer.id} className="hover:bg-gray-50 transition-colors group">
-                        <td className="px-6 py-4">
+                        <td className="px-8 py-6">
                             <div className="font-bold text-gray-900">{customer.businessName}</div>
-                            <div className="text-xs text-gray-500">{customer.email || 'No email'}</div>
+                            <div className="text-xs text-gray-400 font-medium">{customer.email || 'No primary email'}</div>
                         </td>
-                        <td className="px-6 py-4"><span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">{customer.category}</span></td>
-                        <td className="px-6 py-4">
-                            {customer.connectionStatus === 'Active' && (<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">Active</span>)}
-                            {customer.connectionStatus === 'Pending Connection' && (<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-white text-orange-700 border border-orange-300">Pending Connection</span>)}
-                            {customer.connectionStatus === 'Pricing Pending' && (<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-white text-blue-600 border border-blue-300">Pricing Pending</span>)}
+                        <td className="px-8 py-6"><span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-gray-100 text-gray-600 border border-gray-200">{customer.category}</span></td>
+                        <td className="px-8 py-6">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${customer.connectionStatus === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-orange-400'}`}></div>
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${customer.connectionStatus === 'Active' ? 'text-emerald-700' : 'text-orange-700'}`}>{customer.connectionStatus}</span>
+                            </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-8 py-6">
                             {customer.connectedSupplierName ? (
                                 <>
                                 <div className="text-sm font-bold text-gray-900">{customer.connectedSupplierName}</div>
-                                <div className="text-xs text-gray-500">{customer.connectedSupplierRole}</div>
+                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{customer.connectedSupplierRole}</div>
                                 </>
-                            ) : (<span className="text-xs text-gray-400 italic">Not connected</span>)}
+                            ) : (<span className="text-[10px] text-gray-300 font-bold uppercase italic">No Link</span>)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 font-medium text-center">{metrics.orderCount}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-8 py-6 text-sm text-gray-900 font-black text-center">{metrics.orderCount}</td>
+                        <td className="px-8 py-6">
                             {metrics.outstanding > 0 ? (
-                                <span className="text-sm font-bold text-red-600">${metrics.outstanding.toFixed(2)}</span>
-                            ) : (<span className="text-sm text-gray-400">$0.00</span>)}
+                                <span className="text-sm font-black text-red-600 tracking-tight">${metrics.outstanding.toFixed(2)}</span>
+                            ) : (<span className="text-sm text-gray-300 font-bold">$0.00</span>)}
                         </td>
-                        <td className="px-6 py-4 text-right relative">
+                        <td className="px-8 py-6 text-right relative">
                             {customer.connectionStatus === 'Pending Connection' ? (
                                 <button 
                                     onClick={() => handleGetStarted(customer.id)}
-                                    className="px-4 py-2 bg-[#043003] text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm hover:bg-black transition-all"
+                                    className="px-6 py-2.5 bg-emerald-600 text-white font-black rounded-xl text-[10px] uppercase tracking-[0.15em] flex items-center gap-2 shadow-md hover:bg-black transition-all ml-auto"
                                 >
-                                    <Rocket size={14}/> Get Started
+                                    <Rocket size={14}/> Provision
                                 </button>
                             ) : (
-                                <button onClick={(e) => toggleActionMenu(e, customer.id)} className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 border border-transparent hover:border-gray-300 transition-all"><MoreVertical size={16}/></button>
+                                <button onClick={(e) => toggleActionMenu(e, customer.id)} className="p-2.5 rounded-xl hover:bg-gray-100 text-gray-400 border border-transparent hover:border-gray-200 transition-all ml-auto block"><MoreVertical size={18}/></button>
                             )}
                             
                             {activeActionMenu === customer.id && (
-                                <div ref={menuRef} className="absolute right-8 top-8 w-56 bg-white rounded-lg shadow-xl border border-gray-100 z-50 animate-in fade-in zoom-in-95 duration-100 origin-top-right overflow-hidden">
-                                <div className="py-1">
-                                    <button className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"><Eye size={16} className="text-gray-400"/> View Profile</button>
-                                    <button className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"><Edit size={16} className="text-green-600"/> Edit Business</button>
-                                    <button className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2" onClick={() => handleOpenInvoices(customer)}><FileText size={16} className="text-blue-600"/> View Invoices</button>
-                                </div>
+                                <div ref={menuRef} className="absolute right-8 top-12 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 animate-in fade-in zoom-in-95 duration-150 origin-top-right overflow-hidden py-1">
+                                    <button className="w-full text-left px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-3"><Eye size={18} className="text-gray-400"/> Full Profile</button>
+                                    <button className="w-full text-left px-5 py-3 text-sm font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-3"><Edit size={18}/> Management</button>
+                                    <button className="w-full text-left px-5 py-3 text-sm font-bold text-indigo-600 hover:bg-indigo-50 flex items-center gap-3" onClick={() => handleOpenInvoices(customer)}><FileText size={18}/> Invoices</button>
                                 </div>
                             )}
                         </td>
@@ -302,31 +308,80 @@ export const ConsumerOnboarding: React.FC = () => {
                 })}
                 </tbody>
             </table>
-            {filteredCustomers.length === 0 && (<div className="p-12 text-center text-gray-400">No customers found matching "{searchTerm}"</div>)}
+            {filteredCustomers.length === 0 && (<div className="p-24 text-center text-gray-400 flex flex-col items-center gap-3"><Store size={40} className="opacity-10"/><p className="text-sm font-black uppercase tracking-widest">No matching connections</p></div>)}
             </div>
         )}
 
         {activeTab === 'orders' && (
-            <div className="p-8 text-center text-gray-400">Marketplace orders view.</div>
+            <div className="p-24 text-center text-gray-400 flex flex-col items-center gap-3">
+                <ShoppingCart size={40} className="opacity-10"/>
+                <p className="text-sm font-black uppercase tracking-widest">Marketplace Order Feed</p>
+            </div>
         )}
         
         {activeTab === 'waiting' && (
-            <div className="divide-y divide-gray-100">
+            <div className="p-8 space-y-4">
                 {pendingRequests.length === 0 ? (
-                    <div className="p-16 text-center text-gray-400">No pending applications.</div>
+                    <div className="p-20 text-center text-gray-300 flex flex-col items-center gap-3">
+                        <CheckCircle size={40} className="opacity-10"/>
+                        <p className="text-sm font-black uppercase tracking-widest">Application Queue Empty</p>
+                    </div>
                 ) : (
-                    pendingRequests.map(req => (
-                        <div key={req.id} className="p-6 hover:bg-gray-50 flex justify-between items-center">
-                            <div>
-                                <h3 className="font-bold text-gray-900">{req.businessName}</h3>
-                                <p className="text-xs text-gray-500">{req.email} • {req.requestedRole}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {pendingRequests.map(req => (
+                            <div key={req.id} className="p-6 bg-gray-50 border border-gray-100 rounded-[2rem] hover:shadow-lg transition-all animate-in zoom-in-95 group">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner-sm ${
+                                            req.requestedRole === UserRole.CONSUMER ? 'bg-blue-100 text-blue-700' : 
+                                            req.requestedRole === UserRole.FARMER ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'
+                                        }`}>
+                                            {req.businessName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-gray-900 text-lg leading-tight uppercase tracking-tight">{req.businessName}</h3>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-0.5">Applied: {new Date(req.submittedDate).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] border-2 ${
+                                        req.requestedRole === UserRole.CONSUMER ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                        req.requestedRole === UserRole.FARMER ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                        'bg-indigo-50 text-indigo-600 border-indigo-100'
+                                    }`}>
+                                        {req.requestedRole === UserRole.CONSUMER ? 'Buyer' : req.requestedRole}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 mb-8">
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase">
+                                        <Building size={16} className="text-gray-300"/> Applied as: {req.requestedRole}
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase">
+                                        <Mail size={16} className="text-gray-300"/> {req.email}
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase">
+                                        <MapPin size={16} className="text-gray-300"/> {req.consumerData?.location || 'Australia'}
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => handleApproveRequest(req.id)} 
+                                        className="flex-1 py-4 bg-[#043003] text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all active:scale-95 flex items-center justify-center gap-2"
+                                    >
+                                        <Check size={16} strokeWidth={3}/> Approve Application
+                                    </button>
+                                    <button 
+                                        onClick={() => handleRejectRequest(req.id)} 
+                                        className="px-5 py-4 bg-white border border-gray-200 text-gray-400 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center shadow-sm"
+                                    >
+                                        <X size={18}/>
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => handleApproveRequest(req.id)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold">Approve</button>
-                                <button onClick={() => handleRejectRequest(req.id)} className="px-4 py-2 bg-white text-gray-500 border rounded-lg text-sm font-bold">Reject</button>
-                            </div>
-                        </div>
-                    ))
+                        ))
+                    }
+                    </div>
                 )}
             </div>
         )}

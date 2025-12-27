@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { UserRole, User, AppNotification } from './types';
@@ -379,15 +378,6 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                     <div className="pb-2 px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Platform Admin</div>
                     <SidebarLink to="/" icon={LayoutDashboard} label="Overview" active={isActive('/')} onClick={() => setIsMobileNavOpen(false)} />
                     
-                    {/* Elevated Quote Generator for better accessibility */}
-                    <SidebarLink 
-                        to="/pricing-requests" 
-                        icon={Calculator} 
-                        label="Quote Generator" 
-                        active={isActive('/pricing-requests')} 
-                        onClick={() => setIsMobileNavOpen(false)} 
-                    />
-
                     <div className="space-y-1">
                         <button 
                             onClick={() => setIsMarketplaceMenuOpen(!isMarketplaceMenuOpen)}
@@ -403,7 +393,7 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                         {isMarketplaceMenuOpen && (
                             <div className="space-y-1 animate-in slide-in-from-top-2 duration-200">
                                 <SidebarLink to="/marketplace" icon={Layers} label="Catalog Manager" active={isActive('/marketplace')} isSubItem onClick={() => setIsMobileNavOpen(false)} />
-                                <SidebarLink to="/consumer-onboarding" icon={Users} label="Customers" active={isActive('/consumer-onboarding')} isSubItem onClick={() => setIsMobileNavOpen(false)} />
+                                <SidebarLink to="/consumer-onboarding" icon={Users} label="Marketplace Management" active={isActive('/consumer-onboarding')} isSubItem onClick={() => setIsMobileNavOpen(false)} />
                                 <SidebarLink to="/admin/suppliers" icon={Store} label="Suppliers" active={isActive('/admin/suppliers')} isSubItem onClick={() => setIsMobileNavOpen(false)} />
                                 <SidebarLink 
                                     to="/login-requests" 
@@ -688,10 +678,16 @@ const App = () => {
                                         <ChevronRight size={20} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                                     </button>
                                 </div>
-                                <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-center">
+                                <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col items-center gap-2">
+                                    <button 
+                                        onClick={() => setShowLoginModal(false)}
+                                        className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-2 uppercase tracking-widest py-1 transition-colors"
+                                    >
+                                        Don't have an account? Sign up
+                                    </button>
                                     <button 
                                         onClick={() => selectPortal('ADMIN')}
-                                        className="text-xs font-bold text-gray-400 hover:text-gray-600 flex items-center gap-2 uppercase tracking-widest py-2 transition-colors"
+                                        className="text-xs font-bold text-gray-400 hover:text-gray-600 flex items-center gap-2 uppercase tracking-widest py-1 transition-colors"
                                     >
                                         <Lock size={14} /> Admin & Staff Access
                                     </button>
@@ -718,7 +714,7 @@ const App = () => {
                                     </button>
                                     <button 
                                         onClick={() => selectSubRole('FARMER')}
-                                        className="w-full text-left p-5 border border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group flex items-center gap-4"
+                                        className="w-full text-left p-5 border border-gray-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group flex items-center gap-4"
                                     >
                                         <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
                                             <Sprout size={24} />
@@ -772,7 +768,7 @@ const App = () => {
                 } />
                 <Route path="/marketplace" element={<Marketplace user={user} />} />
                 <Route path="/login-requests" element={<LoginRequests />} />
-                <Route path="/pricing-requests" element={<PricingRequests user={user} />} />
+                <Route path="/pricing-requests" element={user.role === UserRole.ADMIN ? <PricingRequests user={user} /> : <Navigate to="/" replace />} />
                 <Route path="/admin/negotiations" element={<AdminPriceRequests />} />
                 <Route path="/consumer-onboarding" element={<ConsumerOnboarding />} />
                 <Route path="/admin/suppliers" element={<AdminSuppliers />} />

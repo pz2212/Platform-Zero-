@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { UserRole, User, AppNotification } from './types';
@@ -589,29 +590,54 @@ const App = () => {
             <ConsumerLanding onLogin={() => setShowAuthModal(true)} />
             {showAuthModal && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Sign In</h2>
-                            <button onClick={() => setShowAuthModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+                        <div className="p-10 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
+                            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Sign In</h2>
+                            <button onClick={() => setShowAuthModal(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full border border-gray-100 shadow-sm transition-all active:scale-90"><X size={24}/></button>
                         </div>
-                        <div className="p-8 space-y-4">
-                            <p className="text-sm text-gray-500 mb-6">Select a profile to enter the Platform Zero ecosystem.</p>
-                            {mockService.getAllUsers().map(u => (
-                                <button 
-                                    key={u.id}
-                                    onClick={() => handleLogin(u)}
-                                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all flex items-center gap-4 group"
-                                >
-                                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center font-black text-gray-400 group-hover:text-emerald-600 group-hover:border-emerald-200 shadow-sm">
-                                        {u.name.charAt(0)}
+                        <div className="p-10 space-y-4">
+                            <p className="text-sm text-gray-500 mb-8 font-medium">Choose your entry point to the Platform Zero ecosystem.</p>
+                            
+                            <button 
+                                onClick={() => handleLogin(mockService.getAllUsers().find(u => u.role === UserRole.WHOLESALER)!)}
+                                className="w-full p-8 bg-white border-2 border-gray-100 rounded-[2rem] hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex items-center justify-between group shadow-sm hover:shadow-xl hover:shadow-emerald-50/50"
+                            >
+                                <div className="flex items-center gap-6">
+                                    <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <Sprout size={32} strokeWidth={2.5}/>
                                     </div>
                                     <div className="text-left">
-                                        <p className="font-black text-gray-900">{u.businessName}</p>
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{u.role}</p>
+                                        <p className="font-black text-gray-900 text-xl tracking-tight">Partner Portal</p>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-0.5">Farmers & Wholesalers</p>
                                     </div>
-                                    <ChevronRight className="ml-auto text-gray-300 group-hover:text-emerald-500" size={20}/>
+                                </div>
+                                <ChevronRight className="text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" size={24}/>
+                            </button>
+
+                            <button 
+                                onClick={() => handleLogin(mockService.getAllUsers().find(u => u.role === UserRole.CONSUMER)!)}
+                                className="w-full p-8 bg-white border-2 border-gray-100 rounded-[2rem] hover:border-blue-500 hover:bg-blue-50/30 transition-all flex items-center justify-between group shadow-sm hover:shadow-xl hover:shadow-blue-50/50"
+                            >
+                                <div className="flex items-center gap-6">
+                                    <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <ShoppingCart size={32} strokeWidth={2.5}/>
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="font-black text-gray-900 text-xl tracking-tight">Marketplace</p>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-0.5">Buyers & Procurement</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" size={24}/>
+                            </button>
+
+                            <div className="pt-8 text-center">
+                                <button 
+                                    onClick={() => handleLogin(mockService.getAllUsers().find(u => u.role === UserRole.ADMIN)!)}
+                                    className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] hover:text-indigo-600 transition-colors"
+                                >
+                                    Platform Admin
                                 </button>
-                            ))}
+                            </div>
                         </div>
                     </div>
                 </div>

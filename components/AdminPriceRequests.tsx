@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SupplierPriceRequest, User, Customer } from '../types';
 import { mockService } from '../services/mockDataService';
+/* Added Check to imports */
 import { 
   Handshake, Store, CheckCircle, ChevronRight, X, MessageSquare, 
-  Clock, AlertCircle, Rocket, MapPin, DollarSign, ArrowLeft
+  Clock, AlertCircle, Rocket, MapPin, DollarSign, ArrowLeft, Percent, TrendingUp, Check
 } from 'lucide-react';
 import { ChatDialog } from './ChatDialog';
 
@@ -168,7 +169,7 @@ export const AdminPriceRequests: React.FC = () => {
       {/* VIEW QUOTE DETAILS MODAL */}
       {viewingRequest && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
-              <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+              <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                   <div className="p-10 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
                       <div>
                           <div className="flex items-center gap-4 mb-2">
@@ -179,17 +180,18 @@ export const AdminPriceRequests: React.FC = () => {
                           </div>
                           <p className="text-xs text-indigo-600 font-black uppercase tracking-widest">Submission from {wholesalers.find(w => w.id === viewingRequest.supplierId)?.businessName}</p>
                       </div>
-                      <button onClick={() => setViewingRequest(null)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm border border-gray-100"><X size={24}/></button>
+                      <button onClick={() => setViewingRequest(null)} className="text-gray-400 hover:text-gray-600 p-1 bg-white rounded-full shadow-sm border border-gray-100"><X size={24}/></button>
                   </div>
                   
                   <div className="p-10 overflow-y-auto flex-1">
                       <table className="w-full text-sm">
                           <thead>
                               <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-left border-b border-gray-100">
-                                  <th className="pb-6">Product Variety</th>
-                                  <th className="pb-6 text-right">Target Price</th>
-                                  <th className="pb-6 text-right text-indigo-600">Offered Price</th>
-                                  <th className="pb-6 text-right">Variance</th>
+                                  <th className="pb-6 px-4">Product Variety</th>
+                                  <th className="pb-6 px-4 text-right">Target Rate</th>
+                                  <th className="pb-6 px-4 text-center">Matched?</th>
+                                  <th className="pb-6 px-4 text-right text-indigo-600">Offered Price</th>
+                                  <th className="pb-6 px-4 text-right">Status</th>
                               </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-50">
@@ -197,12 +199,19 @@ export const AdminPriceRequests: React.FC = () => {
                                   const variance = item.offeredPrice ? ((item.offeredPrice - item.targetPrice) / item.targetPrice) * 100 : 0;
                                   return (
                                       <tr key={idx} className="hover:bg-gray-50 transition-colors group">
-                                          <td className="py-6 font-black text-gray-900 text-lg tracking-tight">{item.productName}</td>
-                                          <td className="py-6 text-right text-gray-400 font-bold">${item.targetPrice.toFixed(2)}</td>
-                                          <td className="py-6 text-right font-black text-gray-900 text-xl">
+                                          <td className="py-6 px-4 font-black text-gray-900 text-lg tracking-tight">{item.productName}</td>
+                                          <td className="py-6 px-4 text-right text-gray-400 font-bold">${item.targetPrice.toFixed(2)}</td>
+                                          <td className="py-6 px-4 text-center">
+                                              {item.isMatchingTarget ? (
+                                                  <div className="bg-emerald-100 text-emerald-700 w-8 h-8 rounded-full flex items-center justify-center mx-auto"><Check size={18} strokeWidth={3}/></div>
+                                              ) : (
+                                                  <div className="bg-red-100 text-red-700 w-8 h-8 rounded-full flex items-center justify-center mx-auto font-black text-xs">NO</div>
+                                              )}
+                                          </td>
+                                          <td className="py-6 px-4 text-right font-black text-gray-900 text-xl">
                                               {item.offeredPrice ? `$${item.offeredPrice.toFixed(2)}` : <span className="text-gray-200 italic">...</span>}
                                           </td>
-                                          <td className="py-6 text-right">
+                                          <td className="py-6 px-4 text-right">
                                               {item.offeredPrice ? (
                                                   <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-widest border-2 ${variance <= 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
                                                       {variance <= 0 ? 'Target Met' : `+${variance.toFixed(1)}%`}
@@ -250,7 +259,7 @@ export const AdminPriceRequests: React.FC = () => {
 
       <ChatDialog 
         isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
+        onClose={() => setChatOpen(false)}
         orderId="QUOTE-NEGOTIATION"
         issueType={chatQuoteContext}
         repName={chatSupplierName}

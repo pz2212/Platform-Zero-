@@ -311,6 +311,7 @@ export interface SupplierPriceRequestItem {
   productName: string;
   targetPrice: number;
   offeredPrice?: number;
+  isMatchingTarget?: boolean;
 }
 
 export interface SupplierPriceRequest {

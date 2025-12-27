@@ -95,6 +95,8 @@ export const LoginRequests: React.FC = () => {
 
     useEffect(() => {
         setRequests(mockService.getRegistrationRequests());
+        const interval = setInterval(() => setRequests(mockService.getRegistrationRequests()), 3000);
+        return () => clearInterval(interval);
     }, []);
 
     const handleApprove = (id: string) => {
@@ -108,12 +110,12 @@ export const LoginRequests: React.FC = () => {
     };
 
     const handleGenerateQuote = (req: RegistrationRequest) => {
-        // Navigate to quote generator with pre-filled state
+        // Navigate to quote generator with pre-filled state including invoice file
         navigate('/pricing-requests', { 
             state: { 
                 customerName: req.businessName,
                 customerLocation: req.consumerData?.location || '',
-                invoiceFile: req.consumerData?.invoiceFile || null,
+                invoiceFile: req.consumerData?.invoiceFile || null, // THIS IS KEY: Pass the stored base64
                 weeklySpend: req.consumerData?.weeklySpend || 0,
                 orderFreq: req.consumerData?.orderFrequency || 'Weekly'
             } 
@@ -178,6 +180,11 @@ export const LoginRequests: React.FC = () => {
                                             <span className="flex items-center gap-1.5"><User size={14}/> {req.name}</span>
                                             <span className="flex items-center gap-1.5"><Mail size={14}/> {req.email}</span>
                                             {req.consumerData?.location && <span className="flex items-center gap-1.5"><MapPin size={14}/> {req.consumerData.location}</span>}
+                                            {req.consumerData?.invoiceFile && (
+                                                <span className="flex items-center gap-1.5 text-emerald-600">
+                                                    <FileText size={14}/> Invoice Attached
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

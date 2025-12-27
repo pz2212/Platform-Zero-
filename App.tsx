@@ -27,50 +27,12 @@ import { AdminRepManagement } from './components/AdminRepManagement';
 import { TradingInsights } from './components/TradingInsights';
 import { AdminSuppliers } from './components/AdminSuppliers';
 import { Contacts } from './components/Contacts';
+import { LiveActivity } from './components/LiveActivity';
 import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  Settings, 
-  LogOut,
-  Menu,
-  Tags,
-  ChevronDown,
-  ChevronRight,
-  UserPlus,
-  ClipboardList, 
-  ScanLine, 
-  DollarSign, 
-  Store, 
-  X, 
-  Lock, 
-  ArrowLeft, 
-  Briefcase, 
-  Eye, 
-  EyeOff, 
-  Bell, 
-  Award,
-  ShoppingBag,
-  Sprout,
-  Handshake,
-  ShieldCheck,
-  TrendingUp,
-  Target,
-  Plus,
-  ChevronUp,
-  BarChart4,
-  Layers,
-  FileText,
-  Gift,
-  Truck,
-  Sparkles,
-  Calculator,
-  Clock,
-  Building,
-  User as UserIcon,
-  MessageCircle,
-  Menu as HamburgerIcon
+  LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Menu, Tags, ChevronDown, ChevronRight, UserPlus, 
+  ClipboardList, ScanLine, DollarSign, Store, X, Lock, ArrowLeft, Briefcase, Eye, EyeOff, Bell, Award,
+  ShoppingBag, Sprout, Handshake, ShieldCheck, TrendingUp, Target, Plus, ChevronUp, BarChart4, Layers, FileText, 
+  Gift, Truck, Sparkles, Calculator, Clock, Building, User as UserIcon, MessageCircle, Menu as HamburgerIcon
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, active, onClick, isSubItem = false, badge = 0, subLabel }: any) => (
@@ -319,6 +281,7 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   const [isMarketplaceMenuOpen, setIsMarketplaceMenuOpen] = useState(true);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
+  const [latestLiveNotif, setLatestLiveNotif] = useState<AppNotification | null>(null);
   const [directory, setDirectory] = useState<User[]>([]);
 
   const notifRef = useRef<HTMLDivElement>(null);
@@ -340,12 +303,20 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   }, [user]);
 
   useEffect(() => {
+    let lastNotifId = '';
     const updateNotifs = () => {
         const notifs = mockService.getAppNotifications(user.id);
         setNotifCount(notifs.filter(n => !n.isRead).length);
+        
+        // Find newest unread high-priority notification to show as Live Activity
+        const latest = notifs.find(n => !n.isRead);
+        if (latest && latest.id !== lastNotifId) {
+            lastNotifId = latest.id;
+            setLatestLiveNotif(latest);
+        }
     };
     updateNotifs();
-    const interval = setInterval(updateNotifs, 5000);
+    const interval = setInterval(updateNotifs, 3000);
     return () => clearInterval(interval);
   }, [user.id]);
 
@@ -481,6 +452,13 @@ const AppLayout = ({ children, user, onLogout }: any) => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      {/* LIVE ACTIVITY NOTIFICATION OVERLAY */}
+      <LiveActivity 
+        notification={latestLiveNotif} 
+        user={user} 
+        onClose={() => setLatestLiveNotif(null)} 
+      />
+
       {/* DESKTOP SIDEBAR */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 fixed inset-y-0 z-30">
         <div className="p-6 border-b border-gray-100 flex items-center gap-3">
@@ -541,7 +519,7 @@ const AppLayout = ({ children, user, onLogout }: any) => {
       )}
       
       <main className="flex-1 md:ml-64 p-4 md:p-8 w-full overflow-x-hidden relative mt-16 md:mt-0">
-        <div className="hidden md:flex justify-end mb-6 sticky top-0 md:absolute md:top-8 md:right-8 z-40 bg-gray-50/80 md:bg-transparent backdrop-blur-sm md:backdrop-blur-0 py-2 md:py-0 -mx-4 md:mx-0 px-4 md:px-0">
+        <div className="hidden md:flex justify-end mb-6 sticky top-0 md:absolute md:top-8 md:right-8 z-40 bg-gray-50/80 md:bg-transparent backdrop-blur-sm md:backdrop-blur-0 py-2 md:py-0 -mx-4 md:mx-0 px-4 md:mx-0">
             <div className="flex items-center gap-3">
                 <div className="relative" ref={notifRef}>
                     <button 
@@ -587,206 +565,117 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   );
 };
 
+// Main App Component with Auth management and Routes
 const App = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginStep, setLoginStep] = useState<'select' | 'role_select' | 'form'>('select');
-  const [portalType, setPortalType] = useState<'PARTNER' | 'MARKETPLACE' | 'ADMIN'>('PARTNER');
-  const [subRole, setSubRole] = useState<'WHOLESALER' | 'FARMER' | null>(null);
-  const [email, setEmail] = useState('');
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const found = mockService.getAllUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (found) {
-        setUser(found);
-        setShowLoginModal(false);
-        setLoginStep('select');
-    } else {
-        alert(`Account not found. Tip: Try '${subRole === 'FARMER' ? 'bob@greenvalley.com' : 'sarah@fresh.com'}' for demo access.`);
-    }
+  useEffect(() => {
+    // Initial user setup can be added here if persistent login is needed
+  }, []);
+
+  const handleLogout = () => {
+    setUser(null);
   };
 
-  const selectPortal = (type: 'PARTNER' | 'MARKETPLACE' | 'ADMIN') => {
-      setPortalType(type);
-      if (type === 'PARTNER') {
-          setLoginStep('role_select');
-      } else {
-          setLoginStep('form');
-          if (type === 'ADMIN') setEmail('admin@pz.com');
-          else setEmail('alice@cafe.com');
-      }
+  const handleLogin = (user: User) => {
+    setUser(user);
+    setShowAuthModal(false);
   };
 
-  const selectSubRole = (role: 'WHOLESALER' | 'FARMER') => {
-      setSubRole(role);
-      setLoginStep('form');
-      if (role === 'WHOLESALER') setEmail('sarah@fresh.com');
-      else setEmail('bob@greenvalley.com');
-  };
-
-  const resetModal = () => {
-      setShowLoginModal(false);
-      setLoginStep('select');
-      setEmail('');
-      setSubRole(null);
-  };
-
-  return (
-    <Router>
-      {!user ? (
+  if (!user) {
+    return (
         <>
-            <ConsumerLanding onLogin={() => setShowLoginModal(true)} />
-            {showLoginModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
-                        
-                        {loginStep === 'select' ? (
-                            <>
-                                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                                    <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
-                                    <button onClick={resetModal} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
-                                </div>
-                                <div className="p-6 space-y-4 bg-white">
-                                    <p className="text-gray-500 text-sm font-medium mb-2">Please select your portal to continue.</p>
-                                    
-                                    <button 
-                                        onClick={() => selectPortal('PARTNER')}
-                                        className="w-full text-left p-5 border border-gray-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group flex items-center gap-4"
-                                    >
-                                        <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 group-hover:scale-105 transition-transform">
-                                            <Briefcase size={28} />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-gray-900 text-lg">Partners</h3>
-                                            <p className="text-sm text-gray-500">Wholesalers & Farmers</p>
-                                        </div>
-                                        <ChevronRight size={20} className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
-                                    </button>
-
-                                    <button 
-                                        onClick={() => selectPortal('MARKETPLACE')}
-                                        className="w-full text-left p-5 border border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50/30 transition-all group flex items-center gap-4"
-                                    >
-                                        <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-105 transition-transform">
-                                            <ShoppingCart size={28} />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-gray-900 text-lg">Marketplace</h3>
-                                            <p className="text-sm text-gray-500">Buyers & Consumers</p>
-                                        </div>
-                                        <ChevronRight size={20} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
-                                    </button>
-                                </div>
-                                <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col items-center gap-2">
-                                    <button 
-                                        onClick={() => setShowLoginModal(false)}
-                                        className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-2 uppercase tracking-widest py-1 transition-colors"
-                                    >
-                                        Don't have an account? Sign up
-                                    </button>
-                                    <button 
-                                        onClick={() => selectPortal('ADMIN')}
-                                        className="text-xs font-bold text-gray-400 hover:text-gray-600 flex items-center gap-2 uppercase tracking-widest py-1 transition-colors"
-                                    >
-                                        <Lock size={14} /> Admin & Staff Access
-                                    </button>
-                                </div>
-                            </>
-                        ) : loginStep === 'role_select' ? (
-                            <>
-                                <div className="p-6 border-b border-gray-100 flex items-center gap-4">
-                                    <button onClick={() => setLoginStep('select')} className="text-gray-400 hover:text-gray-600"><ArrowLeft size={20}/></button>
-                                    <h2 className="text-xl font-bold text-gray-900">Partner Login</h2>
-                                </div>
-                                <div className="p-6 space-y-4">
-                                    <button 
-                                        onClick={() => selectSubRole('WHOLESALER')}
-                                        className="w-full text-left p-5 border border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group flex items-center gap-4"
-                                    >
-                                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-                                            <Building size={24} />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-gray-900">Wholesaler Portal</h3>
-                                            <p className="text-xs text-gray-500">Manage inventory & staff</p>
-                                        </div>
-                                    </button>
-                                    <button 
-                                        onClick={() => selectSubRole('FARMER')}
-                                        className="w-full text-left p-5 border border-gray-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group flex items-center gap-4"
-                                    >
-                                        <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
-                                            <Sprout size={24} />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-gray-900">Farmer Portal</h3>
-                                            <p className="text-xs text-gray-500">Manage harvest & direct sales</p>
-                                        </div>
-                                    </button>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <div className="p-6 border-b border-gray-100 flex items-center gap-4">
-                                    <button onClick={() => portalType === 'PARTNER' ? setLoginStep('role_select') : setLoginStep('select')} className="text-gray-400 hover:text-gray-600"><ArrowLeft size={20}/></button>
-                                    <h2 className="text-xl font-bold text-gray-900">Sign in to {subRole ? `${subRole.charAt(0) + subRole.slice(1).toLowerCase()} Portal` : portalType.charAt(0) + portalType.slice(1).toLowerCase()}</h2>
-                                </div>
-                                <form onSubmit={handleLogin} className="p-8 space-y-6">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">Email Address</label>
-                                        <input 
-                                            type="email" 
-                                            autoFocus
-                                            value={email} 
-                                            onChange={e => setEmail(e.target.value)} 
-                                            className="w-full p-4 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50 text-lg text-black" 
-                                            placeholder="your@email.com"
-                                        />
+            <ConsumerLanding onLogin={() => setShowAuthModal(true)} />
+            {showAuthModal && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Sign In</h2>
+                            <button onClick={() => setShowAuthModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+                        </div>
+                        <div className="p-8 space-y-4">
+                            <p className="text-sm text-gray-500 mb-6">Select a profile to enter the Platform Zero ecosystem.</p>
+                            {mockService.getAllUsers().map(u => (
+                                <button 
+                                    key={u.id}
+                                    onClick={() => handleLogin(u)}
+                                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all flex items-center gap-4 group"
+                                >
+                                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center font-black text-gray-400 group-hover:text-emerald-600 group-hover:border-emerald-200 shadow-sm">
+                                        {u.name.charAt(0)}
                                     </div>
-                                    <button type="submit" className="w-full py-4 bg-[#043003] text-white rounded-xl font-bold text-lg shadow-lg hover:bg-[#064004] transition-all">Continue</button>
-                                    <p className="text-xs text-center text-gray-400 italic">
-                                        Demo accounts are pre-filled based on your selection.
-                                    </p>
-                                </form>
-                            </>
-                        )}
+                                    <div className="text-left">
+                                        <p className="font-black text-gray-900">{u.businessName}</p>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{u.role}</p>
+                                    </div>
+                                    <ChevronRight className="ml-auto text-gray-300 group-hover:text-emerald-500" size={20}/>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
         </>
-      ) : (
-        <AppLayout user={user} onLogout={() => setUser(null)}>
-            <Routes>
-                <Route path="/" element={
-                  user.role === UserRole.ADMIN ? <AdminDashboard /> : 
-                  user.role === UserRole.CONSUMER ? <ConsumerDashboard user={user} /> :
-                  user.role === UserRole.DRIVER ? <DriverDashboard user={user} /> :
-                  user.role === UserRole.PZ_REP ? <RepDashboard user={user} /> :
-                  user.role === UserRole.FARMER ? <FarmerDashboard user={user} /> :
-                  user.dashboardVersion === 'v1' ? <SellerDashboardV1 user={user} /> : <Dashboard user={user} />
-                } />
-                <Route path="/marketplace" element={<Marketplace user={user} />} />
+    );
+  }
+
+  const isV1 = user.dashboardVersion === 'v1';
+
+  return (
+    <Router>
+      <AppLayout user={user} onLogout={handleLogout}>
+        <Routes>
+          {/* COMMON ROUTES */}
+          <Route path="/settings" element={<SettingsComponent user={user} onRefreshUser={() => setUser({...mockService.getAllUsers().find(u => u.id === user.id)!})} />} />
+          <Route path="/marketplace" element={<Marketplace user={user} />} />
+          <Route path="/trading-insights" element={<TradingInsights user={user} />} />
+          <Route path="/contacts" element={<Contacts user={user} />} />
+
+          {/* ROLE SPECIFIC ROUTES */}
+          {user.role === UserRole.ADMIN && (
+              <>
+                <Route path="/" element={<AdminDashboard />} />
                 <Route path="/login-requests" element={<LoginRequests />} />
-                <Route path="/pricing-requests" element={user.role === UserRole.ADMIN ? <PricingRequests user={user} /> : <Navigate to="/" replace />} />
-                <Route path="/admin/negotiations" element={<AdminPriceRequests />} />
                 <Route path="/consumer-onboarding" element={<ConsumerOnboarding />} />
-                <Route path="/admin/suppliers" element={<AdminSuppliers />} />
                 <Route path="/customer-portals" element={<CustomerPortals />} />
+                <Route path="/pricing-requests" element={<PricingRequests user={user} />} />
+                <Route path="/admin/negotiations" element={<AdminPriceRequests />} />
                 <Route path="/admin-reps" element={<AdminRepManagement />} />
-                <Route path="/trading-insights" element={<TradingInsights user={user} />} />
-                <Route path="/pricing" element={<ProductPricing user={user} />} />
-                <Route path="/inventory" element={<Inventory items={mockService.getInventory(user.id)} />} />
-                <Route path="/market" element={<SupplierMarket user={user} />} />
-                <Route path="/ai-matcher" element={<AiOpportunityMatcher user={user} />} />
-                <Route path="/accounts" element={<Accounts user={user} />} />
+                <Route path="/admin/suppliers" element={<AdminSuppliers />} />
+              </>
+          )}
+
+          {user.role === UserRole.CONSUMER && (
+              <>
+                <Route path="/" element={<ConsumerDashboard user={user} />} />
                 <Route path="/orders" element={<CustomerOrders user={user} />} />
-                <Route path="/contacts" element={<Contacts user={user} />} />
-                <Route path="/settings" element={<SettingsComponent user={user} onRefreshUser={() => setUser({...user})} />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-        </AppLayout>
-      )}
+              </>
+          )}
+
+          {(user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) && (
+              <>
+                <Route path="/" element={
+                  isV1 ? <SellerDashboardV1 user={user} onSwitchVersion={(v) => handleLogin({...user, dashboardVersion: v})} /> 
+                       : (user.role === UserRole.FARMER ? <FarmerDashboard user={user} /> : <Dashboard user={user} />)
+                } />
+                <Route path="/pricing" element={<ProductPricing user={user} />} />
+                <Route path="/accounts" element={<Accounts user={user} />} />
+                <Route path="/market" element={<SupplierMarket user={user} />} />
+              </>
+          )}
+
+          {user.role === UserRole.DRIVER && (
+              <Route path="/" element={<DriverDashboard user={user} />} />
+          )}
+
+          {user.role === UserRole.PZ_REP && (
+              <Route path="/" element={<RepDashboard user={user} />} />
+          )}
+          
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AppLayout>
     </Router>
   );
 };

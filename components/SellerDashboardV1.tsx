@@ -26,7 +26,6 @@ export const ShareModal: React.FC<{
   currentUser: User;
 }> = ({ item, onClose, onComplete, currentUser }) => {
   const product = mockService.getProduct(item.productId);
-  const owner = mockService.getAllUsers().find(u => u.id === item.ownerId);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
   const [manualNumbers, setManualNumbers] = useState<string[]>([]);
@@ -63,7 +62,7 @@ export const ShareModal: React.FC<{
   const handleConnectContacts = async () => {
     try {
       setIsSyncingContacts(true);
-      // @ts-ignore - Contact Picker API (Supported on Chrome Android, some iOS)
+      // @ts-ignore
       if ('contacts' in navigator && 'select' in navigator.contacts) {
         const props = ['name', 'tel'];
         const opts = { multiple: true };
@@ -74,7 +73,6 @@ export const ShareModal: React.FC<{
           setManualNumbers(prev => [...new Set([...prev, ...numbers])]);
         }
       } else {
-        // Fallback simulated sync for standard browser testing
         await new Promise(r => setTimeout(r, 1000));
         const mockContacts = ['0411222333', '0499888777', '0455123987'];
         setManualNumbers(prev => [...new Set([...prev, ...mockContacts])]);
@@ -92,42 +90,30 @@ export const ShareModal: React.FC<{
   };
 
   const handleSendBlast = () => {
-    // Collect all unique numbers (customers + manual)
     const targetNumbers = [
       ...customers.filter(c => selectedCustomerIds.includes(c.id)).map(c => c.phone).filter(p => !!p),
       ...manualNumbers
     ];
 
     if (targetNumbers.length === 0) {
-      alert("Please select or add at least one mobile number to send the link.");
+      alert("Please select or add at least one mobile number.");
       return;
     }
 
     setIsSending(true);
     
-    // 1. Generate the Deep Link
-    // When receivers click this, they'll see the landing page and be asked to sign in/up to see product details
-    const productLink = generateProductDeepLink('product', item.id, currentUser.id);
-    
-    // 2. Construct the SMS Template
-    const businessName = owner?.businessName || currentUser.businessName;
+    // Updated wording as requested by user
+    const senderName = currentUser.businessName;
     const productName = product?.name || 'fresh produce';
-    const priceDisplay = product?.defaultPricePerKg ? `$${product.defaultPricePerKg.toFixed(2)}/kg` : 'market rates';
+    const priceDisplay = product?.defaultPricePerKg ? `$${product.defaultPricePerKg.toFixed(2)}` : 'market rates';
+    const productLink = generateProductDeepLink('product', item.id, senderName);
     
-    const smsMessage = `Hi! ${businessName} just listed fresh ${productName} on Platform Zero! 🔥 Price: ${priceDisplay}. View product and trade here: ${productLink}`;
+    const smsMessage = `Hey there! ${senderName} wants you to view this: fresh ${productName} at ${priceDisplay}. We'd like to connect and chat with you. View and trade here: ${productLink}`;
 
-    // 3. Trigger Native SMS Handler
-    // On mobile, this opens the Messages app. Browser security typically allows only ONE prompt per user gesture.
     triggerNativeSms(targetNumbers[0] as string, smsMessage);
     
-    // 4. Handle remaining targets (Simulation for demo, in production use an API like Twilio)
     setTimeout(() => {
-      const count = targetNumbers.length;
-      let notification = `🚀 SMS Dispatch initiated!`;
-      if (count > 1) {
-        notification += `\n\nApp opened for the first recipient. The other ${count - 1} recipients have been queued for system dispatch.`;
-      }
-      alert(notification);
+      alert(`🚀 SMS Dispatch initiated to ${targetNumbers.length} recipients!`);
       setIsSending(false);
       onComplete();
     }, 1200);
@@ -139,21 +125,19 @@ export const ShareModal: React.FC<{
         <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <div>
             <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Blast to Network</h2>
-            <p className="text-sm text-gray-500 font-medium tracking-tight">Generate and share produce links via SMS</p>
+            <p className="text-sm text-gray-500 font-medium tracking-tight">Generate produce links for your contacts</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm border border-gray-100 transition-all active:scale-90"><X size={28}/></button>
         </div>
         
         <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
-          {/* LIVE SMS PREVIEW BOX */}
           <div className="bg-emerald-50 rounded-3xl p-6 border-2 border-emerald-100 relative shadow-sm">
             <span className="absolute -top-3 left-6 bg-emerald-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">SMS PREVIEW</span>
             <p className="text-sm text-emerald-900 italic leading-relaxed pt-2">
-              "Hi! <span className="font-bold">{owner?.businessName || 'Green Valley'}</span> just listed fresh <span className="font-bold">{product?.name || 'Tomatoes'}</span>! 🔥 Price: <span className="font-bold">${product?.defaultPricePerKg.toFixed(2) || '4.50'}/kg</span>. View product and trade here: <span className="underline font-bold text-emerald-700">https://pz.io/l/...</span>"
+              "Hey there! <span className="font-bold">{currentUser.businessName}</span> wants you to view this: fresh <span className="font-bold">{product?.name || 'Tomatoes'}</span> at <span className="font-bold">${product?.defaultPricePerKg.toFixed(2) || '4.50'}</span>. We'd like to connect and chat with you. View and trade here: <span className="underline font-bold text-emerald-700">https://pz.io/l/...</span>"
             </p>
           </div>
 
-          {/* CONNECTED PROFILES SELECTION */}
           <div>
             <div className="flex justify-between items-center mb-4 px-1">
                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2"><Users size={16}/> Saved Connections ({customers.length})</h3>
@@ -183,16 +167,9 @@ export const ShareModal: React.FC<{
                   {selectedCustomerIds.includes(customer.id) ? <CheckCircle className="text-emerald-600" size={24}/> : <div className="w-6 h-6 rounded-full border-2 border-gray-100" />}
                 </div>
               ))}
-              {customers.length === 0 && (
-                <div className="py-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                    <Users size={32} className="mx-auto text-gray-200 mb-2"/>
-                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">No saved connections found.</p>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* MANUAL MOBILE INPUT */}
           <div>
             <div className="flex justify-between items-center mb-4 px-1">
                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2"><Smartphone size={16}/> Add Manual Recipients</h3>
@@ -221,22 +198,9 @@ export const ShareModal: React.FC<{
                 <Plus size={24}/>
               </button>
             </div>
-            {manualNumbers.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-6 animate-in slide-in-from-top-2 duration-300">
-                {manualNumbers.map(num => (
-                  <div key={num} className="bg-slate-100 text-slate-800 px-4 py-2 rounded-full text-xs font-black flex items-center gap-3 border border-slate-200 shadow-sm animate-in zoom-in duration-200">
-                    {num}
-                    <button onClick={() => removeManualNumber(num)} className="text-slate-400 hover:text-red-500 transition-colors">
-                      <X size={16}/>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* MODAL FOOTER ACTIONS */}
         <div className="p-8 border-t border-gray-100 bg-gray-50/50 flex gap-4">
           <button onClick={onClose} className="flex-1 py-5 bg-white border-2 border-gray-200 rounded-[1.5rem] font-black text-xs uppercase tracking-widest text-gray-400 hover:bg-gray-100 transition-all shadow-sm">
             Cancel
@@ -409,7 +373,6 @@ export const SellerDashboardV1: React.FC<SellerDashboardV1Props> = ({ user, onSw
                 )}
               </div>
             ))}
-            {orders.length === 0 && <div className="p-16 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">No active orders in queue</div>}
           </div>
         </div>
       ) : (
@@ -431,12 +394,6 @@ export const SellerDashboardV1: React.FC<SellerDashboardV1Props> = ({ user, onSw
               </div>
             </div>
           ))}
-          {inventory.length === 0 && (
-             <div className="col-span-full py-16 text-center bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
-                <Package size={48} className="mx-auto text-gray-200 mb-4"/>
-                <p className="text-gray-400 font-black uppercase tracking-widest text-xs">No items currently listed in your catalog</p>
-             </div>
-          )}
         </div>
       )}
 

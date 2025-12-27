@@ -259,7 +259,8 @@ export const AdminPriceRequests: React.FC = () => {
 
       <ChatDialog 
         isOpen={isChatOpen}
-        onClose={() => setChatOpen(false)}
+        /* Fix typo: setChatOpen -> setIsChatOpen */
+        onClose={() => setIsChatOpen(false)}
         orderId="QUOTE-NEGOTIATION"
         issueType={chatQuoteContext}
         repName={chatSupplierName}

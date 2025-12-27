@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { UserRole, User, AppNotification } from './types';
@@ -33,7 +32,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Menu, Tags, ChevronDown, ChevronRight, UserPlus, 
   ClipboardList, ScanLine, DollarSign, Store, X, Lock, ArrowLeft, Briefcase, Eye, EyeOff, Bell, Award,
   ShoppingBag, Sprout, Handshake, ShieldCheck, TrendingUp, Target, Plus, ChevronUp, BarChart4, Layers, FileText, 
-  Gift, Truck, Sparkles, Calculator, Clock, Building, User as UserIcon, MessageCircle, Menu as HamburgerIcon
+  Gift, Truck, Sparkles, Calculator, Clock, Building, User as UserIcon, MessageCircle, Menu as HamburgerIcon, Mail, Loader2
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, active, onClick, isSubItem = false, badge = 0, subLabel }: any) => (
@@ -570,74 +569,185 @@ const AppLayout = ({ children, user, onLogout }: any) => {
 const App = () => {
   const [user, setUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-
-  useEffect(() => {
-    // Initial user setup can be added here if persistent login is needed
-  }, []);
+  
+  // Step in the Auth process: 'category' | 'credentials'
+  const [authStep, setAuthStep] = useState<'category' | 'credentials'>('category');
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  
+  // Login form state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleLogout = () => {
     setUser(null);
   };
 
-  const handleLogin = (user: User) => {
-    setUser(user);
-    setShowAuthModal(false);
+  const handleStartAuth = () => {
+    setAuthStep('category');
+    setSelectedRole(null);
+    setShowAuthModal(true);
+  };
+
+  const selectCategory = (category: 'PARTNER' | 'MARKETPLACE' | 'ADMIN') => {
+      if (category === 'PARTNER') setSelectedRole(UserRole.WHOLESALER);
+      else if (category === 'MARKETPLACE') setSelectedRole(UserRole.CONSUMER);
+      else setSelectedRole(UserRole.ADMIN);
+      
+      setAuthStep('credentials');
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    
+    // Simulate API delay
+    await new Promise(r => setTimeout(r, 1000));
+    
+    // Find matching user from mock data or fallback to generic for the selected role
+    let foundUser = mockService.getAllUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+    
+    if (!foundUser && selectedRole) {
+        foundUser = mockService.getAllUsers().find(u => u.role === selectedRole);
+    }
+
+    if (foundUser) {
+        setUser(foundUser);
+        setShowAuthModal(false);
+        setAuthStep('category');
+        setSelectedRole(null);
+        setEmail('');
+        setPassword('');
+    } else {
+        alert("Invalid credentials for the selected portal.");
+    }
+    setIsLoggingIn(false);
   };
 
   if (!user) {
     return (
         <>
-            <ConsumerLanding onLogin={() => setShowAuthModal(true)} />
+            <ConsumerLanding onLogin={handleStartAuth} />
+            
             {showAuthModal && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
-                        <div className="p-10 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
-                            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Sign In</h2>
-                            <button onClick={() => setShowAuthModal(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full border border-gray-100 shadow-sm transition-all active:scale-90"><X size={24}/></button>
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-[540px] overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+                        {/* Modal Header */}
+                        <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-white">
+                            <h2 className="text-[26px] font-bold text-gray-900 tracking-tight">Welcome Back</h2>
+                            <button 
+                                onClick={() => setShowAuthModal(false)} 
+                                className="text-gray-400 hover:text-gray-600 transition-all p-1"
+                            >
+                                <X size={26}/>
+                            </button>
                         </div>
-                        <div className="p-10 space-y-4">
-                            <p className="text-sm text-gray-500 mb-8 font-medium">Choose your entry point to the Platform Zero ecosystem.</p>
-                            
-                            <button 
-                                onClick={() => handleLogin(mockService.getAllUsers().find(u => u.role === UserRole.WHOLESALER)!)}
-                                className="w-full p-8 bg-white border-2 border-gray-100 rounded-[2rem] hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex items-center justify-between group shadow-sm hover:shadow-xl hover:shadow-emerald-50/50"
-                            >
-                                <div className="flex items-center gap-6">
-                                    <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <Sprout size={32} strokeWidth={2.5}/>
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="font-black text-gray-900 text-xl tracking-tight">Partner Portal</p>
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-0.5">Farmers & Wholesalers</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" size={24}/>
-                            </button>
 
-                            <button 
-                                onClick={() => handleLogin(mockService.getAllUsers().find(u => u.role === UserRole.CONSUMER)!)}
-                                className="w-full p-8 bg-white border-2 border-gray-100 rounded-[2rem] hover:border-blue-500 hover:bg-blue-50/30 transition-all flex items-center justify-between group shadow-sm hover:shadow-xl hover:shadow-blue-50/50"
-                            >
-                                <div className="flex items-center gap-6">
-                                    <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <ShoppingCart size={32} strokeWidth={2.5}/>
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="font-black text-gray-900 text-xl tracking-tight">Marketplace</p>
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-0.5">Buyers & Procurement</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" size={24}/>
-                            </button>
+                        <div className="p-10 pt-8 pb-4">
+                            {authStep === 'category' ? (
+                                <>
+                                    <p className="text-[17px] text-[#64748B] mb-8 font-normal">Please select your portal to continue.</p>
+                                    
+                                    <div className="space-y-4 mb-8">
+                                        {/* Partners Portal */}
+                                        <button 
+                                            onClick={() => selectCategory('PARTNER')}
+                                            className="w-full p-6 bg-white border border-gray-100 rounded-[1.25rem] hover:border-emerald-100 hover:shadow-md transition-all flex items-center justify-between group"
+                                        >
+                                            <div className="flex items-center gap-6">
+                                                <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                                                    <Briefcase size={28} strokeWidth={2.2}/>
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="font-bold text-gray-900 text-xl tracking-tight">Partners</p>
+                                                    <p className="text-sm text-slate-500 mt-0.5">Wholesalers & Farmers</p>
+                                                </div>
+                                            </div>
+                                            <ChevronRight className="text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" size={24}/>
+                                        </button>
 
-                            <div className="pt-8 text-center">
-                                <button 
-                                    onClick={() => handleLogin(mockService.getAllUsers().find(u => u.role === UserRole.ADMIN)!)}
-                                    className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] hover:text-indigo-600 transition-colors"
-                                >
-                                    Platform Admin
-                                </button>
-                            </div>
+                                        {/* Marketplace Portal */}
+                                        <button 
+                                            onClick={() => selectCategory('MARKETPLACE')}
+                                            className="w-full p-6 bg-white border border-gray-100 rounded-[1.25rem] hover:border-blue-100 hover:shadow-md transition-all flex items-center justify-between group"
+                                        >
+                                            <div className="flex items-center gap-6">
+                                                <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                                                    <ShoppingCart size={28} strokeWidth={2.2}/>
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="font-bold text-gray-900 text-xl tracking-tight">Marketplace</p>
+                                                    <p className="text-sm text-slate-500 mt-0.5">Buyers & Consumers</p>
+                                                </div>
+                                            </div>
+                                            <ChevronRight className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" size={24}/>
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="animate-in slide-in-from-right-4 duration-300">
+                                    <button 
+                                        onClick={() => setAuthStep('category')}
+                                        className="flex items-center gap-2 text-indigo-600 font-bold text-sm mb-6 hover:underline"
+                                    >
+                                        <ArrowLeft size={16}/> Back to Portals
+                                    </button>
+                                    
+                                    <div className="mb-8">
+                                        <h3 className="text-xl font-black text-gray-900">Portal Login</h3>
+                                        <p className="text-sm text-gray-500 mt-1">Sign in to your {selectedRole?.toLowerCase()} account.</p>
+                                    </div>
+
+                                    <form onSubmit={handleLoginSubmit} className="space-y-5">
+                                        <div className="space-y-2">
+                                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
+                                            <div className="relative">
+                                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
+                                                <input 
+                                                    type="email" 
+                                                    required
+                                                    className="w-full pl-11 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none font-bold text-gray-900 transition-all"
+                                                    placeholder="john@example.com"
+                                                    value={email}
+                                                    onChange={e => setEmail(e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
+                                            <div className="relative">
+                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
+                                                <input 
+                                                    type="password" 
+                                                    required
+                                                    className="w-full pl-11 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none font-bold text-gray-900 transition-all"
+                                                    placeholder="••••••••"
+                                                    value={password}
+                                                    onChange={e => setPassword(e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                        <button 
+                                            type="submit"
+                                            disabled={isLoggingIn}
+                                            className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            {isLoggingIn ? <Loader2 size={20} className="animate-spin" /> : "Sign In"}
+                                        </button>
+                                    </form>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-6 bg-[#F8FAFC]/50 border-t border-gray-100 text-center">
+                            <button 
+                                onClick={() => selectCategory('ADMIN')}
+                                className="inline-flex items-center gap-2 text-sm font-medium text-[#94A3B8] hover:text-[#64748B] transition-colors"
+                            >
+                                <Lock size={14}/>
+                                Admin & Staff Access
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -682,7 +792,8 @@ const App = () => {
           {(user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) && (
               <>
                 <Route path="/" element={
-                  isV1 ? <SellerDashboardV1 user={user} onSwitchVersion={(v) => handleLogin({...user, dashboardVersion: v})} /> 
+                  /* Fixed handleLogin typo: Cannot find name 'handleLogin'. Used setUser instead. */
+                  isV1 ? <SellerDashboardV1 user={user} onSwitchVersion={(v) => setUser({...user, dashboardVersion: v})} /> 
                        : (user.role === UserRole.FARMER ? <FarmerDashboard user={user} /> : <Dashboard user={user} />)
                 } />
                 <Route path="/pricing" element={<ProductPricing user={user} />} />

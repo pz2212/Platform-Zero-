@@ -137,49 +137,51 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-4 py-12 flex-1 flex flex-col justify-center">
+      <div className="max-w-6xl mx-auto px-4 py-8 md:py-12 flex-1 flex flex-col justify-center">
         {step === 1 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
-            <div className="hidden lg:block space-y-8 pr-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start max-w-6xl mx-auto">
+            {/* HERO CONTENT - Now visible on all screen sizes */}
+            <div className="space-y-8 lg:pr-12 animate-in slide-in-from-left-4 duration-700">
               <div className="max-w-xl">
-                <h1 className="text-[56px] font-black text-[#0F172A] leading-[1.05] mb-6 tracking-tight">
+                <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-black text-[#0F172A] leading-[1.05] mb-6 tracking-tight">
                   Stop overpaying for <br/><span className="text-[#10B981]">fresh produce.</span>
                 </h1>
-                <p className="text-[18px] text-[#64748B] leading-relaxed">
+                <p className="text-lg md:text-[18px] text-[#64748B] leading-relaxed">
                   Join the marketplace connecting restaurants directly to farms and wholesalers. Upload your invoice, and we'll show you exactly how much you'll save.
                 </p>
               </div>
 
               <div className="space-y-5">
-                 <div className="flex items-center gap-3 text-[18px] font-bold text-[#334155]">
+                 <div className="flex items-center gap-3 text-base md:text-[18px] font-bold text-[#334155]">
                     <div className="text-[#10B981] p-1 rounded-full bg-emerald-50"><CheckCircle size={24} /></div> 
                     Direct-to-source pricing
                  </div>
-                 <div className="flex items-center gap-3 text-[18px] font-bold text-[#334155]">
+                 <div className="flex items-center gap-3 text-base md:text-[18px] font-bold text-[#334155]">
                     <div className="text-[#10B981] p-1 rounded-full bg-emerald-50"><CheckCircle size={24} /></div> 
                     Consolidated billing & logistics
                  </div>
-                 <div className="flex items-center gap-3 text-[18px] font-bold text-[#334155]">
+                 <div className="flex items-center gap-3 text-base md:text-[18px] font-bold text-[#334155]">
                     <div className="text-[#10B981] p-1 rounded-full bg-emerald-50"><CheckCircle size={24} /></div> 
                     Reduce food waste & carbon footprint
                  </div>
               </div>
 
-              <div className="bg-[#ECFDF5] border border-[#D1FAE5] rounded-[1.5rem] p-8 max-w-lg mt-8 shadow-sm">
-                  <div className="flex items-center gap-2 text-[#065F46] font-black uppercase text-sm tracking-widest mb-3">
+              <div className="bg-[#ECFDF5] border border-[#D1FAE5] rounded-[1.5rem] p-6 md:p-8 max-w-lg mt-8 shadow-sm">
+                  <div className="flex items-center gap-2 text-[#065F46] font-black uppercase text-xs md:text-sm tracking-widest mb-3">
                       <Star size={20} fill="currentColor" className="text-[#10B981]" /> Limited Offer
                   </div>
-                  <p className="text-[#065F46] text-[15px] leading-relaxed font-medium">
+                  <p className="text-[#065F46] text-sm md:text-[15px] leading-relaxed font-medium">
                       Book an onboarding call today and receive <span className="font-black">$1,000 credit</span> in your portal.
                   </p>
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 w-full animate-in fade-in zoom-in-95 duration-500 max-w-xl">
+            {/* FORM CONTAINER */}
+            <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 w-full animate-in fade-in zoom-in-95 duration-500 lg:sticky lg:top-24">
               <div className="bg-gray-100/80 p-1.5 rounded-2xl flex mb-10 border border-gray-100">
-                <button onClick={() => handleRoleSelect(UserRole.CONSUMER)} className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all ${formData.role === UserRole.CONSUMER ? 'bg-white shadow-md text-blue-600' : 'text-gray-400 hover:text-gray-500'}`}><ShoppingCart size={20} className="mb-1"/><span className="text-[10px] font-black uppercase tracking-widest">Buyer</span></button>
-                <button onClick={() => handleRoleSelect(UserRole.WHOLESALER)} className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all ${formData.role === UserRole.WHOLESALER ? 'bg-white shadow-md text-indigo-600' : 'text-gray-400 hover:text-gray-500'}`}><Building size={20} className="mb-1"/><span className="text-[10px] font-black uppercase tracking-widest">Supplier</span></button>
-                <button onClick={() => handleRoleSelect(UserRole.FARMER)} className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all ${formData.role === UserRole.FARMER ? 'bg-white shadow-md text-emerald-600' : 'text-gray-400 hover:text-gray-500'}`}><Sprout size={20} className="mb-1"/><span className="text-[10px] font-black uppercase tracking-widest">Farmer</span></button>
+                <button onClick={() => handleRoleSelect(UserRole.CONSUMER)} className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all ${formData.role === UserRole.CONSUMER ? 'bg-white shadow-md text-blue-600' : 'text-gray-400 hover:text-gray-50'}`}><ShoppingCart size={20} className="mb-1"/><span className="text-[10px] font-black uppercase tracking-widest">Buyer</span></button>
+                <button onClick={() => handleRoleSelect(UserRole.WHOLESALER)} className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all ${formData.role === UserRole.WHOLESALER ? 'bg-white shadow-md text-indigo-600' : 'text-gray-400 hover:text-gray-50'}`}><Building size={20} className="mb-1"/><span className="text-[10px] font-black uppercase tracking-widest">Supplier</span></button>
+                <button onClick={() => handleRoleSelect(UserRole.FARMER)} className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all ${formData.role === UserRole.FARMER ? 'bg-white shadow-md text-emerald-600' : 'text-gray-400 hover:text-gray-50'}`}><Sprout size={20} className="mb-1"/><span className="text-[10px] font-black uppercase tracking-widest">Farmer</span></button>
               </div>
 
               <div className="mb-8">
@@ -191,7 +193,7 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
               </div>
 
               <div className="space-y-5">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">YOUR NAME</label>
                     <div className="relative"><User size={16} className="absolute left-3.5 top-3.5 text-gray-300"/><input name="name" value={formData.name} onChange={handleInputChange} placeholder="John Doe" className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none font-bold text-gray-900 placeholder-gray-300 transition-all" /></div>
@@ -252,7 +254,8 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
             </div>
           </div>
         )}
-
+        
+        {/* ... rest of the component remains the same (step 2 and step 4 views) ... */}
         {step === 2 && (
           <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in zoom-in-95 duration-500">
              <div className="text-center space-y-4">
@@ -260,7 +263,7 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
                     <Sparkles size={18}/>
                     <span className="text-xs font-black uppercase tracking-[0.15em]">Analysis Complete</span>
                 </div>
-                <h2 className="text-[48px] font-black text-[#0F172A] tracking-tighter leading-none">Your Potential Savings</h2>
+                <h2 className="text-4xl md:text-[48px] font-black text-[#0F172A] tracking-tighter leading-none">Your Potential Savings</h2>
                 <p className="text-gray-500 text-lg font-medium max-w-2xl mx-auto">We've analyzed your invoice against Platform Zero's source pricing. Here is how much you're leaving on the table.</p>
              </div>
 
@@ -281,7 +284,7 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
                     <div className="absolute top-0 right-0 p-12 opacity-5 transform rotate-12 scale-150"><TrendingDown size={140} className="text-emerald-400"/></div>
                     <div className="relative z-10">
                         <span className="text-[10px] font-black text-emerald-400/60 uppercase tracking-widest block mb-1">Monthly Savings</span>
-                        <h3 className="text-6xl font-black text-white tracking-tighter">${savingsMetrics.monthly.toFixed(0)}</h3>
+                        <h3 className="text-5xl md:text-6xl font-black text-white tracking-tighter">${savingsMetrics.monthly.toFixed(0)}</h3>
                     </div>
                     <div className="relative z-10 mt-8 pt-6 border-t border-emerald-900">
                         <p className="text-sm text-emerald-400 font-black flex items-center gap-2">
@@ -359,7 +362,7 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
                 <span className="bg-[#D1FAE5] text-[#065F46] px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-sm">
                     Application Received
                 </span>
-                <h2 className="text-[40px] font-black text-[#0F172A] tracking-tight mt-6 mb-4 leading-none">What's next?</h2>
+                <h2 className="text-4xl font-black text-[#0F172A] tracking-tight mt-6 mb-4 leading-none">What's next?</h2>
                 <p className="text-[#64748B] text-[15px] leading-relaxed font-medium">
                     Your request has been placed in our <span className="text-[#0F172A] font-black">Pending Review</span> queue. You can continue setting up your profile now to speed up the approval process.
                 </p>
@@ -394,14 +397,6 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
           </div>
         )}
 
-        {isProfileModalOpen && (
-          <CompleteProfileModal 
-            isOpen={isProfileModalOpen}
-            onClose={() => setIsProfileModalOpen(false)}
-            user={{ ...mockService.getAllUsers()[0], businessName: formData.businessName, role: UserRole.CONSUMER }} 
-            onComplete={() => setStep(1)}
-          />
-        )}
       </div>
     </div>
   );

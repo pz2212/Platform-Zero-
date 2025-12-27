@@ -7,12 +7,234 @@ import {
   MessageCircle, Send, Plus, X, Search, Info, 
   ShoppingBag, Link as LinkIcon, CheckCircle, Clock,
   Store, MapPin, Phone, ShieldCheck, Tag, ChevronRight, Users, UserCheck,
-  ArrowLeft, UserPlus, Smartphone, Contact, Loader2, Building, Mail, BookOpen
+  ArrowLeft, UserPlus, Smartphone, Contact, Loader2, Building, Mail, BookOpen,
+  Package, DollarSign, Truck, Camera, Image as ImageIcon, ChevronDown, FolderOpen
 } from 'lucide-react';
 
 interface ContactsProps {
   user: User;
 }
+
+const SendProductOfferModal = ({ isOpen, onClose, targetPartner, user, products }: { 
+    isOpen: boolean, 
+    onClose: () => void, 
+    targetPartner: User, 
+    user: User,
+    products: Product[]
+}) => {
+    const [offerData, setOfferData] = useState({
+        productId: '',
+        price: '',
+        unit: 'KG',
+        logisticsPrice: '0',
+        note: ''
+    });
+    const [customImage, setCustomImage] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPhotoMenu, setShowPhotoMenu] = useState(false);
+    
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowPhotoMenu(false);
+            }
+        };
+        if (showPhotoMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showPhotoMenu]);
+
+    if (!isOpen) return null;
+
+    const selectedProduct = products.find(p => p.id === offerData.productId);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (ev) => setCustomImage(ev.target?.result as string);
+            reader.readAsDataURL(e.target.files[0]);
+            setShowPhotoMenu(false);
+        }
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        const productName = selectedProduct?.name || 'Fresh Produce';
+        const messageText = `OFFER: ${productName} available at $${offerData.price}/${offerData.unit.toLowerCase()}. Logistics: $${offerData.logisticsPrice}.`;
+        
+        mockService.sendChatMessage(user.id, targetPartner.id, messageText, !!customImage, offerData.productId);
+        
+        mockService.addAppNotification(
+            targetPartner.id,
+            'New Product Offer',
+            `${user.businessName} sent you an offer for ${productName}.`,
+            'PRICE_REQUEST',
+            `/contacts?id=${user.id}`
+        );
+
+        setTimeout(() => {
+            setIsSubmitting(false);
+            onClose();
+        }, 800);
+    };
+
+    return (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-white">
+                    <div>
+                        <h2 className="text-xl font-black text-[#0F172A] uppercase tracking-tight">Send Product Offer</h2>
+                        <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mt-1">To: {targetPartner.businessName}</p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-300 hover:text-slate-600 p-2 bg-slate-50 rounded-full border border-slate-100 transition-all"><X size={24}/></button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-8 space-y-8 relative">
+                    <div className="space-y-6">
+                        {/* SELECT PRODUCT SECTION */}
+                        <div className="space-y-3">
+                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Product</label>
+                            <div className="flex gap-4 items-center">
+                                {/* PHOTO CAPTURE AREA */}
+                                <div className="relative">
+                                    <div 
+                                        onClick={() => setShowPhotoMenu(!showPhotoMenu)}
+                                        className={`w-20 h-20 rounded-2xl bg-slate-50 border-2 flex-shrink-0 flex items-center justify-center cursor-pointer transition-all group overflow-hidden ${customImage ? 'border-emerald-500' : 'border-slate-100 hover:border-emerald-300'}`}
+                                    >
+                                        {customImage ? (
+                                            <img src={customImage} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="text-center p-2 flex flex-col items-center gap-1">
+                                                <Camera className="text-slate-300 group-hover:text-emerald-500 transition-colors" size={24}/>
+                                                <span className="text-[8px] font-black text-slate-300 group-hover:text-emerald-500 transition-colors uppercase">Photo</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* HIDDEN INPUTS */}
+                                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                                    <input type="file" ref={cameraInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleFileChange} />
+
+                                    {/* SOURCE SELECTION MENU */}
+                                    {showPhotoMenu && (
+                                        <div ref={menuRef} className="absolute left-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-slate-100 py-2 z-[150] animate-in zoom-in-95 duration-200 origin-top-left">
+                                            <button 
+                                                type="button"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="w-full text-left px-5 py-3.5 hover:bg-slate-50 flex items-center gap-4 transition-colors group"
+                                            >
+                                                <ImageIcon size={20} className="text-slate-400 group-hover:text-emerald-600"/>
+                                                <span className="font-bold text-slate-700">Photo Library</span>
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                onClick={() => cameraInputRef.current?.click()}
+                                                className="w-full text-left px-5 py-3.5 hover:bg-slate-50 flex items-center gap-4 transition-colors border-y border-slate-50 group"
+                                            >
+                                                <Camera size={20} className="text-slate-400 group-hover:text-emerald-600"/>
+                                                <span className="font-bold text-slate-700">Take Photo</span>
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="w-full text-left px-5 py-3.5 hover:bg-slate-50 flex items-center gap-4 transition-colors group"
+                                            >
+                                                <FolderOpen size={20} className="text-slate-400 group-hover:text-emerald-600"/>
+                                                <span className="font-bold text-slate-700">Choose File</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex-1 relative group">
+                                    <select 
+                                        required
+                                        className="w-full pl-6 pr-10 py-5 bg-white border-2 border-emerald-500 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/10 font-bold text-slate-900 appearance-none shadow-sm"
+                                        value={offerData.productId}
+                                        onChange={e => setOfferData({...offerData, productId: e.target.value})}
+                                    >
+                                        <option value="">Choose item...</option>
+                                        {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
+                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none" size={20}/>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* PRICE & UNIT SECTION */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Price Per Unit</label>
+                                <div className="relative">
+                                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18}/>
+                                    <input 
+                                        required
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        className="w-full pl-11 pr-4 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 font-bold text-slate-900 transition-all"
+                                        value={offerData.price}
+                                        onChange={e => setOfferData({...offerData, price: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Unit Type</label>
+                                <div className="relative">
+                                    <select 
+                                        className="w-full px-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 font-black text-slate-900 appearance-none transition-all"
+                                        value={offerData.unit}
+                                        onChange={e => setOfferData({...offerData, unit: e.target.value})}
+                                    >
+                                        <option value="KG">KG</option>
+                                        <option value="TRAY">Tray</option>
+                                        <option value="BIN">Bin</option>
+                                        <option value="EACH">Each</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" size={20}/>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* LOGISTICS SECTION */}
+                        <div className="space-y-3">
+                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Logistic Price (Optional)</label>
+                            <div className="relative">
+                                <Truck className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20}/>
+                                <input 
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0"
+                                    className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 font-black text-slate-900 transition-all"
+                                    value={offerData.logisticsPrice}
+                                    onChange={e => setOfferData({...offerData, logisticsPrice: e.target.value})}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-2">
+                        <button 
+                            type="submit" 
+                            disabled={isSubmitting || !offerData.productId}
+                            className="w-full py-5 bg-[#043003] text-white rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-[0_20px_40px_-10px_rgba(4,48,3,0.3)] hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50 active:scale-[0.98]"
+                        >
+                            {isSubmitting ? <Loader2 size={18} className="animate-spin"/> : <Send size={16} strokeWidth={3}/>}
+                            Submit to Portal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
 
 const ManualInviteModal = ({ isOpen, onClose, user }: { isOpen: boolean, onClose: () => void, user: User }) => {
     const [formData, setFormData] = useState({ name: '', phone: '' });
@@ -157,6 +379,7 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
   const [inputText, setInputText] = useState('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isManualInviteOpen, setIsManualInviteOpen] = useState(false);
+  const [sendProductTarget, setSendProductTarget] = useState<User | null>(null);
   const [myInventory, setMyInventory] = useState<InventoryItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   
@@ -276,38 +499,50 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
                 {filteredDirectory.map(contact => (
                     <div 
                         key={contact.id} 
-                        onClick={() => navigate(`/contacts?id=${contact.id}`)}
-                        className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all group cursor-pointer flex flex-col justify-between"
+                        className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all group flex flex-col justify-between"
                     >
-                        <div className="flex items-start justify-between mb-6">
-                            <div className={`w-16 h-16 rounded-[1.25rem] flex items-center justify-center font-black text-2xl shadow-inner-sm ${
-                                contact.role === UserRole.FARMER ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
-                            }`}>
-                                {contact.businessName.charAt(0)}
+                        <div onClick={() => navigate(`/contacts?id=${contact.id}`)} className="cursor-pointer">
+                            <div className="flex items-start justify-between mb-6">
+                                <div className={`w-16 h-16 rounded-[1.25rem] flex items-center justify-center font-black text-2xl shadow-inner-sm ${
+                                    contact.role === UserRole.FARMER ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                    {contact.businessName.charAt(0)}
+                                </div>
+                                <div className="flex items-center gap-1.5 text-emerald-500 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 shadow-sm">
+                                    <UserCheck size={14}/>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Verified</span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-1.5 text-emerald-500 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 shadow-sm">
-                                <UserCheck size={14}/>
-                                <span className="text-[10px] font-black uppercase tracking-widest">Verified</span>
+
+                            <div>
+                                <h3 className="text-2xl font-black text-gray-900 tracking-tight group-hover:text-emerald-900 mb-1">{contact.businessName}</h3>
+                                <p className="text-sm font-bold text-indigo-600 uppercase tracking-[0.15em] opacity-60 mb-6">{contact.role}</p>
+                                
+                                <div className="space-y-2 mb-8">
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase">
+                                        <MapPin size={16} className="text-gray-300"/> Melbourne Regional
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase">
+                                        <Tag size={16} className="text-gray-300"/> 12+ Seasonal Products
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div>
-                            <h3 className="text-2xl font-black text-gray-900 tracking-tight group-hover:text-emerald-900 mb-1">{contact.businessName}</h3>
-                            <p className="text-sm font-bold text-indigo-600 uppercase tracking-[0.15em] opacity-60 mb-6">{contact.role}</p>
-                            
-                            <div className="space-y-2 mb-8">
-                                <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase">
-                                    <MapPin size={16} className="text-gray-300"/> Melbourne Regional
-                                </div>
-                                <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase">
-                                    <Tag size={16} className="text-gray-300"/> 12+ Seasonal Products
-                                </div>
-                            </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setSendProductTarget(contact)}
+                                className="flex-1 py-4 bg-indigo-50 text-indigo-600 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 hover:bg-indigo-600 hover:text-white hover:shadow-lg"
+                            >
+                                <Package size={16}/> Send Product
+                            </button>
+                            <button 
+                                onClick={() => navigate(`/contacts?id=${contact.id}`)}
+                                className="flex-[2] py-4 bg-gray-50 text-gray-400 group-hover:bg-[#043003] group-hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-emerald-100"
+                            >
+                                <MessageCircle size={18}/> Start Conversation
+                            </button>
                         </div>
-
-                        <button className="w-full py-4 bg-gray-50 text-gray-400 group-hover:bg-emerald-600 group-hover:text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-emerald-100">
-                            <MessageCircle size={18}/> Start Conversation
-                        </button>
                     </div>
                 ))}
                 
@@ -328,6 +563,16 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
                 onClose={() => setIsManualInviteOpen(false)} 
                 user={user} 
             />
+
+            {sendProductTarget && (
+                <SendProductOfferModal 
+                    isOpen={!!sendProductTarget} 
+                    onClose={() => setSendProductTarget(null)} 
+                    targetPartner={sendProductTarget} 
+                    user={user}
+                    products={products}
+                />
+            )}
           </div>
       );
   }
@@ -356,6 +601,13 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
             >
                 <ArrowLeft size={18}/>
                 <span className="text-xs font-black uppercase tracking-widest hidden sm:block">Back to directory</span>
+            </button>
+            <button 
+                onClick={() => setSendProductTarget(activeContact)}
+                className="p-2.5 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center gap-2 px-4"
+            >
+                <Package size={18}/>
+                <span className="text-xs font-black uppercase tracking-widest hidden sm:block">Send Product</span>
             </button>
             <button className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-400 hover:text-indigo-600 transition-all shadow-sm"><Phone size={18}/></button>
             <button className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-400 hover:text-indigo-600 transition-all shadow-sm"><Info size={18}/></button>
@@ -475,6 +727,16 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
                   </div>
               </div>
           </div>
+      )}
+
+      {sendProductTarget && (
+          <SendProductOfferModal 
+              isOpen={!!sendProductTarget} 
+              onClose={() => setSendProductTarget(null)} 
+              targetPartner={sendProductTarget} 
+              user={user}
+              products={products}
+          />
       )}
     </div>
   );

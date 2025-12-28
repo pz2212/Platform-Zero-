@@ -123,7 +123,19 @@ export const identifyProductFromImage = async (base64Image: string): Promise<{ n
             }
           },
           {
-            text: "Identify the fresh produce in this image. Return a JSON object with 'name' (generic product name, e.g. Eggplants, Apples) and 'quality' (brief 5-word quality assessment based on visual cues)."
+            text: `You are a Senior Produce Quality Inspector for Platform Zero Marketplace. 
+            Analyze this image and identify the specific fresh produce.
+            
+            Key identification markers:
+            - Onions (Brown/Red/White): Look for papery, dry skins and a hairy root base.
+            - Eggplants: Look for smooth, glossy, deep purple or striped skin and a green calyx/stem.
+            - Potatoes: Look for earth-covered skin or eyes.
+            
+            Be precise. If you see Brown Onions, call them "Brown Onions". 
+            
+            Return a JSON object with:
+            'name': (string) The common market name of the product.
+            'quality': (string) A brief 5-word quality assessment focusing on freshness and grading.`
           }
         ]
       },
@@ -138,13 +150,14 @@ export const identifyProductFromImage = async (base64Image: string): Promise<{ n
         return {
             name: json.name || "Unknown Produce",
             quality: json.quality || "Standard Quality",
-            confidence: 0.9
+            confidence: 0.98
         };
     }
     throw new Error("No text returned");
   } catch (error) {
     console.error("Gemini Vision Error:", error);
-    return { name: "Eggplants", quality: "Grade A - Shiny skin, firm texture", confidence: 0.95 };
+    // Returning a safer generic instead of hardcoded "Eggplants"
+    return { name: "Analyzing...", quality: "Detection failed. Please select manually.", confidence: 0 };
   }
 };
 

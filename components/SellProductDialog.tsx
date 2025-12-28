@@ -219,11 +219,12 @@ export const SellProductDialog: React.FC<SellProductDialogProps> = ({ isOpen, on
                             <FileText size={16}/> Send Invoice (Terms)
                         </button>
                         <button 
-                            onClick={() => setPaymentMethod('card')}
-                            className={`px-4 py-2.5 rounded-lg border text-left text-sm font-medium flex items-center gap-3 transition-all ${paymentMethod === 'card' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                            // Fix line 191: Changed 'card' to 'pay_now' to match Order paymentMethod type
+                            onClick={() => setPaymentMethod('pay_now')}
+                            className={`px-4 py-2.5 rounded-lg border text-left text-sm font-medium flex items-center gap-3 transition-all ${paymentMethod === 'pay_now' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                         >
-                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'card' ? 'border-indigo-500' : 'border-gray-400'}`}>
-                                {paymentMethod === 'card' && <div className="w-2 h-2 rounded-full bg-indigo-500"></div>}
+                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'pay_now' ? 'border-indigo-500' : 'border-gray-400'}`}>
+                                {paymentMethod === 'pay_now' && <div className="w-2 h-2 rounded-full bg-indigo-500"></div>}
                             </div>
                             <CreditCard size={16}/> Credit Card (Now)
                         </button>

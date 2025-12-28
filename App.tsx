@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { UserRole, User, AppNotification } from './types';
@@ -597,6 +598,13 @@ const App = () => {
       setAuthStep('credentials');
   };
 
+  const handleDemoLogin = (demoEmail: string, role: UserRole) => {
+    setEmail(demoEmail);
+    setPassword('demo123'); // Standard Demo Password
+    setSelectedRole(role);
+    setAuthStep('credentials');
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
@@ -643,7 +651,7 @@ const App = () => {
                             </button>
                         </div>
 
-                        <div className="p-10 pt-8 pb-4">
+                        <div className="p-10 pt-8 pb-4 max-h-[70vh] overflow-y-auto">
                             {authStep === 'category' ? (
                                 <>
                                     <p className="text-[17px] text-[#64748B] mb-8 font-normal">Please select your portal to continue.</p>
@@ -682,6 +690,29 @@ const App = () => {
                                             </div>
                                             <ChevronRight className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" size={24}/>
                                         </button>
+                                    </div>
+
+                                    {/* QUICK LOGINS IN CATEGORY STEP */}
+                                    <div className="mt-8 pt-8 border-t border-gray-100">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Quick Demo Access (PW: demo123)</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button onClick={() => handleDemoLogin('admin@pz.com', UserRole.ADMIN)} className="flex items-center gap-2 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border border-gray-100 group">
+                                                <ShieldCheck size={16} className="text-gray-400 group-hover:text-indigo-500"/>
+                                                <span className="text-[11px] font-bold text-gray-700">Admin</span>
+                                            </button>
+                                            <button onClick={() => handleDemoLogin('sarah@fresh.com', UserRole.WHOLESALER)} className="flex items-center gap-2 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border border-gray-100 group">
+                                                <Building size={16} className="text-gray-400 group-hover:text-indigo-500"/>
+                                                <span className="text-[11px] font-bold text-gray-700">Wholesaler</span>
+                                            </button>
+                                            <button onClick={() => handleDemoLogin('bob@greenvalley.com', UserRole.FARMER)} className="flex items-center gap-2 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border border-gray-100 group">
+                                                <Sprout size={16} className="text-gray-400 group-hover:text-emerald-500"/>
+                                                <span className="text-[11px] font-bold text-gray-700">Farmer</span>
+                                            </button>
+                                            <button onClick={() => handleDemoLogin('alice@cafe.com', UserRole.CONSUMER)} className="flex items-center gap-2 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border border-gray-100 group">
+                                                <ShoppingCart size={16} className="text-gray-400 group-hover:text-blue-500"/>
+                                                <span className="text-[11px] font-bold text-gray-700">Buyer</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </>
                             ) : (
@@ -792,7 +823,6 @@ const App = () => {
           {(user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) && (
               <>
                 <Route path="/" element={
-                  /* Fixed handleLogin typo: Cannot find name 'handleLogin'. Used setUser instead. */
                   isV1 ? <SellerDashboardV1 user={user} onSwitchVersion={(v) => setUser({...user, dashboardVersion: v})} /> 
                        : (user.role === UserRole.FARMER ? <FarmerDashboard user={user} /> : <Dashboard user={user} />)
                 } />

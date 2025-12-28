@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, ScanLine, CheckCircle, Send, MessageSquare, AlertCircle, Loader2, Image as ImageIcon, FolderOpen, X, Store, MapPin, Share2, Heart } from 'lucide-react';
+import { Camera, Upload, ScanLine, CheckCircle, Send, MessageSquare, AlertCircle, Loader2, Image as ImageIcon, FolderOpen, X, Store, MapPin, Share2, Heart, Edit2, ChevronDown } from 'lucide-react';
 import { mockService } from '../services/mockDataService';
 import { identifyProductFromImage } from '../services/geminiService';
 import { Customer, User, InventoryItem, Product } from '../types';
@@ -15,6 +15,7 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
   const [image, setImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{name: string, quality: string} | null>(null);
+  const [isEditingName, setIsEditingName] = useState(false);
   const [matchedBuyers, setMatchedBuyers] = useState<Customer[]>([]);
   const [price, setPrice] = useState<number>(0);
   const [products, setProducts] = useState<Product[]>([]);
@@ -73,14 +74,25 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
 
     try {
         const result = await identifyProductFromImage(base64Data);
-        setAnalysisResult({ name: result.name, quality: result.quality });
-        const buyers = mockService.findBuyersForProduct(result.name);
-        setMatchedBuyers(buyers);
+        updateResults(result.name, result.quality);
     } catch (error) {
         console.error("Analysis failed", error);
         alert("Could not analyse image. Please try again.");
     } finally {
         setIsAnalyzing(false);
+    }
+  };
+
+  const updateResults = (name: string, quality: string) => {
+    setAnalysisResult({ name, quality });
+    const buyers = mockService.findBuyersForProduct(name);
+    setMatchedBuyers(buyers);
+    setIsEditingName(false);
+  };
+
+  const handleManualCorrect = (productName: string) => {
+    if (analysisResult) {
+        updateResults(productName, analysisResult.quality);
     }
   };
 
@@ -231,8 +243,27 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
                             <div className="bg-emerald-100 p-3 rounded-2xl text-emerald-600 shadow-inner-sm">
                                 <CheckCircle size={28} />
                             </div>
-                            <div>
-                                <h3 className="font-black text-gray-900 text-2xl tracking-tight">{analysisResult.name}</h3>
+                            <div className="relative flex-1">
+                                {isEditingName ? (
+                                    <div className="space-y-2">
+                                        <select 
+                                            className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl font-black text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                                            value={analysisResult.name}
+                                            onChange={(e) => handleManualCorrect(e.target.value)}
+                                        >
+                                            <option value={analysisResult.name}>{analysisResult.name} (Suggested)</option>
+                                            {products.filter(p => p.name !== analysisResult.name).map(p => (
+                                                <option key={p.id} value={p.name}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                        <button onClick={() => setIsEditingName(false)} className="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-emerald-600">Cancel Edit</button>
+                                    </div>
+                                ) : (
+                                    <div className="group cursor-pointer flex items-center gap-2" onClick={() => setIsEditingName(true)}>
+                                        <h3 className="font-black text-gray-900 text-2xl tracking-tight">{analysisResult.name}</h3>
+                                        <Edit2 size={16} className="text-gray-300 group-hover:text-indigo-500 transition-colors" />
+                                    </div>
+                                )}
                                 <p className="text-xs font-black text-emerald-600 uppercase tracking-widest">Identified by Platform Zero AI</p>
                             </div>
                         </div>

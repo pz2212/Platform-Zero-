@@ -3,15 +3,22 @@ import {
   User, UserRole, Product, InventoryItem, Order, Customer, 
   RegistrationRequest, Driver, Packer, Lead, SupplierPriceRequest,
   PricingRule, OnboardingFormTemplate, BusinessProfile,
-  SupplierPriceRequestItem, AppNotification, ChatMessage
+  SupplierPriceRequestItem, AppNotification, ChatMessage, OrderItem
 } from '../types';
 
 export const USERS: User[] = [
   { id: 'u1', name: 'Admin User', businessName: 'Platform Zero', role: UserRole.ADMIN, email: 'admin@pz.com' },
-  { id: 'u2', name: 'Sarah Wholesaler', businessName: 'Fresh Wholesalers', role: UserRole.WHOLESALER, email: 'sarah@fresh.com', dashboardVersion: 'v2', businessProfile: { isComplete: true } as any },
-  { id: 'u3', name: 'Bob Farmer', businessName: 'Green Valley Farms', role: UserRole.FARMER, email: 'bob@greenvalley.com', dashboardVersion: 'v2', businessProfile: { isComplete: true } as any },
+  { id: 'u2', name: 'Sarah Wholesaler', businessName: 'Fresh Wholesalers', role: UserRole.WHOLESALER, email: 'sarah@fresh.com', dashboardVersion: 'v2', activeSellingInterests: ['Tomatoes', 'Lettuce', 'Apples'], activeBuyingInterests: ['Potatoes', 'Carrots'], businessProfile: { isComplete: true } as any },
+  { id: 'u3', name: 'Bob Farmer', businessName: 'Green Valley Farms', role: UserRole.FARMER, email: 'bob@greenvalley.com', dashboardVersion: 'v2', activeSellingInterests: ['Tomatoes', 'Eggplant'], businessProfile: { isComplete: true } as any },
   { id: 'u4', name: 'Alice Consumer', businessName: 'The Morning Cafe', role: UserRole.CONSUMER, email: 'alice@cafe.com' },
   { id: 'u5', name: 'Pippa', businessName: "Pippa's Farm", role: UserRole.WHOLESALER, email: 'alex@platformzerosolutions.com', dashboardVersion: 'v2', businessProfile: { isComplete: true, businessLocation: 'N/A' } as any },
+  // DEMO SUPPLIERS
+  { id: 's1', name: 'Jim Potato', businessName: 'Spud King Gippsland', role: UserRole.FARMER, email: 'jim@spuds.com', activeSellingInterests: ['Potatoes', 'Onions'] },
+  { id: 's2', name: 'Kelly Citrus', businessName: 'Sunraysia Citrus Co', role: UserRole.FARMER, email: 'kelly@citrus.com', activeSellingInterests: ['Oranges', 'Lemons', 'Limes'] },
+  { id: 's3', name: 'Mark Veg', businessName: 'Werribee Veggies', role: UserRole.WHOLESALER, email: 'mark@werribee.com', activeSellingInterests: ['Broccoli', 'Carrots', 'Cauliflower'] },
+  { id: 's4', name: 'Fruit Direct', businessName: 'Tropical Imports QLD', role: UserRole.WHOLESALER, email: 'fruit@tropical.com', activeSellingInterests: ['Mangoes', 'Bananas', 'Pineapples'] },
+  { id: 's5', name: 'Gourmet Growers', businessName: 'Mornington Microgreens', role: UserRole.FARMER, email: 'gourmet@micro.com', activeSellingInterests: ['Microgreens', 'Edible Flowers'] },
+  
   { id: 'rep1', name: 'Rep User', businessName: 'Platform Zero', role: UserRole.PZ_REP, email: 'rep1@pz.com', commissionRate: 5.0 },
   { id: 'd1', name: 'Dave Driver', businessName: 'Fresh Wholesalers', role: UserRole.DRIVER, email: 'dave@fresh.com' }
 ];
@@ -23,72 +30,60 @@ class MockDataService {
     { id: 'p2', name: 'Fresh Lettuce', category: 'Vegetable', variety: 'Cos', imageUrl: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&q=80&w=100&h=100', defaultPricePerKg: 1.20, co2SavingsPerKg: 0.8 },
     { id: 'p3', name: 'Apples', category: 'Fruit', variety: 'Pink Lady', imageUrl: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&q=80&w=100&h=100', defaultPricePerKg: 3.80, co2SavingsPerKg: 1.5 },
     { id: 'p4', name: 'Eggplants', category: 'Vegetable', variety: 'Black Beauty', imageUrl: 'https://images.unsplash.com/photo-1615484477778-ca3b77940c25?auto=format&fit=crop&q=80&w=100&h=100', defaultPricePerKg: 5.50, co2SavingsPerKg: 1.1 },
+    { id: 'p5', name: 'Dutch Cream Potatoes', category: 'Vegetable', variety: 'Grade A', imageUrl: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&q=80&w=100&h=100', defaultPricePerKg: 2.10, co2SavingsPerKg: 0.9 },
+    { id: 'p6', name: 'Navel Oranges', category: 'Fruit', variety: 'Juicing', imageUrl: 'https://images.unsplash.com/photo-1557800636-894a64c1696f?auto=format&fit=crop&q=80&w=100&h=100', defaultPricePerKg: 1.50, co2SavingsPerKg: 1.8 },
+    { id: 'p7', name: 'Broccoli', category: 'Vegetable', variety: 'Heads', imageUrl: 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?auto=format&fit=crop&q=80&w=100&h=100', defaultPricePerKg: 3.20, co2SavingsPerKg: 1.4 },
+    { id: 'p8', name: 'Carrots', category: 'Vegetable', variety: 'Bunched', imageUrl: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&q=80&w=100&h=100', defaultPricePerKg: 1.10, co2SavingsPerKg: 0.7 },
   ];
   private inventory: InventoryItem[] = [
     { id: 'i1', productId: 'p1', ownerId: 'u3', quantityKg: 500, expiryDate: new Date(Date.now() + 86400000 * 5).toISOString(), harvestDate: new Date().toISOString(), status: 'Available', originalFarmerName: 'Green Valley Farms', harvestLocation: 'Yarra Valley' },
     { id: 'i2', productId: 'p2', ownerId: 'u2', quantityKg: 1000, expiryDate: new Date(Date.now() + 86400000 * 14).toISOString(), harvestDate: new Date().toISOString(), status: 'Available', originalFarmerName: 'Bob\'s Spuds', harvestLocation: 'Gippsland' },
     { id: 'i3', productId: 'p4', ownerId: 'u2', quantityKg: 200, expiryDate: new Date(Date.now() + 86400000 * 3).toISOString(), harvestDate: new Date().toISOString(), status: 'Available', originalFarmerName: 'Green Valley Farms', harvestLocation: 'Yarra Valley' },
+    // Inventory for Demo Suppliers
+    { id: 'di1', productId: 'p5', ownerId: 's1', quantityKg: 5000, expiryDate: new Date(Date.now() + 86400000 * 30).toISOString(), harvestDate: new Date().toISOString(), status: 'Available', harvestLocation: 'Gippsland' },
+    { id: 'di2', productId: 'p6', ownerId: 's2', quantityKg: 2000, expiryDate: new Date(Date.now() + 86400000 * 10).toISOString(), harvestDate: new Date().toISOString(), status: 'Available', harvestLocation: 'Mildura' },
+    { id: 'di3', productId: 'p7', ownerId: 's3', quantityKg: 800, expiryDate: new Date(Date.now() + 86400000 * 5).toISOString(), harvestDate: new Date().toISOString(), status: 'Available', harvestLocation: 'Werribee' },
+    { id: 'di4', productId: 'p8', ownerId: 's3', quantityKg: 1500, expiryDate: new Date(Date.now() + 86400000 * 12).toISOString(), harvestDate: new Date().toISOString(), status: 'Available', harvestLocation: 'Werribee' },
   ];
-  private orders: Order[] = [
-    { 
-        id: 'o-1001', buyerId: 'c1', sellerId: 'u2', items: [{ productId: 'p1', quantityKg: 25, pricePerKg: 4.50 }, { productId: 'p2', quantityKg: 10, pricePerKg: 1.20 }], totalAmount: 245.50, status: 'Pending', date: new Date().toISOString(), priority: 'HIGH', customerNotes: 'Please ensure fresh quality for restaurant use. Customer needs delivery by 8 AM.',
-        logistics: { method: 'LOGISTICS', deliveryLocation: 'Fresh Market Co - 123 Main St' },
-        paymentStatus: 'Unpaid'
-    },
-    { 
-        id: 'o-1002', buyerId: 'c2', sellerId: 'u2', items: [{ productId: 'p1', quantityKg: 50, pricePerKg: 4.50 }, { productId: 'p2', quantityKg: 20, pricePerKg: 1.20 }, { productId: 'p4', quantityKg: 15, pricePerKg: 5.50 }], totalAmount: 412.75, status: 'Pending', date: new Date(Date.now() - 15 * 60000).toISOString(), priority: 'URGENT', customerNotes: 'Urgent order for today\'s lunch prep. Quality must be restaurant grade.',
-        logistics: { method: 'LOGISTICS', deliveryLocation: 'Healthy Eats - 456 Green Ave' },
-        paymentStatus: 'Unpaid'
-    }
-  ];
+  private orders: Order[] = [];
   private customers: Customer[] = [
-      { id: 'c1', businessName: 'Fresh Market Co', contactName: 'Sarah Johnson', email: 'orders@freshmarket.com', phone: '0400 123 456', category: 'Retail', connectionStatus: 'Active', connectedSupplierName: 'Fresh Wholesalers', connectedSupplierId: 'u2', connectedSupplierRole: 'Wholesaler', pricingStatus: 'Approved', joinedDate: '2023-01-15', pzMarkup: 15 },
-      { id: 'c2', businessName: 'Healthy Eats Restaurant', contactName: 'Chef Mario', email: 'mario@healthyeats.com', phone: '0400 333 444', category: 'Restaurant', connectionStatus: 'Active', connectedSupplierName: 'Fresh Wholesalers', connectedSupplierId: 'u2', connectedSupplierRole: 'Wholesaler', pricingStatus: 'Approved', joinedDate: '2023-02-10', pzMarkup: 12 }
+      { id: 'c1', businessName: 'Fresh Market Co', contactName: 'Sarah Johnson', category: 'Retail', commonProducts: 'Tomatoes, Lettuce, Apples', location: 'Richmond' },
+      { id: 'c2', businessName: 'Healthy Eats', contactName: 'Chef Mario', category: 'Restaurant', commonProducts: 'Tomatoes, Eggplant, Broccoli', location: 'South Yarra' },
+      { id: 'c3', businessName: 'The Pizza Place', contactName: 'Tony', category: 'Restaurant', commonProducts: 'Tomatoes, Onions, Herbs', location: 'Collingwood' },
+      { id: 'c4', businessName: 'Melbourne Juice Bar', contactName: 'Lucy', category: 'Cafe', commonProducts: 'Apples, Oranges, Carrots', location: 'CBD' },
+      { id: 'c5', businessName: 'St Johns Primary', contactName: 'Canteen Manager', category: 'Unassigned', commonProducts: 'Apples, Bananas, Lettuce', location: 'Hawthorn' },
+      { id: 'c6', businessName: 'The Grand Hotel', contactName: 'Executive Chef', category: 'Pub', commonProducts: 'Potatoes, Carrots, Onions', location: 'Carlton' },
+      { id: 'c7', businessName: 'Artisan Sourdough', contactName: 'Dave', category: 'Cafe', commonProducts: 'Tomatoes, Lettuce', location: 'Fitzroy' },
+      { id: 'c8', businessName: 'Veggie Delights', contactName: 'Sam', category: 'Retail', commonProducts: 'Eggplant, Broccoli, Carrots', location: 'Brunswick' },
   ];
-  private leads: Lead[] = [
-      { id: 'l1', businessName: 'Downtown Bistro', location: 'CBD', weeklySpend: 3000, deliveryTimePref: 'Early Morning', requestedProducts: [{productId: 'p1', productName: 'Tomatoes', currentPrice: 5.00}] }
-  ];
-  private registrationRequests: RegistrationRequest[] = [
-    {
-      id: 'req-florence',
-      name: 'Florence',
-      businessName: 'FLORENCE',
-      email: 'florence@example.com',
-      requestedRole: UserRole.CONSUMER,
-      submittedDate: new Date().toISOString(),
-      status: 'Pending',
-      consumerData: {
-        mobile: '0400 000 000',
-        location: 'Melbourne',
-        weeklySpend: 5000,
-        orderFrequency: 'Daily'
-      }
-    }
-  ];
-  private drivers: Driver[] = [
-      { id: 'd1', wholesalerId: 'u2', name: 'Dave Driver', email: 'dave@fresh.com', phone: '0400123456', licenseNumber: 'DL123456', vehicleRegistration: 'ABC-123', vehicleType: 'Van', status: 'Active' }
-  ];
-  private packers: Packer[] = [
-      { id: 'pk1', wholesalerId: 'u2', name: 'Pete Packer', email: 'pete@fresh.com', phone: '0400654321', status: 'Active' }
-  ];
+  private leads: Lead[] = [];
+  private registrationRequests: RegistrationRequest[] = [];
+  private drivers: Driver[] = [];
+  private packers: Packer[] = [];
   private supplierPriceRequests: SupplierPriceRequest[] = [];
   private pricingRules: PricingRule[] = [];
   private notifications: AppNotification[] = [];
   private messages: ChatMessage[] = [];
   
   private formTemplates: Record<string, OnboardingFormTemplate> = {
-      'CONSUMER': { role: UserRole.CONSUMER, sections: [{ id: 's1', title: 'Basic Info', fields: [{ id: 'f1', label: 'Business Name', type: 'text', required: true }] }] },
+      'CONSUMER': { role: UserRole.CONSUMER, sections: [] },
       'WHOLESALER': { role: UserRole.WHOLESALER, sections: [] },
       'FARMER': { role: UserRole.FARMER, sections: [] }
   };
 
   constructor() {
+      // Initialize with base orders for the current user demos
+      this.generateDemoOrders();
+
       try {
           const storedRequests = localStorage.getItem('pz_registrationRequests');
           if (storedRequests) this.registrationRequests = JSON.parse(storedRequests);
           
           const storedCustomers = localStorage.getItem('pz_customers');
-          if (storedCustomers) this.customers = JSON.parse(storedCustomers);
+          if (storedCustomers) {
+              const parsed = JSON.parse(storedCustomers);
+              if (parsed.length > 0) this.customers = parsed;
+          }
           
           const storedOrders = localStorage.getItem('pz_orders');
           if (storedOrders) this.orders = JSON.parse(storedOrders);
@@ -108,12 +103,54 @@ class MockDataService {
           const storedMessages = localStorage.getItem('pz_chat_messages');
           if (storedMessages) this.messages = JSON.parse(storedMessages);
 
-          // Seed initial admin notification if empty
-          if (this.notifications.length === 0) {
-              this.addAppNotification('u1', 'New Business Application', 'FLORENCE has submitted a login request.', 'APPLICATION', '/login-requests');
-          }
+          const storedForms = localStorage.getItem('pz_form_templates');
+          if (storedForms) this.formTemplates = JSON.parse(storedForms);
       } catch (e) {
           console.error("Failed to load mock data from storage", e);
+      }
+  }
+
+  private generateDemoOrders() {
+      const today = new Date();
+      const sellerIds = ['u2', 'u3', 's1', 's2', 's3'];
+      const buyerIds = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'u4'];
+      
+      // Create 40 orders spread across the last 30 days
+      for (let i = 0; i < 40; i++) {
+          const date = new Date();
+          date.setDate(today.getDate() - (i % 30));
+          // Mix hours
+          date.setHours(8 + (i % 10), (i * 13) % 60);
+
+          const sellerId = sellerIds[i % sellerIds.length];
+          const buyerId = buyerIds[i % buyerIds.length];
+          const itemCount = 1 + (i % 4);
+          
+          const items: OrderItem[] = [];
+          for (let j = 0; j < itemCount; j++) {
+              const p = this.products[j % this.products.length];
+              items.push({
+                  productId: p.id,
+                  quantityKg: 10 + (j * 5),
+                  pricePerKg: p.defaultPricePerKg
+              });
+          }
+
+          const total = items.reduce((s, item) => s + (item.quantityKg * item.pricePerKg), 0);
+
+          this.orders.push({
+              id: `o-demo-${i}`,
+              buyerId,
+              sellerId,
+              items,
+              totalAmount: total,
+              status: i < 5 ? 'Pending' : 'Delivered',
+              date: date.toISOString(),
+              paymentStatus: i % 3 === 0 ? 'Paid' : 'Unpaid',
+              // Fix line 150: Type '"card"' is not assignable to type '"pay_now" | "invoice" | "amex"'.
+              paymentMethod: i % 2 === 0 ? 'invoice' : 'pay_now',
+              deliveredAt: i >= 5 ? date.toISOString() : undefined
+          });
       }
   }
 
@@ -127,6 +164,7 @@ class MockDataService {
         localStorage.setItem('pz_notifications', JSON.stringify(this.notifications));
         localStorage.setItem('pz_supplierPriceRequests', JSON.stringify(this.supplierPriceRequests));
         localStorage.setItem('pz_chat_messages', JSON.stringify(this.messages));
+        localStorage.setItem('pz_form_templates', JSON.stringify(this.formTemplates));
     } catch (e) {
         console.error("Failed to persist mock data", e);
     }
@@ -155,7 +193,6 @@ class MockDataService {
     return newMessage;
   }
 
-  // --- DELETE METHODS FOR MANUAL CONTROL ---
   deleteUser(userId: string) {
       this.users = this.users.filter(u => u.id !== userId);
       this.customers = this.customers.filter(c => c.id !== userId);
@@ -167,7 +204,6 @@ class MockDataService {
       this.persistData();
   }
 
-  // --- NOTIFICATION ENGINE ---
   getAppNotifications(userId: string) {
       return this.notifications.filter(n => n.userId === userId).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
@@ -396,12 +432,6 @@ class MockDataService {
       if (userId === 'u1') return this.orders;
       return this.orders.filter(o => o.buyerId === userId || o.sellerId === userId || (o.logistics?.driverId && userId.startsWith('d')));
   }
-  getDriverOrders(driverId: string) {
-      return this.orders.filter(o => o.logistics?.driverId === driverId && o.status !== 'Delivered');
-  }
-  getPackerOrders(packerId: string) {
-      return this.orders.filter(o => o.packerId === packerId && o.status !== 'Shipped' && o.status !== 'Delivered');
-  }
 
   createMarketplaceOrder(buyerId: string, sellerId: string, items: {product: Product, qty: number}[], logistics: any, paymentMethod: any) {
       const newOrder: Order = {
@@ -439,15 +469,6 @@ class MockDataService {
       this.persistData();
   }
 
-  markOrderDelivered(orderId: string) {
-      const order = this.orders.find(o => o.id === orderId);
-      if (order) {
-          order.status = 'Delivered';
-          order.deliveredAt = new Date().toISOString();
-          this.persistData();
-      }
-  }
-
   deliverOrder(orderId: string, deliveredBy: string, photoUrl: string) {
       const order = this.orders.find(o => o.id === orderId);
       if (order) {
@@ -469,20 +490,6 @@ class MockDataService {
       }
   }
 
-  confirmOrderV1(orderId: string, items: any[], packerId: string, packerName: string | undefined, driverId: string, driverName: string | undefined) {
-      const order = this.orders.find(o => o.id === orderId);
-      if (order) {
-          order.status = 'Confirmed';
-          order.items = items;
-          order.packerId = packerId;
-          order.packerName = packerName;
-          if (driverId) {
-              order.logistics = { ...order.logistics, method: 'LOGISTICS', driverId, driverName };
-          }
-          this.persistData();
-      }
-  }
-
   packOrder(orderId: string, packerName: string, driverId?: string, driverName?: string) {
       const order = this.orders.find(o => o.id === orderId);
       if (order) {
@@ -494,10 +501,6 @@ class MockDataService {
           }
           this.persistData();
       }
-  }
-
-  verifyOrder(orderId: string, issues: any[]) {
-      console.log(`Order ${orderId} verified with issues:`, issues);
   }
 
   getRegistrationRequests() { return this.registrationRequests; }
@@ -522,7 +525,6 @@ class MockDataService {
     };
     this.registrationRequests.push(req);
 
-    // Also create a temporary user record so they can "log in" immediately
     const newUser: User = {
       id: inviteId,
       name: data.name,
@@ -530,30 +532,9 @@ class MockDataService {
       email: data.email.toLowerCase(),
       role: data.role,
       dashboardVersion: 'v2',
-      businessProfile: {
-          companyName: data.businessName,
-          tradingName: data.businessName,
-          abn: '',
-          businessLocation: '',
-          directorName: data.name,
-          businessMobile: data.mobile,
-          email: data.email.toLowerCase(),
-          accountsEmail: data.email.toLowerCase(),
-          accountsMobile: data.mobile,
-          tradingDaysHours: '',
-          productsSold: '',
-          hasLogistics: null,
-          bankName: '',
-          bsb: '',
-          accountNumber: '',
-          agreeTo14DayTerms: false,
-          agreeTo20PercentDiscount: null,
-          acceptedTandCs: false,
-          isComplete: false
-      }
+      businessProfile: { isComplete: false } as any
     };
     this.users.push(newUser);
-
     this.persistData();
     return req;
   }
@@ -570,7 +551,6 @@ class MockDataService {
           consumerData: { ...data }
       };
       this.registrationRequests.push(req);
-      this.addAppNotification('u1', 'New Business Application', `${req.businessName} has submitted a new ${req.requestedRole} request.`, 'APPLICATION', '/login-requests');
       this.persistData();
   }
 
@@ -578,99 +558,21 @@ class MockDataService {
       const req = this.registrationRequests.find(r => r.id === id);
       if (req) {
           req.status = 'Approved';
-          
-          // Ensure user account exists
-          let user = this.users.find(u => u.email.toLowerCase() === req.email.toLowerCase());
-          if (!user) {
-              user = {
-                id: `u-${Date.now()}`,
-                name: req.name,
-                businessName: req.businessName,
-                email: req.email.toLowerCase(),
-                role: req.requestedRole,
-                dashboardVersion: 'v2',
-                businessProfile: {
-                    companyName: req.businessName,
-                    tradingName: req.businessName,
-                    abn: '',
-                    businessLocation: '',
-                    directorName: req.name,
-                    businessMobile: '',
-                    email: req.email.toLowerCase(),
-                    accountsEmail: req.email.toLowerCase(),
-                    accountsMobile: '',
-                    tradingDaysHours: '',
-                    productsSold: '',
-                    hasLogistics: null,
-                    bankName: '',
-                    bsb: '',
-                    accountNumber: '',
-                    agreeTo14DayTerms: false,
-                    agreeTo20PercentDiscount: null,
-                    acceptedTandCs: false,
-                    isComplete: false
-                }
-              };
-              this.users.push(user);
-          }
-
-          // If they are a consumer, add to marketplace customers list if not there
-          if (user.role === UserRole.CONSUMER) {
-            const exists = this.customers.find(c => c.id === user!.id);
-            if (!exists) {
-              this.customers.push({
-                id: user.id,
-                businessName: req.businessName,
-                contactName: req.name,
-                email: req.email.toLowerCase(),
-                category: 'Restaurant',
-                connectionStatus: 'Pending Connection',
-                joinedDate: new Date().toISOString()
-              });
-            }
-          }
-          this.persistData();
-      }
-  }
-
-  rejectRegistration(id: string) {
-      const req = this.registrationRequests.find(r => r.id === id);
-      if (req) {
-          req.status = 'Rejected';
-          this.persistData();
-      }
-  }
-
-  addMarketplaceCustomer(customer: Customer) {
-      this.customers.push(customer);
-      this.persistData();
-  }
-
-  updateCustomerDetails(id: string, updates: Partial<Customer>) {
-      const c = this.customers.find(x => x.id === id);
-      if (c) {
-          Object.assign(c, updates);
           this.persistData();
       }
   }
 
   getLeads() { return this.leads; }
-  removeLead(id: string) { this.leads = this.leads.filter(l => l.id !== id); this.persistData(); }
-
   getAllSupplierPriceRequests() { return this.supplierPriceRequests; }
   getSupplierPriceRequests(supplierId: string) { return this.supplierPriceRequests.filter(r => r.supplierId === supplierId); }
   createSupplierPriceRequest(req: SupplierPriceRequest) { 
       this.supplierPriceRequests.push(req); 
-      this.addAppNotification(req.supplierId, 'New Price Request', `PZ Admin has requested custom pricing for a new lead (${req.customerContext}).`, 'PRICE_REQUEST', '/');
       this.persistData(); 
   }
   updateSupplierPriceRequest(id: string, updates: Partial<SupplierPriceRequest>) {
       const req = this.supplierPriceRequests.find(r => r.id === id);
       if (req) {
         Object.assign(req, updates);
-        if (updates.status === 'SUBMITTED') {
-            this.addAppNotification('u1', 'Price Offer Received', `Partner has submitted pricing for lead: ${req.customerContext}.`, 'PRICE_REQUEST', '/pricing-requests');
-        }
         this.persistData();
       }
   }
@@ -679,20 +581,14 @@ class MockDataService {
       const req = this.supplierPriceRequests.find(r => r.id === reqId);
       if (req) {
           req.status = 'WON';
-          
-          const supplier = this.users.find(u => u.id === req.supplierId);
-
           const newCustomer: Customer = {
               id: `c-won-${Date.now()}`,
               businessName: req.customerContext,
               contactName: 'Pending Setup',
               category: 'Restaurant',
-              connectionStatus: 'Pending Connection',
+              connectionStatus: 'Active',
               joinedDate: new Date().toISOString(),
-              connectedSupplierId: req.supplierId,
-              connectedSupplierName: supplier?.businessName || 'Supplier',
-              connectedSupplierRole: supplier?.role === UserRole.FARMER ? 'Farmer' : 'Wholesaler',
-              email: 'pending@setup.com'
+              connectedSupplierId: req.supplierId
           };
           this.customers.push(newCustomer);
           this.persistData();
@@ -701,46 +597,13 @@ class MockDataService {
       return null;
   }
 
-  sendOnboardingComms(customerId: string) {
-      const customer = this.customers.find(c => c.id === customerId);
-      if (customer) {
-          const link = `https://portal.platformzero.io/setup/${customer.id.split('-').pop()}`;
-          console.log(`[SIMULATED SMS] Sent to ${customer.phone || 'Customer'}: Hello ${customer.contactName}, your Platform Zero account is up and running! Set up your profile here: ${link}`);
-          console.log(`[SIMULATED EMAIL] Sent to ${customer.email}: Welcome to Platform Zero! Your wholesale procurement portal is ready.`);
-          
-          customer.connectionStatus = 'Active';
-          this.persistData();
-          return true;
-      }
-      return false;
-  }
-
   getRepStats(repId: string) {
-      return {
-          totalSales: 15400,
-          commissionMade: 770,
-          commissionComing: 320,
-          customerCount: 12,
-          orders: this.orders 
-      };
+      return { totalSales: 15400, commissionMade: 770, commissionComing: 320, customerCount: 12, orders: this.orders };
   }
 
-  getRepCustomers(repId: string) {
-      return this.customers.filter(c => c.assignedPzRepId === repId);
-  }
-
-  getRepIssues(repId: string) {
-      const myCustomerIds = this.customers.filter(c => c.assignedPzRepId === repId).map(c => c.id);
-      return this.orders.filter(o => o.issue && o.issue.status === 'Open' && myCustomerIds.includes(o.buyerId));
-  }
-
+  getRepCustomers(repId: string) { return this.customers.filter(c => c.assignedPzRepId === repId); }
   getFormTemplate(role: UserRole) { return this.formTemplates[role]; }
-  updateFormTemplate(role: UserRole, template: OnboardingFormTemplate) { this.formTemplates[role] = template; this.persistData(); }
-
-  getPricingRules(ownerId: string, productId: string) {
-      return this.pricingRules.filter(r => r.ownerId === ownerId && r.productId === productId);
-  }
-
+  getPricingRules(ownerId: string, productId: string) { return this.pricingRules.filter(r => r.ownerId === ownerId && r.productId === productId); }
   savePricingRules(rules: PricingRule[]) {
       if (rules.length > 0) {
           this.pricingRules = this.pricingRules.filter(r => !(r.ownerId === rules[0].ownerId && r.productId === rules[0].productId));
@@ -750,7 +613,113 @@ class MockDataService {
   }
 
   findBuyersForProduct(productName: string) {
-      return this.customers.slice(0, 3);
+      return this.customers.filter(c => c.commonProducts?.toLowerCase().includes(productName.toLowerCase())).slice(0, 8);
+  }
+
+  // --- FIXES: ADDING MISSING METHODS ---
+
+  /**
+   * Adds a new customer to the marketplace list.
+   */
+  addMarketplaceCustomer(customer: Customer) {
+      this.customers.push(customer);
+      this.persistData();
+  }
+
+  /**
+   * Updates an onboarding form template for a specific role.
+   */
+  updateFormTemplate(role: UserRole, template: OnboardingFormTemplate) {
+      this.formTemplates[role] = template;
+      this.persistData();
+  }
+
+  /**
+   * Returns orders assigned to a specific driver.
+   */
+  getDriverOrders(driverId: string) {
+      return this.orders.filter(o => o.logistics?.driverId === driverId);
+  }
+
+  /**
+   * Returns orders assigned to a specific packer.
+   */
+  getPackerOrders(packerId: string) {
+      return this.orders.filter(o => o.packerId === packerId);
+  }
+
+  /**
+   * Rejects a registration request by ID.
+   */
+  rejectRegistration(id: string) {
+      const req = this.registrationRequests.find(r => r.id === id);
+      if (req) {
+          req.status = 'Rejected';
+          this.persistData();
+      }
+  }
+
+  /**
+   * Simulates sending onboarding communications to a customer.
+   */
+  sendOnboardingComms(customerId: string) {
+      const customer = this.customers.find(c => c.id === customerId);
+      if (customer) {
+          this.addAppNotification(
+              customer.id, 
+              'Welcome to Platform Zero', 
+              'Your portal is ready! Click here to finalize your setup and terms.', 
+              'SYSTEM', 
+              '/settings'
+          );
+      }
+  }
+
+  /**
+   * Returns all active issues for a PZ Representative's assigned customers.
+   */
+  getRepIssues(repId: string) {
+      const myCustomerIds = this.customers.filter(c => c.assignedPzRepId === repId).map(c => c.id);
+      return this.orders.filter(o => myCustomerIds.includes(o.buyerId) && o.issue);
+  }
+
+  /**
+   * Confirms an order and assigns fulfillment team (V1 flow).
+   */
+  confirmOrderV1(orderId: string, items: OrderItem[], packerId: string, packerName?: string, driverId?: string, driverName?: string) {
+      const order = this.orders.find(o => o.id === orderId);
+      if (order) {
+          order.status = 'Confirmed';
+          order.packerId = packerId;
+          order.packerName = packerName;
+          if (!order.logistics) {
+              order.logistics = { method: 'LOGISTICS' };
+          }
+          order.logistics.driverId = driverId;
+          order.logistics.driverName = driverName;
+          this.persistData();
+      }
+  }
+
+  /**
+   * Marks order items as verified or reported with issues by a consumer.
+   */
+  verifyOrder(orderId: string, issues: {itemId: string, type: string, action: string}[]) {
+      const order = this.orders.find(o => o.id === orderId);
+      if (order) {
+          if (issues.length > 0) {
+              const firstIssue = issues[0];
+              order.issue = {
+                  type: firstIssue.type as any,
+                  description: `Issue with item ${firstIssue.itemId}. Requested: ${firstIssue.action}`,
+                  reportedAt: new Date().toISOString(),
+                  deadline: new Date(Date.now() + 86400000).toISOString(),
+                  requestedResolution: 'Credit',
+                  status: 'Open'
+              };
+          }
+          this.persistData();
+      }
   }
 }
 

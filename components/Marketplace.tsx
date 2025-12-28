@@ -123,17 +123,20 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user }) => {
 
   const handleConnectRequest = () => {
     if (user) {
-        // Logged in: Go to chat directory
+        // Logged in: Add to cart automatically if it's a specific product link
+        if (sharedProduct) {
+            addToCart(sharedProduct, 1);
+        }
+        
+        // Go to chat directory
         const owner = mockService.getAllUsers().find(u => u.id === sharedItem?.ownerId);
         if (owner) {
             navigate(`/contacts?id=${owner.id}`);
         }
     } else {
         // Not logged in: Show auth modal
-        // In this implementation, we simulate the toggle to login
         alert("Welcome! Please sign in or create an account to connect with this supplier and start trading.");
-        // We'll trigger the login modal by reloading with a hint or similar, 
-        // but typically you'd call an app-wide setAuthModal(true)
+        // Reload to trigger auth flow on landing
         window.location.hash = '#/'; 
     }
   };

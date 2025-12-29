@@ -222,7 +222,6 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
   const [activeContact, setActiveContact] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [sendProductTarget, setSendProductTarget] = useState<any>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -288,14 +287,13 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      {/* HEADER MATCHING SCREENSHOT STYLE */}
       <div className="px-2">
           <div className="flex items-center gap-5 mb-4">
             <div className="w-14 h-14 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center text-slate-900">
                 <Users size={32} />
             </div>
             <div className="relative">
-                <h1 className="text-4xl font-black text-gray-900 tracking-tight">Network</h1>
+                <h1 className="text-4xl font-black text-gray-900 tracking-tight uppercase">Network</h1>
                 <div className="absolute -bottom-2 left-0 w-full h-1.5 bg-slate-900 rounded-full"></div>
             </div>
           </div>
@@ -353,14 +351,13 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
                   </div>
               ))}
               <div onClick={() => setIsInviteModalOpen(true)} className="border-4 border-dashed border-gray-100 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center group hover:bg-indigo-50/30 hover:border-indigo-200 transition-all cursor-pointer min-h-[300px]">
-                  <div className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center mb-6"><Plus size={32} className="text-gray-300 group-hover:text-indigo-500 transition-all"/></div>
+                  <div className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center mb-6 border-2 border-dashed border-gray-200"><Plus size={32} className="text-gray-300 group-hover:text-indigo-500 transition-all"/></div>
                   <h3 className="text-xl font-black text-gray-400 group-hover:text-gray-900 tracking-tight uppercase">Invite Buyer</h3>
                   <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">Provision a direct portal</p>
               </div>
           </div>
       ) : (
           <div className="space-y-6">
-              {/* AU STATE SELECTOR BAR */}
               <div className="bg-white p-2 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-2 overflow-x-auto no-scrollbar">
                 {AU_STATES.map(state => (
                     <button

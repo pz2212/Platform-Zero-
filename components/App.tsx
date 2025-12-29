@@ -28,7 +28,6 @@ import {
   LayoutDashboard, ShoppingCart, Users, Settings, LogOut, Tags, ChevronDown, UserPlus, 
   DollarSign, X, Lock, ArrowLeft, Bell, 
   ShoppingBag, ShieldCheck, TrendingUp, Target, Plus, ChevronUp, Layers, 
-  /* Fix line 31: Added missing Calculator and BarChart3 imports from lucide-react */
   Sparkles, User as UserIcon, Building, ChevronRight,
   Sprout, Globe, Users2, Circle, LogIn, ArrowRight, Menu, Search, Calculator, BarChart3
 } from 'lucide-react';
@@ -108,7 +107,6 @@ const NotificationDropdown = ({ user, onClose }: { user: User, onClose: () => vo
                                 }`}>
                                     {n.type === 'ORDER' ? <ShoppingCart size={18}/> :
                                      n.type === 'APPLICATION' ? <UserPlus size={18}/> :
-                                     /* Fix line 110: Calculator icon is now defined via imports */
                                      n.type === 'PRICE_REQUEST' ? <Calculator size={18}/> :
                                      <Sparkles size={18}/>}
                                 </div>
@@ -169,7 +167,7 @@ const NetworkSignalsWidget = ({ user, mode = 'sidebar', onFinish }: { user: User
     <div className="overflow-hidden w-full">
        <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center justify-between w-full text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1 px-1">
          <span>Daily Signals</span>
-         {isExpanded ? <ChevronDown size={14} className="text-slate-500" /> : <ChevronUp size={14} className="text-slate-500" />}
+         {isExpanded ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronUp size={14} className="text-slate-400" />}
        </button>
        {isExpanded && (
          <div className="mt-4 space-y-4 px-1">
@@ -254,6 +252,7 @@ const NetworkSignalsWidget = ({ user, mode = 'sidebar', onFinish }: { user: User
   );
 };
 
+// Fix: Added missing AuthModal component definition to resolve scoping issues in components/App.tsx
 const AuthModal = ({ isOpen, onClose, step, setStep, onLogin, email, setEmail, password, setPassword, selectedRole, setSelectedRole, onAutoLogin }: any) => {
     if (!isOpen) return null;
 
@@ -355,7 +354,7 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) {
+    if (user && (user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER)) {
         const today = new Date().toLocaleDateString();
         const lastSeen = localStorage.getItem(`pz_daily_signal_${user.id}`);
         if (lastSeen !== today) setShowDailyPopup(true);
@@ -363,6 +362,7 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   }, [user]);
 
   useEffect(() => {
+    if (!user) return;
     let lastNotifId = '';
     const updateNotifs = () => {
         const notifs = mockService.getAppNotifications(user.id);
@@ -415,7 +415,6 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                       <SidebarLink to="/" icon={LayoutGrid} label="Order Management" active={isActive('/')} badge={mockService.getOrders(user.id).filter(o => o.sellerId === user.id && o.status === 'Pending').length} />
                       <SidebarLink to="/pricing" icon={Tags} label="Inventory & Price" active={isActive('/pricing')} />
                       <SidebarLink to="/accounts" icon={DollarSign} label="Financials" active={isActive('/accounts')} />
-                      /* Fix line 416: BarChart3 icon is now defined via imports */
                       <SidebarLink to="/trading-insights" icon={BarChart3} label="Market Intelligence" active={isActive('/trading-insights')} />
                     </div>
                   </div>
@@ -482,13 +481,19 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                 </div>
                 <div className="h-8 w-px bg-gray-100 mx-2"></div>
                 <div className="flex items-center gap-3">
-                    <div className="text-right hidden sm:block">
-                        <p className="text-xs font-black text-gray-900 tracking-tight leading-none mb-1 uppercase">{user.name}</p>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">{user.role}</p>
-                    </div>
-                    <Link to="/settings" className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-black shadow-sm overflow-hidden">
-                        {user.name.charAt(0)}
-                    </Link>
+                    {user ? (
+                      <>
+                        <div className="text-right hidden sm:block">
+                            <p className="text-xs font-black text-gray-900 tracking-tight leading-none mb-1 uppercase">{user.name}</p>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">{user.role}</p>
+                        </div>
+                        <Link to="/settings" className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-black shadow-sm overflow-hidden">
+                            {user.name.charAt(0)}
+                        </Link>
+                      </>
+                    ) : (
+                      <button onClick={() => window.location.hash = '#/'} className="px-6 py-2 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-black transition-all">Sign In</button>
+                    )}
                 </div>
             </div>
         </header>

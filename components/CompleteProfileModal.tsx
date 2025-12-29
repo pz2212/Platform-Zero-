@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   X, Building2, ShieldAlert, CheckCircle2, Mail, Phone, MapPin, 
-  Globe, ChevronDown, CreditCard, Truck, BookOpen, ChevronRight, 
-  Check, Landmark, Users2, ShoppingBag, PackageSearch, HelpCircle,
-  TrendingUp, Sparkles, Sprout, ShoppingCart, CheckCircle
+  ChevronRight, Landmark, Users2, PackageSearch, HelpCircle,
+  TrendingUp, Sparkles, Sprout, ShoppingCart, CheckCircle, Truck, BookOpen,
+  /* Fix: Added missing Check import from lucide-react */
+  Check
 } from 'lucide-react';
-import { User, UserRole } from '../types';
+import { User, UserRole, BusinessProfile } from '../types';
 import { mockService } from '../services/mockDataService';
 
 interface CompleteProfileModalProps {
@@ -14,8 +15,6 @@ interface CompleteProfileModalProps {
   user: User;
   onComplete: () => void;
 }
-
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const TermsModal = ({ isOpen, onClose, onAccept }: { isOpen: boolean, onClose: () => void, onAccept: () => void }) => {
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
@@ -85,30 +84,30 @@ const TermsModal = ({ isOpen, onClose, onAccept }: { isOpen: boolean, onClose: (
 
 export const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ isOpen, onClose, user, onComplete }) => {
   const [isTermsOpen, setIsTermsOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<number>(0);
   
   const [formData, setFormData] = useState({
     businessName: user.businessName || '',
-    abn: '',
-    address: '',
+    abn: user.businessProfile?.abn || '',
+    address: user.businessProfile?.businessLocation || '',
     // Banking
-    bankName: '',
-    bsb: '',
-    accountNumber: '',
-    // Stakeholders
-    directorName: '',
-    directorEmail: '',
-    directorPhone: '',
-    accountsName: '',
-    accountsEmail: '',
-    accountsPhone: '',
-    // Trade
-    productsSell: '',
-    productsGrow: '',
-    productsBuy: '',
+    bankName: user.businessProfile?.bankName || '',
+    bsb: user.businessProfile?.bsb || '',
+    accountNumber: user.businessProfile?.accountNumber || '',
+    // Director
+    directorName: user.businessProfile?.directorName || '',
+    directorEmail: user.businessProfile?.directorEmail || '',
+    directorPhone: user.businessProfile?.directorPhone || '',
+    // Accounts
+    accountsName: user.businessProfile?.accountsName || '',
+    accountsEmail: user.businessProfile?.accountsEmail || '',
+    accountsPhone: user.businessProfile?.accountsPhone || '',
+    // Trade Mix
+    productsSell: user.businessProfile?.productsSell || '',
+    productsGrow: user.businessProfile?.productsGrow || '',
+    productsBuy: user.businessProfile?.productsBuy || '',
     // Logistics
-    hasLogistics: false,
-    wantPzAgent: false,
+    hasLogistics: user.businessProfile?.hasLogistics || false,
+    wantPzAgent: user.businessProfile?.isPzAgent || false,
     acceptTerms: false
   });
 
@@ -134,10 +133,13 @@ export const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ isOp
     
     mockService.updateBusinessProfile(user.id, {
       ...formData,
+      companyName: formData.businessName,
+      businessLocation: formData.address,
+      isPzAgent: formData.wantPzAgent,
       isComplete: true,
     } as any);
 
-    alert("Your onboarding document has been submitted for verification.");
+    alert("Your onboarding profile has been submitted successfully!");
     onComplete();
     onClose();
   };
@@ -154,159 +156,177 @@ export const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ isOp
     </div>
   );
 
+  const FormInput = ({ label, name, placeholder, required = true, type = "text" }: any) => (
+    <div>
+      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1 block">{label}</label>
+      <input 
+        name={name} 
+        type={type}
+        placeholder={placeholder} 
+        required={required}
+        className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all placeholder:text-gray-300" 
+        value={(formData as any)[name]} 
+        onChange={handleInputChange} 
+      />
+    </div>
+  );
+
   return (
     <>
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto">
-        <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl my-8 animate-in zoom-in-95 duration-200 overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
+        <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-3xl my-8 animate-in zoom-in-95 duration-200 overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
           
           <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#043003] rounded-xl flex items-center justify-center text-white font-black text-xl">P</div>
+              <div className="w-12 h-12 bg-[#043003] rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg">P</div>
               <div>
-                <h2 className="text-2xl font-black text-[#0F172A] tracking-tight leading-none">Onboarding Document</h2>
-                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mt-1">Wholesaler Setup • Australia</p>
+                <h2 className="text-2xl font-black text-[#0F172A] tracking-tight leading-none uppercase">Wholesaler Onboarding</h2>
+                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mt-1">Official Trade Registration • Australia</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-gray-300 hover:text-gray-600 transition-colors p-1 bg-gray-50 rounded-full">
+            <button onClick={onClose} className="text-gray-300 hover:text-gray-600 transition-colors p-2 bg-gray-50 rounded-full">
               <X size={24} strokeWidth={2.5} />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-10 pt-6 space-y-12 custom-scrollbar">
             
-            {/* SECTION 1: IDENTITY */}
+            {/* SECTION 1: ENTITY */}
             <section className="animate-in slide-in-from-left-4">
-              <SectionHeader icon={Building2} title="Business Identity" sub="Entity Information" />
+              <SectionHeader icon={Building2} title="Business Entity" sub="Trading Identity Information" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1 block">Trading Name</label>
-                  <input name="businessName" placeholder="e.g. Smith's Fresh Wholesale" required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black text-gray-900 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all" value={formData.businessName} onChange={handleInputChange} />
+                  <FormInput label="Full Trading Name" name="businessName" placeholder="e.g. Fresh Wholesalers Pty Ltd" />
                 </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1 block">ABN</label>
-                  <input name="abn" placeholder="XX XXX XXX XXX" required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black text-gray-900 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all" value={formData.abn} onChange={handleInputChange} />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1 block">Headquarters Address</label>
-                  <input name="address" placeholder="Store 1, SA Produce Market" required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-black text-gray-900 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all" value={formData.address} onChange={handleInputChange} />
-                </div>
+                <FormInput label="ABN" name="abn" placeholder="53 667 679 003" />
+                <FormInput label="Principal Place of Business" name="address" placeholder="Store 12, Pooraka Produce Market" />
               </div>
             </section>
 
-            {/* SECTION 2: CONTACTS */}
+            {/* SECTION 2: BANKING */}
+            <section className="bg-emerald-50/20 p-8 rounded-[2.5rem] border border-emerald-100/50 animate-in slide-in-from-left-4 duration-300">
+              <SectionHeader icon={Landmark} title="Banking Details" sub="For Automated Payout Settlement" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormInput label="Bank Name" name="bankName" placeholder="e.g. Commonwealth Bank" />
+                <FormInput label="BSB" name="bsb" placeholder="000-000" />
+                <FormInput label="Account Number" name="accountNumber" placeholder="12345678" />
+              </div>
+            </section>
+
+            {/* SECTION 3: KEY CONTACTS */}
             <section className="animate-in slide-in-from-left-4 duration-500">
-              <SectionHeader icon={Users2} title="Stakeholders" sub="Key Decision Makers" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <SectionHeader icon={Users2} title="Key Stakeholders" sub="Operational Decision Makers" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-4">
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest border-b border-indigo-50 pb-2">Director / Owner</p>
-                  <input name="directorName" placeholder="Full Name" required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 outline-none" value={formData.directorName} onChange={handleInputChange} />
-                  <input name="directorEmail" type="email" placeholder="Email Address" required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 outline-none" value={formData.directorEmail} onChange={handleInputChange} />
-                  <input name="directorPhone" placeholder="Mobile Phone" required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 outline-none" value={formData.directorPhone} onChange={handleInputChange} />
+                  <div className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase tracking-widest border-b border-indigo-50 pb-2 mb-4">
+                    <CheckCircle size={14}/> Primary Director
+                  </div>
+                  <FormInput label="Director Name" name="directorName" placeholder="Full Name" />
+                  <FormInput label="Director Email" name="directorEmail" type="email" placeholder="email@business.com" />
+                  <FormInput label="Director Phone" name="directorPhone" placeholder="Mobile preferred" />
                 </div>
                 <div className="space-y-4">
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest border-b border-indigo-50 pb-2">Accounts / AP</p>
-                  <input name="accountsName" placeholder="Contact Name" required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 outline-none" value={formData.accountsName} onChange={handleInputChange} />
-                  <input name="accountsEmail" type="email" placeholder="Accounts Email" required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 outline-none" value={formData.accountsEmail} onChange={handleInputChange} />
-                  <input name="accountsPhone" placeholder="Accounts Direct Line" required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 outline-none" value={formData.accountsPhone} onChange={handleInputChange} />
+                  <div className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase tracking-widest border-b border-indigo-50 pb-2 mb-4">
+                    <CheckCircle size={14}/> Accounts / AP
+                  </div>
+                  <FormInput label="Accounts Contact" name="accountsName" placeholder="Accounts Manager" />
+                  <FormInput label="Accounts Email" name="accountsEmail" type="email" placeholder="accounts@business.com" />
+                  <FormInput label="Accounts Phone" name="accountsPhone" placeholder="Direct Line" />
                 </div>
               </div>
             </section>
 
-            {/* SECTION 3: BANKING */}
+            {/* SECTION 4: PRODUCT CATEGORIES */}
             <section className="animate-in slide-in-from-left-4 duration-700">
-              <SectionHeader icon={Landmark} title="Banking Details" sub="Australian Settlement Info" />
-              <div className="bg-emerald-50/30 p-6 rounded-[2rem] border border-emerald-100/50 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1 block">Bank Name</label>
-                  <input name="bankName" placeholder="e.g. CBA, Westpac" required className="w-full p-4 bg-white border border-gray-100 rounded-2xl text-sm font-black text-gray-900 outline-none" value={formData.bankName} onChange={handleInputChange} />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1 block">BSB</label>
-                  <input name="bsb" placeholder="XXX-XXX" required className="w-full p-4 bg-white border border-gray-100 rounded-2xl text-sm font-black text-gray-900 outline-none" value={formData.bsb} onChange={handleInputChange} />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1 block">Account Number</label>
-                  <input name="accountNumber" placeholder="XXXXXXXXX" required className="w-full p-4 bg-white border border-gray-100 rounded-2xl text-sm font-black text-gray-900 outline-none" value={formData.accountNumber} onChange={handleInputChange} />
-                </div>
-              </div>
-            </section>
-
-            {/* SECTION 4: PRODUCT CATALOG */}
-            <section>
-              <SectionHeader icon={PackageSearch} title="Trade Catalog" sub="Core Inventory Mix" />
+              <SectionHeader icon={PackageSearch} title="Produce Inventory" sub="Market Catalog Categorization" />
               <div className="space-y-6">
                 <div>
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
-                    <TrendingUp size={14} className="text-emerald-500"/> Products You Sell
+                    <TrendingUp size={14} className="text-emerald-500"/> Products You Sell (Active Inventory)
                   </label>
-                  <textarea name="productsSell" placeholder="Apples, Pears, Citrus..." className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 h-20 resize-none outline-none focus:bg-white" value={formData.productsSell} onChange={handleInputChange} />
+                  <textarea 
+                    name="productsSell" 
+                    placeholder="e.g. Premium Tomatoes, Onions, Potatoes..." 
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 h-24 resize-none outline-none focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all" 
+                    value={formData.productsSell} 
+                    onChange={handleInputChange} 
+                  />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
-                            {/* Fix: Added missing Lucide Sprout component */}
-                            <Sprout size={14} className="text-emerald-500"/> Products You Grow
-                        </label>
-                        <textarea name="productsGrow" placeholder="Stone fruit, Cherries..." className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 h-20 resize-none outline-none focus:bg-white" value={formData.productsGrow} onChange={handleInputChange} />
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
-                            {/* Fix: Added missing Lucide ShoppingCart component */}
-                            <ShoppingCart size={14} className="text-emerald-500"/> Products You Buy
-                        </label>
-                        <textarea name="productsBuy" placeholder="Potatoes, Root Veg..." className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 h-20 resize-none outline-none focus:bg-white" value={formData.productsBuy} onChange={handleInputChange} />
-                    </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
+                      <Sprout size={14} className="text-indigo-500"/> Products You Grow
+                    </label>
+                    <textarea 
+                      name="productsGrow" 
+                      placeholder="e.g. Seasonal stone fruits, leafy greens..." 
+                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 h-24 resize-none outline-none focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all" 
+                      value={formData.productsGrow} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
+                      <ShoppingCart size={14} className="text-indigo-500"/> Products You Buy (Sourcing Needs)
+                    </label>
+                    <textarea 
+                      name="productsBuy" 
+                      placeholder="e.g. Specialty herbs, organic root veg..." 
+                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 h-24 resize-none outline-none focus:bg-white focus:ring-4 focus:ring-emerald-500/5 transition-all" 
+                      value={formData.productsBuy} 
+                      onChange={handleInputChange} 
+                    />
+                  </div>
                 </div>
               </div>
             </section>
 
-            {/* SECTION 5: LOGISTICS */}
-            <section className="bg-indigo-50/30 p-8 rounded-[2.5rem] border border-indigo-100/50 space-y-6">
-              <SectionHeader icon={Truck} title="Logistics & Delivery" sub="Fleet Availability" />
+            {/* SECTION 5: LOGISTICS & AGENT STATUS */}
+            <section className="bg-indigo-50/40 p-8 rounded-[2.5rem] border border-indigo-100/50 space-y-6">
+              <SectionHeader icon={Truck} title="Delivery Logistics" sub="Fulfillment Capabilities" />
               
               <div className="flex items-center justify-between p-6 bg-white rounded-2xl border border-indigo-100 shadow-sm">
                 <div className="flex items-center gap-4">
-                   <div className={`p-3 rounded-xl transition-all ${formData.hasLogistics ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
-                      <Truck size={24}/>
+                   <div className={`p-4 rounded-2xl transition-all shadow-md ${formData.hasLogistics ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                      <Truck size={28}/>
                    </div>
                    <div>
-                      <p className="font-black text-gray-900 uppercase text-sm tracking-tight leading-none">Internal Logistics</p>
-                      <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Do you operate your own fleet?</p>
+                      <p className="font-black text-gray-900 uppercase text-sm tracking-tight leading-none">Fleet Operations</p>
+                      <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1.5">Do you operate your own distribution fleet?</p>
                    </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" name="hasLogistics" className="sr-only peer" checked={formData.hasLogistics} onChange={handleInputChange}/>
-                  <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600"></div>
+                  <div className="w-16 h-9 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-indigo-600 shadow-inner"></div>
                 </label>
               </div>
 
               {formData.hasLogistics && (
-                <div className="p-6 bg-emerald-600 rounded-2xl text-white shadow-xl animate-in zoom-in-95 duration-300 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-1/4 -translate-y-1/4">
-                    <Sparkles size={120}/>
+                <div className="p-8 bg-emerald-600 rounded-[2rem] text-white shadow-2xl animate-in zoom-in-95 duration-300 relative overflow-hidden group border-2 border-emerald-400/30">
+                  <div className="absolute top-0 right-0 p-10 opacity-10 transform translate-x-1/4 -translate-y-1/4">
+                    <Sparkles size={180}/>
                   </div>
                   <div className="relative z-10">
-                    <div className="flex items-start gap-4 mb-6">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        {/* Fix: Added missing Lucide CheckCircle component */}
-                        <CheckCircle size={20}/>
+                    <div className="flex items-start gap-5 mb-8">
+                      <div className="bg-white/20 p-3 rounded-2xl shadow-lg border border-white/20">
+                        <CheckCircle2 size={32}/>
                       </div>
                       <div>
-                        <h4 className="font-black uppercase tracking-widest text-sm leading-none mb-1">Platform Zero Agent Program</h4>
-                        <p className="text-[10px] text-emerald-100 font-medium leading-relaxed opacity-80">
+                        <h4 className="font-black uppercase tracking-[0.2em] text-lg leading-none mb-2">Platform Zero Agent Program</h4>
+                        <p className="text-xs text-emerald-50 font-medium leading-relaxed max-w-md">
                           As an Agent, we send you pre-paid marketplace orders for delivery within your operational region. 
-                          <span className="font-black text-white ml-1">Earn additional freight margin on every load.</span>
+                          <span className="font-black text-white ml-1">Receive new customers automatically and earn freight margin.</span>
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-200">Opt-in to Agency status?</span>
+                    <div className="flex items-center justify-between bg-white/10 p-4 rounded-2xl border border-white/10 backdrop-blur-sm">
+                       <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-200">Opt-in to Agency Status?</span>
                        <button 
                           type="button"
                           onClick={() => setFormData(prev => ({...prev, wantPzAgent: !prev.wantPzAgent}))}
-                          className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.wantPzAgent ? 'bg-white text-emerald-700 shadow-lg' : 'bg-emerald-700/50 text-emerald-300 border border-white/20'}`}
+                          className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${formData.wantPzAgent ? 'bg-white text-emerald-700 shadow-xl' : 'bg-emerald-700/50 text-emerald-300 border border-white/20'}`}
                        >
-                          {formData.wantPzAgent ? 'YES, SIGN ME UP' : 'NO, NOT NOW'}
+                          {formData.wantPzAgent ? 'AGENT STATUS ACTIVE' : 'REQUEST AGENT STATUS'}
                        </button>
                     </div>
                   </div>
@@ -315,33 +335,40 @@ export const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ isOp
             </section>
 
             {/* SECTION 6: COMPLIANCE */}
-            <section className="space-y-4 pt-4">
-              <div className="flex items-center gap-2 text-[#10B981]">
+            <section className="space-y-4 pt-4 border-t border-gray-100">
+              <div className="flex items-center gap-2 text-[#10B981] mb-6">
                 <ShieldAlert size={18} strokeWidth={2.5}/>
-                <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-gray-900">FINAL VERIFICATION</h3>
+                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-900">Compliance & Agreement</h3>
               </div>
               
-              <div className={`flex items-center gap-4 p-6 border rounded-[1.5rem] transition-all shadow-sm ${formData.acceptTerms ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-100'}`}>
-                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${formData.acceptTerms ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-gray-200 text-transparent'}`}>
-                  <Check size={20} strokeWidth={4}/>
+              <div 
+                onClick={() => !formData.acceptTerms && setIsTermsOpen(true)}
+                className={`flex items-center gap-5 p-6 border-2 rounded-[2rem] transition-all shadow-sm cursor-pointer ${formData.acceptTerms ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-100 hover:border-emerald-300 group'}`}
+              >
+                <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center transition-all ${formData.acceptTerms ? 'bg-emerald-500 border-emerald-200 text-white' : 'bg-white border-gray-200 text-transparent group-hover:border-emerald-200'}`}>
+                  {/* Fix: Added missing Check component call */}
+                  <Check size={24} strokeWidth={4}/>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-900 font-black tracking-tight leading-none mb-1">Agreement of Terms</p>
-                  <p className="text-xs text-gray-500 font-medium">I confirm all business and banking details are accurate for ABN verification.</p>
+                <div className="flex-1">
+                  <p className="text-base text-gray-900 font-black tracking-tight leading-none mb-1.5">Official Terms of Trade</p>
+                  <p className="text-xs text-gray-400 font-medium">I confirm that I am an authorized representative of the business entity.</p>
                 </div>
+                {!formData.acceptTerms && <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest group-hover:underline">Review & Accept</span>}
               </div>
 
-              <div className="flex justify-between items-center px-2">
+              <div className="flex justify-between items-center px-4 mt-4">
                 <button 
                   type="button" 
                   onClick={() => setIsTermsOpen(true)}
-                  className="text-[#10B981] font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 hover:underline"
+                  className="text-gray-400 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:text-indigo-600 transition-colors"
                 >
-                  <BookOpen size={14}/> Review Full Wholesaler Agreement
+                  <BookOpen size={14}/> Wholesaler Agreement PDF
                 </button>
                 <div className="flex items-center gap-2">
-                   <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                   <span className="text-orange-500 font-black text-[10px] uppercase tracking-widest">Awaiting Submission</span>
+                   <span className={`w-2 h-2 rounded-full ${formData.acceptTerms ? 'bg-emerald-500' : 'bg-orange-500 animate-pulse'}`}></span>
+                   <span className={`font-black text-[10px] uppercase tracking-widest ${formData.acceptTerms ? 'text-emerald-600' : 'text-orange-500'}`}>
+                     {formData.acceptTerms ? 'Terms Accepted' : 'Awaiting Acceptance'}
+                   </span>
                 </div>
               </div>
             </section>
@@ -352,16 +379,16 @@ export const CompleteProfileModal: React.FC<CompleteProfileModalProps> = ({ isOp
             <button 
               type="button"
               onClick={onClose}
-              className="flex-1 py-4 bg-gray-50 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition-all"
+              className="flex-1 py-5 bg-gray-50 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition-all active:scale-95"
             >
-              Cancel
+              Close
             </button>
             <button 
               onClick={handleSubmit}
               disabled={!formData.acceptTerms}
-              className="flex-[2] py-4 bg-[#043003] hover:bg-black disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+              className="flex-[2] py-5 bg-[#043003] hover:bg-black disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-3"
             >
-              Complete Onboarding <ChevronRight size={18}/>
+              Submit Onboarding Profile <ChevronRight size={18}/>
             </button>
           </div>
         </div>

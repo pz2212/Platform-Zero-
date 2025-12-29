@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Order, InventoryItem, Product } from '../types';
 import { mockService } from '../services/mockDataService';
@@ -169,7 +168,6 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
   };
 
   const handleSaveHarvest = (data: any) => {
-      // Fix: Added missing properties lotNumber and uploadedAt required by InventoryItem
       const newItem: InventoryItem = {
           id: `inv-${Date.now()}`,
           lotNumber: mockService.generateLotId(),
@@ -197,12 +195,11 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
   const handleUpdateItem = (item: InventoryItem) => {
       const newQty = prompt(`Updating ${products.find(p => p.id === item.productId)?.name}. Enter new total quantity (kg):`, item.quantityKg.toString());
       if (newQty !== null) {
-          mockService.updateInventoryStatus(item.id, item.status); // Refresh trigger
+          mockService.updateInventoryStatus(item.id, item.status);
           const allInv = mockService.getAllInventory();
           const target = allInv.find(i => i.id === item.id);
           if (target) {
               target.quantityKg = parseFloat(newQty);
-              localStorage.setItem('pz_orders', JSON.stringify(allInv)); // Forces pseudo-persistence for demo
           }
           loadData();
       }
@@ -212,45 +209,40 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-[#043003] tracking-tight flex items-center gap-3">
-            <Sprout size={32} className="text-[#10B981]"/> Farmer Portal
-          </h1>
-          <p className="text-gray-500 font-medium mt-1">Managing {user.businessName} • Harvest to Market Console</p>
-        </div>
+      <div className="mb-10">
+        <h1 className="text-[32px] font-black text-[#043003] tracking-tight flex items-center gap-3 leading-none">
+          <Sprout size={36} className="text-[#10B981]"/> Farmer Portal
+        </h1>
+        <p className="text-gray-500 font-medium mt-1">Managing {user.businessName} • Harvest to Market Console</p>
       </div>
 
-      {/* KPI Stats Grid - CONSOLIDATED */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        {/* REVENUE & PRIMARY ACTIONS CARD */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-emerald-100 flex flex-col justify-between min-h-[200px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start mb-12">
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-emerald-100 flex flex-col justify-between min-h-[240px]">
           <div>
             <p className="text-[11px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-2">Farm Revenue (Weekly)</p>
             <div className="flex justify-between items-end">
-                <h3 className="text-5xl font-black text-gray-900 tracking-tighter">$4,280</h3>
-                <div className="bg-emerald-50 p-3 rounded-2xl text-emerald-600"><DollarSign size={28}/></div>
+                <h3 className="text-6xl font-black text-gray-900 tracking-tighter">$4,280</h3>
+                <div className="bg-emerald-50 p-4 rounded-3xl text-emerald-600"><DollarSign size={32}/></div>
             </div>
           </div>
           
-          <div className="flex gap-3 mt-8">
+          <div className="flex gap-4 mt-10">
             <button 
                 onClick={() => setIsHarvestModalOpen(true)}
-                className="flex-[2] py-4 bg-[#043003] hover:bg-black text-white rounded-[1.25rem] text-[11px] font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-xl transition-all active:scale-95"
+                className="flex-[2] py-5 bg-[#043003] hover:bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-2xl transition-all active:scale-95"
             >
-                <Plus size={16}/> List New Harvest
+                <Plus size={18}/> List New Harvest
             </button>
             <button 
                 onClick={() => setIsSellModalOpen(true)}
-                className="flex-1 py-4 bg-white border-2 border-[#043003] text-[#043003] rounded-[1.25rem] text-[11px] font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 hover:bg-gray-50 transition-all active:scale-95"
+                className="flex-1 py-5 bg-white border-2 border-[#043003] text-[#043003] rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 hover:bg-gray-50 transition-all active:scale-95"
             >
-                <Camera size={16}/> Sell
+                <Camera size={18}/> Sell Now
             </button>
           </div>
         </div>
 
-        {/* COMPACT STATS DROPDOWN CARD */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col justify-between min-h-[200px] relative" ref={statsDropdownRef}>
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col justify-between min-h-[240px] relative" ref={statsDropdownRef}>
             <div className="flex justify-between items-start">
                 <div>
                     <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Operational Health</p>
@@ -260,43 +252,34 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
                     onClick={() => setShowStatsDropdown(!showStatsDropdown)}
                     className="p-4 bg-gray-50 border border-gray-100 rounded-2xl text-gray-400 hover:text-gray-900 hover:bg-white hover:shadow-md transition-all flex items-center gap-2"
                 >
-                    <span className="text-xs font-black uppercase tracking-widest text-gray-600">View Stats</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-gray-600">View Detail</span>
                     <ChevronDown size={20} className={`transition-transform duration-300 ${showStatsDropdown ? 'rotate-180' : ''}`}/>
                 </button>
             </div>
 
-            {/* PREVIEW OF PRIMARY STAT */}
-            <div className="mt-4 flex items-center gap-4">
-                <div className="bg-blue-50 p-3 rounded-2xl text-blue-600"><Leaf size={24}/></div>
+            <div className="mt-6 flex items-center gap-4">
+                <div className="bg-blue-50 p-4 rounded-3xl text-blue-600"><Leaf size={32}/></div>
                 <div>
-                    <p className="text-2xl font-black text-gray-900">{inventory.length} Stock Lots</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Live in Marketplace</p>
+                    <p className="text-3xl font-black text-gray-900">{inventory.length} Stock Lots</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Live in Marketplace</p>
                 </div>
             </div>
 
-            {/* THE DROPDOWN CONTENT */}
             {showStatsDropdown && (
-                <div className="absolute top-[90%] left-0 right-0 z-50 bg-white rounded-[2rem] shadow-2xl border border-gray-100 p-6 animate-in slide-in-from-top-4 duration-200 mt-2 mx-4">
+                <div className="absolute top-[90%] left-0 right-0 z-50 bg-white rounded-[2rem] shadow-[0_30px_60px_rgba(0,0,0,0.15)] border border-gray-100 p-8 animate-in slide-in-from-top-4 duration-200 mt-4 mx-4">
                     <div className="space-y-6">
-                        <div className="flex items-center gap-4 p-4 hover:bg-gray-50 rounded-2xl transition-colors">
-                            <div className="bg-blue-100 p-2.5 rounded-xl text-blue-600"><Leaf size={20}/></div>
+                        <div className="flex items-center gap-4 p-5 hover:bg-gray-50 rounded-3xl transition-colors border border-transparent hover:border-gray-100">
+                            <div className="bg-blue-100 p-3 rounded-2xl text-blue-600"><Leaf size={24}/></div>
                             <div className="flex-1">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Active Inventory</p>
-                                <p className="text-lg font-black text-gray-900">{inventory.length} Lots Available</p>
+                                <p className="text-xl font-black text-gray-900">{inventory.length} Lots Available</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4 p-4 hover:bg-gray-50 rounded-2xl transition-colors">
-                            <div className="bg-orange-100 p-2.5 rounded-xl text-orange-600"><Truck size={20}/></div>
+                        <div className="flex items-center gap-4 p-5 hover:bg-gray-50 rounded-3xl transition-colors border border-transparent hover:border-gray-100">
+                            <div className="bg-orange-100 p-3 rounded-2xl text-orange-600"><Truck size={24}/></div>
                             <div className="flex-1">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Logistics Status</p>
-                                <p className="text-lg font-black text-gray-900">{pendingDeliveries.length} Pickups Pending</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4 p-4 hover:bg-gray-50 rounded-2xl transition-colors">
-                            <div className="bg-purple-100 p-2.5 rounded-xl text-purple-600"><Heart size={20}/></div>
-                            <div className="flex-1">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Carbon Impact</p>
-                                <p className="text-lg font-black text-gray-900">420kg CO2e Diverted</p>
+                                <p className="text-xl font-black text-gray-900">{pendingDeliveries.length} Pickups Pending</p>
                             </div>
                         </div>
                     </div>
@@ -305,21 +288,20 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* CURRENT HARVEST GRID */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-2 space-y-8">
             <div className="flex items-center justify-between">
-                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-2">
-                    <Droplets className="text-emerald-500" size={24}/> Current Field Harvest
+                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3">
+                    <Droplets className="text-emerald-500" size={28}/> Current Field Harvest
                 </h3>
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{inventory.length} Active Lots</span>
+                <span className="text-[10px] font-black bg-white border border-gray-200 px-5 py-2 rounded-full text-gray-400 uppercase tracking-widest shadow-sm">{inventory.length} Active Lots</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {inventory.length === 0 ? (
-                    <div className="col-span-full py-20 text-center bg-white rounded-[2rem] border-2 border-dashed border-gray-200">
-                        <Plus size={48} className="mx-auto text-gray-200 mb-4"/>
-                        <p className="text-gray-400 font-black uppercase tracking-widest text-xs">No active harvest lots. Use the button above to start.</p>
+                    <div className="col-span-full py-32 text-center bg-white rounded-[3rem] border-2 border-dashed border-gray-100 shadow-inner-sm">
+                        <Plus size={64} className="mx-auto text-gray-100 mb-6"/>
+                        <p className="text-gray-400 font-black uppercase tracking-[0.2em] text-xs">No active harvest lots. Use the button above to start.</p>
                     </div>
                 ) : (
                     inventory.map(item => {
@@ -328,46 +310,46 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
                         try { if(item.notes) fieldData = JSON.parse(item.notes); } catch(e){}
 
                         return (
-                            <div key={item.id} className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 flex flex-col group hover:shadow-md transition-all animate-in zoom-in-95">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
+                            <div key={item.id} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col group hover:shadow-xl transition-all animate-in zoom-in-95">
+                                <div className="flex justify-between items-start mb-8">
+                                    <div className="flex items-center gap-5">
+                                        <div className="w-16 h-16 rounded-[1.25rem] overflow-hidden bg-gray-50 border border-gray-100 shadow-sm">
                                             <img src={product?.imageUrl} className="w-full h-full object-cover" />
                                         </div>
                                         <div>
-                                            <h4 className="font-black text-gray-900 text-xl tracking-tight leading-none">{product?.name}</h4>
-                                            <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-1">{item.quantityKg}kg available</p>
+                                            <h4 className="font-black text-gray-900 text-2xl tracking-tight leading-none">{product?.name}</h4>
+                                            <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-2">{item.quantityKg}kg available</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => handleUpdateItem(item)} className="p-2 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-full transition-colors">
-                                        <Edit2 size={18}/>
+                                    <button onClick={() => handleUpdateItem(item)} className="p-3 bg-gray-50 text-gray-400 hover:text-emerald-600 rounded-xl transition-all shadow-sm">
+                                        <Edit2 size={20}/>
                                     </button>
                                 </div>
 
-                                <div className="space-y-3 mb-6">
-                                    <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wide">
-                                        <span className="flex items-center gap-2"><SprayCan size={14} className="text-orange-400"/> Sprays:</span>
+                                <div className="space-y-4 mb-8">
+                                    <div className="flex items-center justify-between text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                                        <span className="flex items-center gap-2"><SprayCan size={16} className="text-orange-400"/> Sprays:</span>
                                         <span className="text-gray-900">{fieldData.sprays || 'None'}</span>
                                     </div>
-                                    <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wide">
-                                        <span className="flex items-center gap-2"><Droplets size={14} className="text-blue-400"/> Irrigation:</span>
+                                    <div className="flex items-center justify-between text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                                        <span className="flex items-center gap-2"><Droplets size={16} className="text-blue-400"/> Irrigation:</span>
                                         <span className="text-gray-900">{fieldData.water}L/m2</span>
                                     </div>
-                                    <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wide">
-                                        <span className="flex items-center gap-2"><CloudRain size={14} className="text-slate-400"/> Weather:</span>
+                                    <div className="flex items-center justify-between text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                                        <span className="flex items-center gap-2"><CloudRain size={16} className="text-slate-400"/> Weather:</span>
                                         <span className="text-gray-900">{fieldData.weather}</span>
                                     </div>
                                 </div>
 
-                                <div className="mt-auto pt-6 border-t border-gray-50 flex items-center justify-between">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                        Harvested: {new Date(item.harvestDate).toLocaleDateString()}
+                                <div className="mt-auto pt-8 border-t border-gray-50 flex items-center justify-between">
+                                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">
+                                        Harvest: {new Date(item.harvestDate).toLocaleDateString()}
                                     </p>
                                     <button 
                                         onClick={() => handleUpdateItem(item)}
-                                        className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline"
+                                        className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.15em] hover:underline"
                                     >
-                                        Update Harvest Status
+                                        Update Lot Details
                                     </button>
                                 </div>
                             </div>
@@ -377,34 +359,31 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
             </div>
         </div>
 
-        {/* Action Center - Sidebar Style */}
-        <div className="space-y-6">
-          <div className="bg-slate-900 text-white p-8 rounded-[2rem] shadow-xl relative overflow-hidden h-full flex flex-col">
-            <div className="absolute top-0 right-0 p-10 opacity-10 transform translate-x-1/4 -translate-y-1/4">
-              <Sprout size={180}/>
-            </div>
+        <div className="space-y-8">
+          <div className="bg-[#0F172A] text-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden h-full flex flex-col min-h-[500px]">
+            <div className="absolute top-0 right-0 p-12 opacity-5 transform translate-x-1/4 -translate-y-1/4 scale-150"><Sprout size={200}/></div>
             <div className="relative z-10 flex-1">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400 mb-6">Market Demand</h3>
-              <div className="space-y-4">
-                <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
-                  <p className="text-sm font-bold text-white mb-1">Melbourne Fresh Needs Broccoli</p>
-                  <p className="text-xs text-slate-400">Targeting 200kg @ $3.50/kg</p>
-                  <button className="mt-3 text-[10px] font-black uppercase text-emerald-400 flex items-center gap-1 hover:text-white transition-colors">
-                    Fulfill Now <ArrowRight size={12}/>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400 mb-10 border-b border-white/10 pb-4">Real-Time Demand</h3>
+              <div className="space-y-6">
+                <div className="bg-white/5 border border-white/10 p-6 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group">
+                  <p className="text-lg font-black text-white mb-1 uppercase tracking-tight group-hover:text-emerald-400 transition-colors">Broccoli Needed</p>
+                  <p className="text-xs text-slate-400 font-medium">Melbourne Fresh • 200kg @ $3.50/kg</p>
+                  <button className="mt-4 text-[10px] font-black uppercase text-emerald-400 flex items-center gap-2 group-hover:gap-3 transition-all">
+                    Fulfill Now <ArrowRight size={14}/>
                   </button>
                 </div>
-                <div className="bg-white/5 border border-white/10 p-4 rounded-xl">
-                  <p className="text-sm font-bold text-white mb-1">Sydney Bio-Gro Needs Carrots</p>
-                  <p className="text-xs text-slate-400">Looking for 500kg Imperfect Grade</p>
-                  <button className="mt-3 text-[10px] font-black uppercase text-emerald-400 flex items-center gap-1 hover:text-white transition-colors">
-                    Submit Pricing <ArrowRight size={12}/>
+                <div className="bg-white/5 border border-white/10 p-6 rounded-2xl hover:bg-white/10 transition-all cursor-pointer group">
+                  <p className="text-lg font-black text-white mb-1 uppercase tracking-tight group-hover:text-emerald-400 transition-colors">Carrots Sourcing</p>
+                  <p className="text-xs text-slate-400 font-medium">Sydney Bio-Gro • 500kg Imperfect</p>
+                  <button className="mt-4 text-[10px] font-black uppercase text-emerald-400 flex items-center gap-2 group-hover:gap-3 transition-all">
+                    Quote Batch <ArrowRight size={14}/>
                   </button>
                 </div>
               </div>
             </div>
-            <div className="relative z-10 pt-6 mt-6 border-t border-white/10">
-              <button className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-900 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg transition-all">
-                Browse Global Needs
+            <div className="relative z-10 pt-8 mt-10 border-t border-white/10">
+              <button className="w-full py-5 bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl transition-all active:scale-95">
+                Browse Global Sourcing
               </button>
             </div>
           </div>
@@ -421,12 +400,12 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
 
       {isSellModalOpen && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-300">
-              <div className="bg-white rounded-[3rem] w-full max-w-5xl h-[85vh] overflow-hidden relative shadow-2xl flex flex-col border border-gray-100">
-                  <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                    <h2 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3 uppercase"><Camera size={32} className="text-indigo-600"/> Rapid Opportunity Capture</h2>
-                    <button onClick={() => setIsSellModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm border border-gray-100"><X size={28}/></button>
+              <div className="bg-white rounded-[3rem] w-full max-w-6xl h-[90vh] overflow-hidden relative shadow-2xl flex flex-col border border-gray-100">
+                  <div className="p-10 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <h2 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-4 uppercase"><Camera size={36} className="text-indigo-600"/> Visual Market Capture</h2>
+                    <button onClick={() => setIsSellModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm border border-gray-100 transition-all active:scale-90"><X size={32}/></button>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                  <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
                     <AiOpportunityMatcher user={user} />
                   </div>
               </div>

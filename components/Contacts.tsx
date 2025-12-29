@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { User, InventoryItem, Product, ChatMessage, UserRole } from '../types';
 import { mockService } from '../services/mockDataService';
 import { triggerNativeSms, generateProductDeepLink } from '../services/smsService';
+import { InviteBuyerModal } from './InviteBuyerModal';
 import { 
   MessageCircle, Send, Plus, X, Search, Info, 
   ShoppingBag, Link as LinkIcon, CheckCircle, Clock,
@@ -224,6 +224,7 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
   const [inputText, setInputText] = useState('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [sendProductTarget, setSendProductTarget] = useState<any>(null);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -277,7 +278,7 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
             </div>
             <div className="p-6 border-t border-gray-100 bg-white">
                 <div className="flex gap-4">
-                    <input type="text" placeholder="Type a message..." className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl p-4 font-bold text-gray-900 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage(inputText)} />
+                    <input type="text" placeholder="Type a message..." className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl p-4 font-bold text-gray-900 outline-none focus:ring-4 focus:ring-indigo-50/10 transition-all" value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendMessage(inputText)} />
                     <button onClick={() => handleSendMessage(inputText)} className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all shadow-md"><Send size={20}/></button>
                 </div>
             </div>
@@ -351,7 +352,7 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
                       </div>
                   </div>
               ))}
-              <div className="border-4 border-dashed border-gray-100 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center group hover:bg-indigo-50/30 hover:border-indigo-200 transition-all cursor-pointer min-h-[300px]">
+              <div onClick={() => setIsInviteModalOpen(true)} className="border-4 border-dashed border-gray-100 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center group hover:bg-indigo-50/30 hover:border-indigo-200 transition-all cursor-pointer min-h-[300px]">
                   <div className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center mb-6"><Plus size={32} className="text-gray-300 group-hover:text-indigo-500 transition-all"/></div>
                   <h3 className="text-xl font-black text-gray-400 group-hover:text-gray-900 tracking-tight uppercase">Invite Buyer</h3>
                   <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">Provision a direct portal</p>
@@ -429,6 +430,12 @@ export const Contacts: React.FC<ContactsProps> = ({ user }) => {
       )}
 
       {sendProductTarget && <SendProductOfferModal isOpen={!!sendProductTarget} onClose={() => setSendProductTarget(null)} targetPartner={sendProductTarget} user={user} products={products}/>}
+      
+      <InviteBuyerModal 
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        wholesaler={user}
+      />
     </div>
   );
 };

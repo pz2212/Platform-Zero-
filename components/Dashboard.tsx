@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Order, Product, Customer, SupplierPriceRequest, UserRole } from '../types';
 import { mockService } from '../services/mockDataService';
 import { AiOpportunityMatcher } from './AiOpportunityMatcher';
 import { Settings as SettingsComponent } from './Settings';
+import { InviteBuyerModal } from './InviteBuyerModal';
 import { triggerNativeSms, generateProductDeepLink } from '../services/smsService';
 import { 
   Package, Truck, MapPin, LayoutDashboard, 
@@ -262,6 +262,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
   const [selectedSupplierForPhoto, setSelectedSupplierForPhoto] = useState<any>(null);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
   const products = mockService.getAllProducts();
 
   useEffect(() => {
@@ -305,22 +307,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     : [];
 
   return (
-    <div className="animate-in fade-in duration-500 bg-[#F8FAFC] min-h-screen">
-      {/* HEADER SECTION */}
-      <div className="p-8 pb-0">
-        <div className="flex justify-between items-start mb-8">
+    <div className="animate-in fade-in duration-500 min-h-screen">
+      {/* HEADER SECTION - Standardized spacing */}
+      <div className="mb-10">
+        <div className="flex justify-between items-start mb-10">
             <div>
-                <h1 className="text-[28px] font-black text-[#0F172A] tracking-tight">Partner Operations</h1>
+                <h1 className="text-[32px] font-black text-[#0F172A] tracking-tight">Partner Operations</h1>
                 <p className="text-gray-500 font-medium text-sm">Manage orders, logistics, and network.</p>
             </div>
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-blue-100 rounded-xl text-blue-600 font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-95 group">
+            <button className="flex items-center gap-2 px-6 py-3 bg-white border border-blue-100 rounded-xl text-blue-600 font-black text-[10px] uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95 group">
                 <Truck size={18}/>
                 Driver Logistics
             </button>
         </div>
 
-        {/* TAB NAVIGATION - Updated to include Suppliers next to Customers */}
-        <div className="flex items-center gap-8 mb-10 border-b border-gray-100">
+        {/* TAB NAVIGATION */}
+        <div className="flex items-center gap-8 border-b border-gray-100">
             {[
                 { id: 'Order Management', icon: LayoutGrid },
                 { id: 'Sell', icon: Package },
@@ -331,13 +333,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             <button 
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id); setSearchTerm(''); }}
-                className={`flex items-center gap-2 pb-4 text-sm font-bold transition-all relative ${
+                className={`flex items-center gap-2 pb-4 text-xs font-black uppercase tracking-widest transition-all relative ${
                     activeTab === tab.id 
                     ? 'text-gray-900 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-1 after:bg-gray-900 after:rounded-t-full' 
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
             >
-                <tab.icon size={18} />
+                <tab.icon size={16} />
                 {tab.id}
             </button>
             ))}
@@ -345,13 +347,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       </div>
 
       {/* CONTENT AREA */}
-      <div className="px-8 pb-20 space-y-12">
+      <div className="pb-20 space-y-12">
         {activeTab === 'Order Management' && (
           <div className="space-y-10">
             
             {/* ORDERS AWAITING ACCEPTANCE - URGENT SECTION */}
             {pendingAcceptance.length > 0 && (
-                <div className="bg-[#FFF1F2] border border-[#FECDD3] rounded-[2rem] p-8 space-y-6 animate-in slide-in-from-top-4 duration-500">
+                <div className="bg-[#FFF1F2] border border-[#FECDD3] rounded-[2rem] p-8 space-y-6 animate-in slide-in-from-top-4 duration-500 shadow-sm">
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-red-500 border border-[#FECDD3] shadow-sm">
                             <AlertTriangle size={24}/>
@@ -509,10 +511,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </div>
         )}
 
-        {/* --- CUSTOMERS TAB: DIRECTORY --- */}
+        {/* --- CUSTOMERS TAB --- */}
         {activeTab === 'Customers' && (
           <div className="space-y-10 animate-in fade-in duration-300">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
                 <div>
                     <h2 className="text-4xl font-black text-gray-900 tracking-tight uppercase">Customer Directory</h2>
                     <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">Manage your connected buyers and marketplace relationships.</p>
@@ -548,7 +550,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         <button className="w-full py-4 bg-[#0F172A] text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-black transition-all">Open Full Record</button>
                     </div>
                 ))}
-                <div className="border-4 border-dashed border-gray-100 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center group hover:bg-indigo-50/30 hover:border-indigo-200 transition-all cursor-pointer min-h-[300px]">
+                <div onClick={() => setIsInviteModalOpen(true)} className="border-4 border-dashed border-gray-100 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center group hover:bg-indigo-50/30 hover:border-indigo-200 transition-all cursor-pointer min-h-[300px]">
                     <div className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center mb-6"><Plus size={32} className="text-gray-300 group-hover:text-indigo-500 transition-all"/></div>
                     <h3 className="text-xl font-black text-gray-400 group-hover:text-gray-900 tracking-tight uppercase">Invite New Buyer</h3>
                     <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">Provision a direct ordering portal</p>
@@ -557,10 +559,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </div>
         )}
 
-        {/* --- SUPPLIERS TAB: EXTERNAL DIRECTORY --- */}
+        {/* --- SUPPLIERS TAB --- */}
         {activeTab === 'Suppliers' && (
           <div className="space-y-10 animate-in fade-in duration-300">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
                 <div>
                     <h2 className="text-4xl font-black text-gray-900 tracking-tight uppercase">Market Suppliers</h2>
                     <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">Source from verified wholesalers in the AU Produce Market registry.</p>
@@ -577,7 +579,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             </div>
 
             {/* AU STATE SELECTOR BAR */}
-            <div className="bg-white p-2 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <div className="bg-white p-2 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-2 overflow-x-auto no-scrollbar mb-8">
                 {AU_STATES.map(state => (
                     <button
                         key={state}
@@ -668,6 +670,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         customers={customers} 
         onClose={() => setSelectedOrderForItems(null)} 
         onAccept={handleAcceptOrder}
+      />
+
+      <InviteBuyerModal 
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        wholesaler={user}
       />
     </div>
   );

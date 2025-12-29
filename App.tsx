@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { UserRole, User, AppNotification } from './types';
@@ -10,7 +9,6 @@ import { ProductPricing } from './components/ProductPricing';
 import { Marketplace } from './components/Marketplace';
 import { SupplierMarket } from './components/SupplierMarket';
 import { AdminDashboard } from './components/AdminDashboard';
-import { RepDashboard } from './components/RepDashboard';
 import { Settings as SettingsComponent } from './components/Settings';
 import { LoginRequests } from './components/LoginRequests';
 import { ConsumerOnboarding } from './components/ConsumerOnboarding';
@@ -21,16 +19,17 @@ import { AdminPriceRequests } from './components/AdminPriceRequests';
 import { ConsumerLanding } from './components/ConsumerLanding';
 import { CustomerOrders } from './components/CustomerOrders'; 
 import { AdminRepManagement } from './components/AdminRepManagement';
-import { TradingInsights } from './components/TradingInsights';
 import { AdminSuppliers } from './components/AdminSuppliers';
+import { TradingInsights } from './components/TradingInsights';
 import { Contacts } from './components/Contacts';
+import { Notifications } from './components/Notifications';
 import { LiveActivity } from './components/LiveActivity';
 import { 
   LayoutDashboard, ShoppingCart, Users, Settings, LogOut, Tags, ChevronDown, UserPlus, 
-  ScanLine, DollarSign, Store, X, Lock, ArrowLeft, Bell, 
+  DollarSign, X, Lock, ArrowLeft, Bell, 
   ShoppingBag, ShieldCheck, TrendingUp, Target, Plus, ChevronUp, Layers, 
-  Sparkles, Calculator, User as UserIcon, Menu as HamburgerIcon, Mail, LogIn, ArrowRight, Building, ChevronRight,
-  Sprout, Package, BarChart3, Globe, Users2, Circle
+  Sparkles, User as UserIcon, Building, ChevronRight,
+  Sprout, Globe, Users2, Circle, LogIn, ArrowRight, Menu, Search, Calculator, BarChart3
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, active, onClick, isSubItem = false, badge = 0, subLabel }: any) => (
@@ -63,9 +62,9 @@ const NotificationDropdown = ({ user, onClose }: { user: User, onClose: () => vo
     const navigate = useNavigate();
 
     useEffect(() => {
-        setNotifications(mockService.getAppNotifications(user.id));
+        setNotifications(mockService.getAppNotifications(user.id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
         const interval = setInterval(() => {
-            setNotifications(mockService.getAppNotifications(user.id));
+            setNotifications(mockService.getAppNotifications(user.id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
         }, 5000);
         return () => clearInterval(interval);
     }, [user.id]);
@@ -79,13 +78,14 @@ const NotificationDropdown = ({ user, onClose }: { user: User, onClose: () => vo
     };
 
     return (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-[100] animate-in zoom-in-95 duration-200 origin-top-right overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h3 className="font-black text-gray-900 uppercase text-[10px] tracking-widest flex items-center gap-2">
-                    <Bell size={14} className="text-emerald-600"/> Notifications
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-[100] animate-in zoom-in-95 duration-200 origin-top-right overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h3 className="font-black text-gray-900 uppercase text-[10px] tracking-[0.2em] flex items-center gap-2">
+                    <Bell size={14} className="text-emerald-600"/> Recent Activity
                 </h3>
+                <Link to="/notifications" onClick={onClose} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">View History</Link>
             </div>
-            <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+            <div className="max-h-[400px] overflow-y-auto custom-scrollbar bg-white">
                 {notifications.length === 0 ? (
                     <div className="p-12 text-center text-gray-400">
                         <Bell size={32} className="mx-auto mb-3 opacity-20"/>
@@ -98,7 +98,6 @@ const NotificationDropdown = ({ user, onClose }: { user: User, onClose: () => vo
                             onClick={() => handleRead(n)}
                             className={`p-4 border-b border-gray-50 cursor-pointer transition-all hover:bg-emerald-50/30 relative group ${!n.isRead ? 'bg-white' : 'bg-gray-50/20'}`}
                         >
-                            {!n.isRead && <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full"></div>}
                             <div className="flex gap-4">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
                                     n.type === 'ORDER' ? 'bg-blue-100 text-blue-600' :
@@ -106,22 +105,26 @@ const NotificationDropdown = ({ user, onClose }: { user: User, onClose: () => vo
                                     n.type === 'PRICE_REQUEST' ? 'bg-indigo-100 text-indigo-600' :
                                     'bg-emerald-100 text-emerald-600'
                                 }`}>
-                                    {n.type === 'ORDER' ? <ShoppingCart size={20}/> :
-                                     n.type === 'APPLICATION' ? <UserPlus size={20}/> :
-                                     n.type === 'PRICE_REQUEST' ? <Calculator size={20}/> :
-                                     <Sparkles size={20}/>}
+                                    {n.type === 'ORDER' ? <ShoppingCart size={18}/> :
+                                     n.type === 'APPLICATION' ? <UserPlus size={18}/> :
+                                     n.type === 'PRICE_REQUEST' ? <Calculator size={18}/> :
+                                     <Sparkles size={18}/>}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start mb-0.5">
-                                        <p className="text-sm font-black text-gray-900 truncate pr-4">{n.title}</p>
-                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter whitespace-nowrap pt-0.5">{new Date(n.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                        <p className="text-sm font-black text-gray-900 truncate pr-4 uppercase tracking-tight">{n.title}</p>
+                                        {!n.isRead && <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0 mt-1.5"></span>}
                                     </div>
                                     <p className="text-xs text-gray-500 leading-snug line-clamp-2">{n.message}</p>
+                                    <p className="text-[9px] font-black text-gray-300 uppercase tracking-tighter mt-1">{new Date(n.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                                 </div>
                             </div>
                         </div>
                     ))
                 )}
+            </div>
+            <div className="p-4 bg-gray-50 border-t border-gray-100">
+                <button onClick={() => { mockService.markAllNotificationsRead(user.id); onClose(); }} className="w-full py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-emerald-600 transition-colors">Clear All Read</button>
             </div>
         </div>
     );
@@ -343,13 +346,11 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   const isActive = (path: string) => location.pathname === path;
   
   const [showDailyPopup, setShowDailyPopup] = useState(false);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [latestLiveNotif, setLatestLiveNotif] = useState<AppNotification | null>(null);
 
   const notifRef = useRef<HTMLDivElement>(null);
-  const mobileNavRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) {
@@ -374,6 +375,16 @@ const AppLayout = ({ children, user, onLogout }: any) => {
     const interval = setInterval(updateNotifs, 3000);
     return () => clearInterval(interval);
   }, [user.id]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+            setShowNotifDropdown(false);
+        }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const isPartner = user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER;
 
@@ -417,16 +428,15 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                     <h4 className="px-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Contacts</h4>
                     <div className="space-y-0.5">
                       <SidebarLink to="/contacts" icon={Users2} label="Directory" active={isActive('/contacts')} />
-                      <SidebarLink to="/contacts?id=u3" icon={Circle} label="Green Valley Farms" active={false} subLabel="Farmer" />
-                      <SidebarLink to="/contacts?id=u2" icon={Circle} label="Pippa's Farm" active={false} subLabel="Wholesaler" />
                     </div>
-                  </div>
-
-                  <div className="space-y-0.5 pt-4 border-t border-gray-100">
-                    <SidebarLink to="/settings" icon={Settings} label="Settings" active={isActive('/settings')} />
                   </div>
                 </>
               ) : null}
+              
+              <div className="pt-4 border-t border-gray-100">
+                  <SidebarLink to="/notifications" icon={Bell} label="Activity History" active={isActive('/notifications')} badge={notifCount} />
+                  <SidebarLink to="/settings" icon={Settings} label="Settings" active={isActive('/settings')} />
+              </div>
           </div>
           {isPartner && !showDailyPopup && <NetworkSignalsWidget user={user} mode="sidebar" />}
     </div>
@@ -446,8 +456,44 @@ const AppLayout = ({ children, user, onLogout }: any) => {
         </div>
       </aside>
 
-      <main className="flex-1 md:ml-64 w-full min-h-screen">
-        {children}
+      <main className="flex-1 md:ml-64 w-full min-h-screen flex flex-col">
+        {/* GLOBAL HEADER BAR */}
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 flex items-center justify-between sticky top-0 z-20">
+            <div className="hidden sm:flex items-center gap-4 flex-1">
+                <div className="relative max-w-md w-full group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-emerald-500 transition-colors" size={18}/>
+                    <input type="text" placeholder="Search orders, leads, or stock..." className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-gray-900 outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all"/>
+                </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+                <div className="relative" ref={notifRef}>
+                    <button 
+                        onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                        className={`p-3 rounded-xl transition-all relative ${showNotifDropdown ? 'bg-emerald-50 text-emerald-600 shadow-inner-sm' : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-900'}`}
+                    >
+                        <Bell size={20}/>
+                        {notifCount > 0 && <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>}
+                    </button>
+                    {showNotifDropdown && <NotificationDropdown user={user} onClose={() => setShowNotifDropdown(false)} />}
+                </div>
+                <div className="h-8 w-px bg-gray-100 mx-2"></div>
+                <div className="flex items-center gap-3">
+                    <div className="text-right hidden sm:block">
+                        <p className="text-xs font-black text-gray-900 tracking-tight leading-none mb-1 uppercase">{user.name}</p>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">{user.role}</p>
+                    </div>
+                    <Link to="/settings" className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-black shadow-sm overflow-hidden">
+                        {user.name.charAt(0)}
+                    </Link>
+                </div>
+            </div>
+        </header>
+
+        {/* Updated padding for more whitespace as requested */}
+        <div className="flex-1 p-10 md:p-14">
+            {children}
+        </div>
         {isPartner && showDailyPopup && <NetworkSignalsWidget user={user} mode="popup" onFinish={() => setShowDailyPopup(false)} />}
       </main>
     </div>
@@ -515,6 +561,7 @@ const App = () => {
           <Route path="/marketplace" element={<Marketplace user={user} />} />
           <Route path="/trading-insights" element={<TradingInsights user={user} />} />
           <Route path="/contacts" element={<Contacts user={user} />} />
+          <Route path="/notifications" element={<Notifications user={user} />} />
           {user.role === UserRole.ADMIN && (
               <>
                 <Route path="/" element={<AdminDashboard />} />

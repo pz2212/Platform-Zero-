@@ -1,4 +1,3 @@
-
 import { 
   User, UserRole, Product, InventoryItem, Order, Customer, 
   SupplierPriceRequest, PricingRule,
@@ -58,6 +57,7 @@ class MockDataService {
   constructor() {
       // Load initial demo data
       this.generateDemoOrders();
+      this.generateInitialNotifications();
   }
 
   private generateDemoOrders() {
@@ -74,6 +74,28 @@ class MockDataService {
               priority: 'HIGH'
           });
       }
+  }
+
+  private generateInitialNotifications() {
+      const usersToNotify = ['u1', 'u2', 'u3', 'u4'];
+      usersToNotify.forEach(uid => {
+          this.addAppNotification(
+              uid, 
+              'Welcome to Platform Zero', 
+              'You have successfully joined the marketplace. Start trading fresh produce today.', 
+              'SYSTEM'
+          );
+          
+          if (uid === 'u2' || uid === 'u1') {
+              this.addAppNotification(
+                  uid,
+                  'New Price Request',
+                  'Admin has assigned a new pricing negotiation for a local retail lead.',
+                  'PRICE_REQUEST',
+                  '/market'
+              );
+          }
+      });
   }
 
   generateLotId() {
@@ -94,7 +116,7 @@ class MockDataService {
 
   addAppNotification(userId: string, title: string, message: string, type: any, link?: string) {
     this.notifications.push({
-      id: `n-${Date.now()}`,
+      id: `n-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       userId, title, message, type, timestamp: new Date().toISOString(), isRead: false, link
     });
   }
@@ -341,9 +363,11 @@ class MockDataService {
           requestedRole: data.role,
           status: 'Pending',
           submittedDate: new Date().toISOString(),
+          paymentTerms: data.paymentTerms,
+          customTerms: data.customTerms,
           consumerData: {
               location: data.location,
-              mobile: data.mobile
+              mobile: data.mobile || data.phone
           }
       };
       this.registrationRequests.push(request);

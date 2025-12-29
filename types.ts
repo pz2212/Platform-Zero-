@@ -1,4 +1,3 @@
-
 export enum UserRole {
   FARMER = 'FARMER',
   WHOLESALER = 'WHOLESALER',
@@ -29,7 +28,32 @@ export interface ChatMessage {
   productId?: string;
 }
 
-// Fix: Added phone and category properties to User interface to support contacts and marketplace displays
+export interface BusinessProfile {
+  isComplete: boolean;
+  abn?: string;
+  businessLocation?: string;
+  companyName?: string;
+  // Banking
+  bankName?: string;
+  bsb?: string;
+  accountNumber?: string;
+  // Directors
+  directorName?: string;
+  directorEmail?: string;
+  directorPhone?: string;
+  // Accounts
+  accountsName?: string;
+  accountsEmail?: string;
+  accountsPhone?: string;
+  // Products
+  productsSell?: string;
+  productsGrow?: string;
+  productsBuy?: string;
+  // Logistics
+  hasLogistics?: boolean;
+  isPzAgent?: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -39,12 +63,7 @@ export interface User {
   phone?: string;
   category?: string;
   dashboardVersion?: 'v1' | 'v2';
-  businessProfile?: {
-    isComplete: boolean;
-    abn?: string;
-    businessLocation?: string;
-    companyName?: string;
-  };
+  businessProfile?: BusinessProfile;
   activeSellingInterests?: string[];
   activeBuyingInterests?: string[];
   commissionRate?: number;
@@ -65,18 +84,18 @@ export interface Product {
 
 export interface InventoryItem {
   id: string;
-  lotNumber: string; // Human readable unique identifier
+  lotNumber: string; 
   productId: string;
   ownerId: string;
   quantityKg: number;
   unit?: ProductUnit;
   expiryDate: string;
   harvestDate: string;
-  uploadedAt: string; // Track when it entered the warehouse
+  uploadedAt: string; 
   status: 'Available' | 'Sold' | 'Expired' | 'Pending Approval' | 'Rejected' | 'Donated';
   originalFarmerName?: string;
   harvestLocation?: string;
-  warehouseLocation?: string; // e.g. "Cold Room A, Shelf 2"
+  warehouseLocation?: string; 
   discountAfterDays?: number;
   discountPricePerKg?: number;
   batchImageUrl?: string;
@@ -221,6 +240,8 @@ export interface RegistrationRequest {
   requestedRole: UserRole;
   status: 'Pending' | 'Approved' | 'Rejected';
   submittedDate: string;
+  paymentTerms?: string;
+  customTerms?: string;
   consumerData?: {
     location?: string;
     weeklySpend?: number;

@@ -1,45 +1,143 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Product, PricingRule, BusinessCategory, User, InventoryItem, Order } from '../types';
+import { Product, PricingRule, User, InventoryItem, ProductUnit } from '../types';
 import { mockService } from '../services/mockDataService';
 import { SellProductDialog } from './SellProductDialog';
 import { ShareModal } from './SellerDashboardV1';
 import { 
-  Tag, Edit2, Check, X, DollarSign, Percent, MapPin, Calendar, 
-  User as UserIcon, Truck, MoreVertical, Trash2, ShoppingBag, 
-  Share2, PackagePlus, Heart, LayoutTemplate, Save, ChevronDown, Filter, AlertCircle, CheckCircle, Plus, Camera, UploadCloud, Loader2
+  Tag, Edit2, Check, X, DollarSign, MapPin, 
+  MoreVertical, ShoppingBag, 
+  Share2, PackagePlus, CheckCircle, Plus, Camera, Loader2, ChevronRight,
+  Box, Hash, Printer, QrCode, Sparkles, ChevronDown
 } from 'lucide-react';
 
 interface ProductPricingProps {
   user: User;
 }
 
-const BUSINESS_CATEGORIES: BusinessCategory[] = [
-  'Cafe',
-  'Restaurant',
-  'Pub',
-  'Food Manufacturer'
-];
+const UNITS: ProductUnit[] = ['KG', 'Tray', 'Bin', 'Tonne', 'loose'];
 
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const EditPricingModal = ({ isOpen, onClose, product, onComplete }: { 
+    isOpen: boolean, 
+    onClose: () => void, 
+    product: Product | null,
+    onComplete: () => void 
+}) => {
+    const [price, setPrice] = useState<string>('');
+    const [unit, setUnit] = useState<ProductUnit>('KG');
+    const [isSaving, setIsSaving] = useState(false);
 
-const AddInventoryModal = ({ isOpen, onClose, user, products, onComplete }: { 
+    useEffect(() => {
+        if (product) {
+            setPrice(product.defaultPricePerKg.toString());
+            setUnit(product.unit || 'KG');
+        }
+    }, [product]);
+
+    if (!isOpen || !product) return null;
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        mockService.updateProductPricing(product.id, parseFloat(price), unit);
+        setTimeout(() => {
+            setIsSaving(false);
+            onComplete();
+            onClose();
+        }, 600);
+    };
+
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <div>
+                        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Edit Master Pricing</h2>
+                        <p className="text-xs text-gray-400 font-black uppercase tracking-widest mt-1">{product.name}</p>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2"><X size={24}/></button>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="p-8 space-y-8">
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5 ml-1">Base Sale Rate</label>
+                            <div className="relative group">
+                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-emerald-500 transition-colors" size={20}/>
+                                <input 
+                                    required 
+                                    type="number" 
+                                    step="0.01"
+                                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-50 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 font-black text-2xl text-gray-900 transition-all" 
+                                    value={price} 
+                                    onChange={e => setPrice(e.target.value)} 
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2.5 ml-1">Unit of Measurement</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {UNITS.map(u => (
+                                    <button
+                                        key={u}
+                                        type="button"
+                                        onClick={() => setUnit(u)}
+                                        className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${unit === u ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-white border-gray-100 text-gray-400 hover:border-indigo-200'}`}
+                                    >
+                                        {u}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button 
+                        type="submit"
+                        disabled={isSaving}
+                        className="w-full py-5 bg-[#043003] text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-emerald-100 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    >
+                        {isSaving ? <Loader2 className="animate-spin" size={20}/> : <><CheckCircle size={20}/> Update Marketplace Rate</>}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const AddInventoryModal = ({ isOpen, onClose, user, products, onComplete, initialProductId }: { 
     isOpen: boolean, 
     onClose: () => void, 
     user: User, 
     products: Product[],
-    onComplete: () => void 
+    onComplete: () => void,
+    initialProductId?: string
 }) => {
     const [image, setImage] = useState<string | null>(null);
-    const [productId, setProductId] = useState('');
+    const [productId, setProductId] = useState(initialProductId || '');
     const [quantity, setQuantity] = useState('');
+    const [unit, setUnit] = useState<ProductUnit>('KG');
     const [harvestLocation, setHarvestLocation] = useState('');
+    const [warehouseLocation, setWarehouseLocation] = useState('');
     const [farmerName, setFarmerName] = useState('');
     const [price, setPrice] = useState('');
     const [discountPrice, setDiscountPrice] = useState('');
     const [discountAfterDays, setDiscountAfterDays] = useState('3');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const [isNewProductMode, setIsNewProductMode] = useState(false);
+    const [newProductName, setNewProductName] = useState('');
+    const [newProductVariety, setNewProductVariety] = useState('');
+    const [newProductCategory, setNewProductCategory] = useState<'Vegetable' | 'Fruit'>('Vegetable');
+
+    const [newLotId, setNewLotId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setProductId(initialProductId || '');
+        }
+    }, [isOpen, initialProductId]);
 
     if (!isOpen) return null;
 
@@ -51,24 +149,47 @@ const AddInventoryModal = ({ isOpen, onClose, user, products, onComplete }: {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!productId || !quantity || !price) {
-            alert("Please fill in Product, Quantity, and Price.");
+        
+        if ((!isNewProductMode && !productId) || (isNewProductMode && !newProductName) || !quantity || !price) {
+            alert("Please fill in all required fields.");
             return;
         }
 
         setIsSubmitting(true);
+        const lotId = mockService.generateLotId();
         
+        let targetProductId = productId;
+
+        if (isNewProductMode) {
+            const newProdId = `p-man-${Date.now()}`;
+            const newProd: Product = {
+                id: newProdId,
+                name: newProductName,
+                variety: newProductVariety || 'Standard',
+                category: newProductCategory,
+                imageUrl: image || 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&q=80&w=100&h=100',
+                defaultPricePerKg: parseFloat(price),
+                co2SavingsPerKg: 0.8
+            };
+            mockService.addProduct(newProd);
+            targetProductId = newProdId;
+        }
+
         const newItem: InventoryItem = {
             id: `inv-${Date.now()}`,
-            productId,
+            lotNumber: lotId,
+            productId: targetProductId,
             ownerId: user.id,
             quantityKg: parseFloat(quantity),
+            unit: unit,
             harvestLocation,
+            warehouseLocation,
             originalFarmerName: farmerName,
             status: 'Available',
             harvestDate: new Date().toISOString(),
+            uploadedAt: new Date().toISOString(),
             expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             discountAfterDays: parseInt(discountAfterDays),
             discountPricePerKg: discountPrice ? parseFloat(discountPrice) : undefined,
@@ -76,98 +197,195 @@ const AddInventoryModal = ({ isOpen, onClose, user, products, onComplete }: {
         };
 
         mockService.addInventoryItem(newItem);
-        mockService.updateProductPrice(productId, parseFloat(price));
+        mockService.updateProductPrice(targetProductId, parseFloat(price));
 
         setTimeout(() => {
             setIsSubmitting(false);
+            setNewLotId(lotId);
             onComplete();
-            onClose();
-            alert("Inventory added successfully!");
+            setIsNewProductMode(false);
+            setNewProductName('');
+            setNewProductVariety('');
         }, 800);
     };
 
+    if (newLotId) {
+        return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md p-10 text-center animate-in zoom-in-95 duration-200">
+                    <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 text-emerald-600">
+                        <CheckCircle size={48} />
+                    </div>
+                    <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-2">STOCK LOGGED</h2>
+                    <p className="text-gray-500 mb-8 font-medium">Physical identification tag generated.</p>
+                    
+                    <div className="bg-gray-50 border-2 border-gray-100 rounded-[2rem] p-8 mb-8 flex flex-col items-center">
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
+                            <QrCode size={120} className="text-gray-900" />
+                        </div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Assigned Lot ID</p>
+                        <p className="text-2xl font-black text-indigo-600 font-mono tracking-tighter">{newLotId}</p>
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-4 flex items-center gap-1.5">
+                            <Box size={12}/> Bin: {warehouseLocation || 'Warehouse General'}
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <button className="w-full py-5 bg-[#043003] text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl hover:bg-black transition-all">
+                            <Printer size={18}/> Print Bin Label
+                        </button>
+                        <button onClick={() => { setNewLotId(null); onClose(); }} className="w-full py-4 bg-white border-2 border-gray-100 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all">
+                            Back to Catalog
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-white/20">
+                <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Add New Inventory</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2"><X size={24}/></button>
                 </div>
                 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
+                <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* LEFT: PHOTO UPLOAD */}
                         <div className="space-y-4">
-                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest">Product Batch Photo</label>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Product Batch Photo</label>
                             <div 
                                 onClick={() => fileInputRef.current?.click()}
-                                className={`border-2 border-dashed rounded-2xl h-64 flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden ${image ? 'border-emerald-500' : 'border-gray-200 hover:border-emerald-400 hover:bg-gray-50'}`}
+                                className={`border-2 border-dashed rounded-[2rem] h-72 flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden ${image ? 'border-emerald-500' : 'border-gray-200 hover:border-emerald-400 hover:bg-gray-50'}`}
                             >
                                 {image ? (
                                     <img src={image} className="w-full h-full object-cover" alt="Preview"/>
                                 ) : (
                                     <div className="text-center p-4">
-                                        <div className="bg-emerald-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-emerald-600">
-                                            <Camera size={24}/>
+                                        <div className="bg-emerald-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-600 shadow-inner-sm">
+                                            <Camera size={32}/>
                                         </div>
-                                        <p className="text-sm font-bold text-gray-700">Upload Photo</p>
-                                        <p className="text-xs text-gray-400 mt-1">Snap a photo of the stock</p>
+                                        <p className="text-sm font-black text-gray-700 uppercase tracking-tight">Upload Photo</p>
+                                        <p className="text-[10px] text-gray-400 mt-1 font-bold uppercase">Snap a photo of the stock</p>
                                     </div>
                                 )}
                                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                             </div>
                         </div>
 
-                        {/* RIGHT: CORE DETAILS */}
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div>
-                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Select Product</label>
-                                <select 
-                                    required
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
-                                    value={productId}
-                                    onChange={e => setProductId(e.target.value)}
-                                >
-                                    <option value="">Choose product...</option>
-                                    {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.variety})</option>)}
-                                </select>
+                                <div className="flex justify-between items-center mb-2 px-1">
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Select Product</label>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsNewProductMode(!isNewProductMode)}
+                                        className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline flex items-center gap-1"
+                                    >
+                                        {isNewProductMode ? <><ChevronRight size={12}/> Select Existing</> : <><Plus size={12}/> Create New Product</>}
+                                    </button>
+                                </div>
+                                
+                                {isNewProductMode ? (
+                                    <div className="space-y-3 animate-in slide-in-from-right-2 duration-300">
+                                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-center gap-3 mb-4">
+                                            <Sparkles size={18} className="text-indigo-600 shrink-0"/>
+                                            <p className="text-[10px] font-black text-indigo-700 uppercase tracking-tight">You are adding a new product entry to the global catalog.</p>
+                                        </div>
+                                        <input 
+                                            required placeholder="e.g. Heirloom Carrots"
+                                            className="w-full p-4 bg-white border-2 border-indigo-100 rounded-2xl text-sm font-black text-gray-900 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500"
+                                            value={newProductName} onChange={e => setNewProductName(e.target.value)}
+                                        />
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <input 
+                                                placeholder="Variety (e.g. Purple)"
+                                                className="w-full p-4 bg-white border-2 border-indigo-100 rounded-2xl text-sm font-black text-gray-900 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500"
+                                                value={newProductVariety} onChange={e => setNewProductVariety(e.target.value)}
+                                            />
+                                            <select 
+                                                className="w-full p-4 bg-white border-2 border-indigo-100 rounded-2xl text-sm font-black text-gray-900 outline-none appearance-none"
+                                                value={newProductCategory} onChange={e => setNewProductCategory(e.target.value as any)}
+                                            >
+                                                <option value="Vegetable">Vegetable</option>
+                                                <option value="Fruit">Fruit</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="relative group">
+                                        <select 
+                                            required
+                                            className="w-full p-4 bg-gray-50 border-2 border-gray-50 rounded-2xl text-sm font-black text-gray-900 outline-none appearance-none focus:bg-white focus:border-emerald-500 transition-all shadow-sm"
+                                            value={productId}
+                                            onChange={e => setProductId(e.target.value)}
+                                        >
+                                            <option value="">Choose product...</option>
+                                            {products.sort((a,b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.id}>{p.name} ({p.variety})</option>)}
+                                        </select>
+                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-emerald-500 transition-colors pointer-events-none" size={18}/>
+                                    </div>
+                                )}
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+
+                            <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Quantity (kg)</label>
-                                    <input 
-                                        type="number" required placeholder="0"
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
-                                        value={quantity} onChange={e => setQuantity(e.target.value)}
-                                    />
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Trade Unit</label>
+                                    <div className="relative group">
+                                        <select 
+                                            className="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl text-sm font-black text-gray-900 outline-none appearance-none focus:bg-white focus:border-indigo-500 transition-all shadow-sm"
+                                            value={unit}
+                                            onChange={e => setUnit(e.target.value as ProductUnit)}
+                                        >
+                                            {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                                        </select>
+                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18}/>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Price ($/kg)</label>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Quantity ({unit})</label>
+                                        <input 
+                                            type="number" required placeholder="0"
+                                            className="w-full p-4 bg-gray-50 border-2 border-gray-50 rounded-2xl text-lg font-black text-gray-900 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-sm"
+                                            value={quantity} onChange={e => setQuantity(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Price ($/{unit})</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">$</span>
+                                            <input 
+                                                type="number" required step="0.01" placeholder="0.00"
+                                                className="w-full pl-8 pr-4 py-4 bg-gray-50 border-2 border-gray-50 rounded-2xl text-lg font-black text-gray-900 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-sm"
+                                                value={price} onChange={e => setPrice(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-1.5">
+                                    <Box size={12} className="text-indigo-500"/> Warehouse Bin / Location
+                                </label>
+                                <div className="relative">
                                     <input 
-                                        type="number" required step="0.01" placeholder="0.00"
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
-                                        value={price} onChange={e => setPrice(e.target.value)}
+                                        type="text" placeholder="e.g. Cold Room A, Rack 2"
+                                        className="w-full p-4 bg-gray-50 border-2 border-gray-50 rounded-2xl text-sm font-black text-gray-900 outline-none focus:bg-white focus:border-indigo-500 transition-all shadow-sm"
+                                        value={warehouseLocation} onChange={e => setWarehouseLocation(e.target.value)}
                                     />
                                 </div>
                             </div>
+                            
                             <div>
-                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Harvest Location</label>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Farmer / Source</label>
                                 <div className="relative">
-                                    <MapPin size={14} className="absolute left-3 top-3.5 text-gray-400" />
-                                    <input 
-                                        type="text" placeholder="e.g. Mildura, VIC"
-                                        className="w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
-                                        value={harvestLocation} onChange={e => setHarvestLocation(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Farmer / Source</label>
-                                <div className="relative">
-                                    <UserIcon size={14} className="absolute left-3 top-3.5 text-gray-400" />
                                     <input 
                                         type="text" placeholder="e.g. Green Valley Farms"
-                                        className="w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                                        className="w-full p-4 bg-gray-50 border-2 border-gray-50 rounded-2xl text-sm font-black text-gray-900 outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-sm"
                                         value={farmerName} onChange={e => setFarmerName(e.target.value)}
                                     />
                                 </div>
@@ -175,36 +393,38 @@ const AddInventoryModal = ({ isOpen, onClose, user, products, onComplete }: {
                         </div>
                     </div>
 
-                    {/* DISCOUNT SECTION */}
-                    <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100/50 space-y-4">
+                    <div className="bg-emerald-50/50 p-8 rounded-[2rem] border border-emerald-100/50 space-y-6">
                         <div className="flex items-center gap-2 text-emerald-700 font-black text-xs uppercase tracking-[0.2em]">
-                            <Tag size={16}/> Automatic Discount Rules
+                            <Tag size={18}/> Automatic Discount Rules
                         </div>
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Discount Price ($/kg)</label>
-                                <input 
-                                    type="number" step="0.01" placeholder="e.g. 3.50"
-                                    className="w-full p-3 bg-white border border-emerald-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
-                                    value={discountPrice} onChange={e => setDiscountPrice(e.target.value)}
-                                />
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Discount Price ($/{unit})</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-xs">$</span>
+                                    <input 
+                                        type="number" step="0.01" placeholder="e.g. 3.50"
+                                        className="w-full pl-8 pr-4 py-3 bg-white border-2 border-emerald-100/50 rounded-xl text-sm font-black text-gray-900 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"
+                                        value={discountPrice} onChange={e => setDiscountPrice(e.target.value)}
+                                    />
+                                </div>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Active After (Days)</label>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Active After (Days)</label>
                                 <input 
                                     type="number" placeholder="3"
-                                    className="w-full p-3 bg-white border border-emerald-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="w-full p-3 bg-white border-2 border-emerald-100/50 rounded-xl text-sm font-black text-gray-900 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"
                                     value={discountAfterDays} onChange={e => setDiscountAfterDays(e.target.value)}
                                 />
                             </div>
                         </div>
-                        <p className="text-[10px] text-emerald-600 font-medium italic">Help reduce waste by automatically lowering the price as expiry approaches.</p>
+                        <p className="text-[10px] font-bold text-emerald-600/80 italic text-center">Help reduce waste by automatically lowering the price as expiry approaches.</p>
                     </div>
 
                     <button 
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full py-4 bg-[#043003] text-white rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-xl shadow-emerald-100 hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full py-5 bg-[#043003] text-white rounded-full font-black uppercase tracking-[0.25em] text-xs shadow-2xl shadow-emerald-900/20 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50 active:scale-[0.98]"
                     >
                         {isSubmitting ? <Loader2 className="animate-spin" size={20}/> : <><PackagePlus size={20}/> Add stock to catalog</>}
                     </button>
@@ -221,63 +441,41 @@ export const ProductPricing: React.FC<ProductPricingProps> = ({ user }) => {
   
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isAddInvModalOpen, setIsAddInvModalOpen] = useState(false);
+  const [isEditPricingModalOpen, setIsEditPricingModalOpen] = useState(false);
+  
   const [productToSell, setProductToSell] = useState<Product | null>(null);
   const [itemToSell, setItemToSell] = useState<InventoryItem | null>(null);
   
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [itemToShare, setItemToShare] = useState<InventoryItem | null>(null);
 
-  const [rules, setRules] = useState<PricingRule[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | 'FREQUENT'>('FREQUENT');
   
-  // Daily Verification State
   const [verificationMode, setVerificationMode] = useState<Record<string, 'initial' | 'edit' | 'verified'>>({});
   const [verificationPrices, setVerificationPrices] = useState<Record<string, number>>({});
+
+  const [productId, setProductId] = useState<string>('');
 
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchData();
-
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setActiveMenuId(null);
-      }
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setActiveMenuId(null);
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [user]);
 
   const fetchData = () => {
-      const allProducts = mockService.getAllProducts();
-      const myInventory = mockService.getInventory(user.id).filter(i => i.ownerId === user.id);
-      setProducts(allProducts);
-      setInventory(myInventory);
+      setProducts(mockService.getAllProducts());
+      setInventory(mockService.getInventory(user.id));
   };
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
-    const existingRules = mockService.getPricingRules(user.id, product.id);
-    const initializedRules: PricingRule[] = BUSINESS_CATEGORIES.map(category => {
-      const existing = existingRules.find(r => r.category === category);
-      return existing || {
-        id: Math.random().toString(36).substr(2, 9),
-        ownerId: user.id,
-        productId: product.id,
-        category,
-        strategy: 'PERCENTAGE_DISCOUNT',
-        value: 0,
-        isActive: false
-      };
-    });
-    setRules(initializedRules);
-  };
-
-  const handleSave = () => {
-    mockService.savePricingRules(rules);
-    setSelectedProduct(null);
+    setIsEditPricingModalOpen(true);
   };
 
   const toggleMenu = (e: React.MouseEvent, productId: string) => {
@@ -288,64 +486,32 @@ export const ProductPricing: React.FC<ProductPricingProps> = ({ user }) => {
   const handleMenuAction = (e: React.MouseEvent, action: string, product: Product) => {
     e.stopPropagation();
     setActiveMenuId(null);
+    const item = inventory.find(i => i.productId === product.id && i.status === 'Available');
+    if (!item && (action === 'Sell' || action === 'Share')) {
+        alert("No stock lot found for this product.");
+        return;
+    }
     switch(action) {
         case 'Edit': handleProductClick(product); break;
-        case 'Delete': 
-            if(confirm(`Delete ${product.name}?`)) alert("Deleted"); 
-            break;
         case 'Sell': 
-            const sellItem = inventory.find(i => i.productId === product.id && i.status === 'Available');
-            if (sellItem) {
-                setItemToSell(sellItem);
-                setProductToSell(product);
-                setIsSellModalOpen(true);
-            } else {
-                alert("Cannot sell: No available stock for this product.");
-            }
+            setItemToSell(item!); 
+            setProductToSell(product); 
+            setIsSellModalOpen(true); 
             break;
-        case 'Share':
-            const shareItem = inventory.find(i => i.productId === product.id && i.status === 'Available');
-            if (shareItem) {
-                setItemToShare(shareItem);
-                setIsShareModalOpen(true);
-            } else {
-                alert("Cannot share: No available stock for this product.");
-            }
+        case 'Share': 
+            setItemToShare(item!); 
+            setIsShareModalOpen(true); 
             break;
     }
   };
 
   const handleSellComplete = (data: any) => {
     if (!itemToSell) return;
-    let customerId = data.customer.id;
-    let customerName = data.customer.businessName || 'Customer';
-    if (data.customer.isNew) {
-        const newCustomer = {
-            id: `c-new-${Date.now()}`,
-            businessName: data.customer.businessName,
-            contactName: data.customer.contactName,
-            email: data.customer.email,
-            phone: data.customer.mobile,
-            category: 'Restaurant',
-            connectionStatus: 'Active',
-            connectedSupplierName: user.businessName,
-            connectedSupplierId: user.id
-        };
-        mockService.addMarketplaceCustomer(newCustomer as any);
-        customerId = newCustomer.id;
-    }
-    if (data.action === 'QUOTE') {
-         alert(`Quote Sent to ${customerName}!`);
-    } else {
-         mockService.createInstantOrder(customerId, itemToSell, data.quantity, data.pricePerKg);
-         alert(`Sale Recorded!`);
-    }
+    mockService.createInstantOrder(data.customer.id, itemToSell, data.quantity, data.pricePerKg);
+    alert(`Sale Recorded!`);
     setIsSellModalOpen(false);
-    setItemToSell(null);
-    setProductToSell(null);
   };
 
-  // Daily Verification Logic
   const handleVerifyPrice = (invId: string, changed: boolean, currentPrice: number) => {
       if (changed) {
           setVerificationMode(prev => ({ ...prev, [invId]: 'edit' }));
@@ -358,13 +524,12 @@ export const ProductPricing: React.FC<ProductPricingProps> = ({ user }) => {
   };
 
   const handleSubmitPriceChange = (invId: string) => {
-      const newPrice = verificationPrices[invId];
-      mockService.verifyPrice(invId, newPrice);
+      mockService.verifyPrice(invId, verificationPrices[invId]);
       fetchData();
       setVerificationMode(prev => ({ ...prev, [invId]: 'verified' }));
-      alert("Price updated and verified for today.");
   };
 
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   const displayedProducts = activeFilter === 'FREQUENT' 
     ? products.slice(0, 12) 
     : products.filter(p => p.name.toUpperCase().startsWith(activeFilter));
@@ -374,38 +539,22 @@ export const ProductPricing: React.FC<ProductPricingProps> = ({ user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Inventory & Price</h1>
-          <p className="text-gray-500">Manage your listed products and customer-specific pricing.</p>
+          <p className="text-gray-500">Physical bin tracking and marketplace pricing control.</p>
         </div>
         <button 
             onClick={() => setIsAddInvModalOpen(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-[#043003] text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg hover:bg-black transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-6 py-3 bg-[#043003] text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg hover:bg-black transition-all hover:scale-105"
         >
-            <Plus size={18}/> Add Inventory
+            <Plus size={18}/> Add New Batch
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <div className="flex flex-wrap gap-2 items-center justify-start">
-             <button
-                onClick={() => setActiveFilter('FREQUENT')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeFilter === 'FREQUENT' ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-             >
-                Most Frequent
-             </button>
-             <div className="w-px h-6 bg-gray-200 mx-2 hidden sm:block"></div>
-             {ALPHABET.map(letter => {
-                 const hasProducts = products.some(p => p.name.toUpperCase().startsWith(letter));
-                 return (
-                    <button
-                        key={letter}
-                        onClick={() => hasProducts && setActiveFilter(letter)}
-                        disabled={!hasProducts}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-all ${activeFilter === letter ? 'bg-emerald-600 text-white shadow-md' : hasProducts ? 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-100' : 'text-gray-300 cursor-not-allowed bg-gray-50/50'}`}
-                    >
-                        {letter}
-                    </button>
-                 );
-             })}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 overflow-x-auto no-scrollbar">
+          <div className="flex flex-wrap gap-2 min-max">
+             <button onClick={() => setActiveFilter('FREQUENT')} className={`px-4 py-2 rounded-lg text-sm font-bold ${activeFilter === 'FREQUENT' ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>Frequent</button>
+             {alphabet.map(l => (
+                <button key={l} onClick={() => setActiveFilter(l)} className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-bold transition-all ${activeFilter === l ? 'bg-emerald-600 text-white shadow-md' : 'bg-white border border-gray-100 text-gray-400 hover:border-emerald-200 hover:text-emerald-600'}`}>{l}</button>
+             ))}
           </div>
       </div>
 
@@ -415,131 +564,98 @@ export const ProductPricing: React.FC<ProductPricingProps> = ({ user }) => {
             const hasStock = !!myInv;
             const isVerifiedToday = myInv?.lastPriceVerifiedDate === new Date().toLocaleDateString();
             const mode = verificationMode[myInv?.id || ''] || (isVerifiedToday ? 'verified' : 'initial');
-
+            
             return (
-            <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible hover:shadow-md transition-all group relative flex flex-col">
-                <div className="absolute top-3 right-3 z-20">
-                    <button onClick={(e) => toggleMenu(e, product.id)} className="p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-500 shadow-sm border border-gray-100">
+            <div key={product.id} className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden group relative flex flex-col hover:shadow-xl transition-all">
+                <div className="absolute top-4 right-4 z-20">
+                    <button onClick={(e) => toggleMenu(e, product.id)} className="p-2 rounded-full bg-white/90 backdrop-blur shadow border text-gray-500 hover:text-gray-900 transition-colors">
                         <MoreVertical size={18} />
                     </button>
                     {activeMenuId === product.id && (
-                        <div ref={menuRef} className="absolute right-0 top-8 w-56 bg-white rounded-lg shadow-xl border border-gray-100 z-30 overflow-hidden">
-                            <button onClick={(e) => handleMenuAction(e, 'Edit', product)} className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-50">
-                                <Edit2 size={16} className="text-gray-400" /> Edit
-                            </button>
-                            <button onClick={(e) => handleMenuAction(e, 'Share', product)} className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-50">
-                                <Share2 size={16} className="text-gray-400" /> Share
-                            </button>
-                            <button onClick={(e) => handleMenuAction(e, 'Sell', product)} className="w-full text-left px-4 py-3 text-sm font-bold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2">
-                                <ShoppingBag size={16} /> Sell Now
-                            </button>
+                        <div ref={menuRef} className="absolute right-0 top-10 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 overflow-hidden py-1 animate-in zoom-in-95">
+                            <button onClick={(e) => handleMenuAction(e, 'Edit', product)} className="w-full text-left px-5 py-3.5 text-sm font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-3"><Edit2 size={16} className="text-indigo-600" /> Master Pricing</button>
+                            <button onClick={(e) => handleMenuAction(e, 'Share', product)} className="w-full text-left px-5 py-3.5 text-sm font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-3"><Share2 size={16} className="text-blue-600" /> Send Quote Link</button>
+                            <div className="h-px bg-gray-50 mx-2"></div>
+                            <button onClick={(e) => handleMenuAction(e, 'Sell', product)} className="w-full text-left px-5 py-3.5 text-sm font-black text-emerald-600 hover:bg-emerald-50 flex items-center gap-3 uppercase tracking-widest"><ShoppingBag size={16} /> Instant Sale</button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="relative h-48 w-full bg-gray-100 border-b border-gray-100 overflow-hidden">
+                    <img src={myInv?.batchImageUrl || product.imageUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt=""/>
+                    {hasStock && (
+                        <div className="absolute bottom-4 left-4 bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl border border-white/20 flex items-center gap-2">
+                            <Hash size={12}/> {myInv.lotNumber}
                         </div>
                     )}
                 </div>
                 
-                <div className="p-5 flex-1">
-                    <div className="flex justify-between items-start mb-2 pr-8">
-                        <div>
-                            <h3 className="font-bold text-gray-900 text-lg mb-1">{product.name}</h3>
-                            <p className="text-sm text-gray-500">{product.variety}</p>
+                <div className="p-6 flex-1">
+                    <div className="mb-4">
+                        <div className="flex justify-between items-start">
+                            <h3 className="font-black text-gray-900 text-xl tracking-tight leading-tight">{product.name}</h3>
+                            <span className="text-emerald-600 font-black text-lg tracking-tighter">${product.defaultPricePerKg.toFixed(2)}<span className="text-xs text-gray-400 font-bold ml-0.5">/kg</span></span>
                         </div>
-                        {!hasStock && <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded border border-gray-200 uppercase tracking-wide">No Stock</span>}
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mt-4">
-                        <span className="text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg text-sm border border-emerald-100">${product.defaultPricePerKg.toFixed(2)} / kg</span>
+                        {hasStock && (
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2 flex items-center gap-1.5">
+                                <Box size={12} className="text-indigo-400"/> Location: <span className="text-indigo-600">{myInv.warehouseLocation || 'General Stock'}</span>
+                            </p>
+                        )}
                     </div>
 
-                    {/* DAILY PRICE VERIFICATION UI */}
-                    {hasStock && (
-                        <div className="mt-6 pt-4 border-t border-gray-50">
+                    {hasStock ? (
+                        <div className="mt-4 pt-4 border-t border-gray-50">
                             {mode === 'verified' ? (
-                                <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold bg-emerald-50 p-2 rounded-lg border border-emerald-100 animate-in fade-in zoom-in-95">
-                                    <CheckCircle size={16}/> Price Verified for Today
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-emerald-600 text-[10px] font-black uppercase bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100">
+                                        <CheckCircle size={16}/> Price Verified
+                                    </div>
+                                    <button onClick={() => setVerificationMode({...verificationMode, [myInv.id]: 'edit'})} className="p-2 text-gray-300 hover:text-indigo-600 transition-colors"><Edit2 size={16}/></button>
                                 </div>
                             ) : mode === 'edit' ? (
-                                <div className="space-y-3 animate-in slide-in-from-top-2">
-                                    <p className="text-xs font-bold text-gray-500 uppercase">Update Price ($/kg)</p>
-                                    <div className="flex gap-2">
-                                        <input 
-                                            type="number"
-                                            step="0.01"
-                                            className="flex-1 p-2 border border-emerald-300 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
-                                            value={verificationPrices[myInv.id] || ''}
-                                            onChange={(e) => setVerificationPrices(prev => ({ ...prev, [myInv.id]: parseFloat(e.target.value) }))}
-                                            autoFocus
-                                        />
-                                        <button 
-                                            onClick={() => handleSubmitPriceChange(myInv.id)}
-                                            className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm"
-                                        >
-                                            Submit
-                                        </button>
-                                    </div>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="number" step="0.01" className="flex-1 p-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-black text-gray-900 outline-none"
+                                        value={verificationPrices[myInv.id]} onChange={e => setVerificationPrices({...verificationPrices, [myInv.id]: parseFloat(e.target.value)})}
+                                    />
+                                    <button onClick={() => handleSubmitPriceChange(myInv.id)} className="bg-indigo-600 text-white px-4 rounded-xl text-xs font-black uppercase">Save</button>
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-tight flex items-center gap-1">
-                                        <AlertCircle size={14} className="text-orange-400"/> Price changed today?
-                                    </p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Verify market price for today?</p>
                                     <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => handleVerifyPrice(myInv.id, true, product.defaultPricePerKg)}
-                                            className="flex-1 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors"
-                                        >
-                                            Yes
-                                        </button>
-                                        <button 
-                                            onClick={() => handleVerifyPrice(myInv.id, false, product.defaultPricePerKg)}
-                                            className="flex-1 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-bold hover:bg-black transition-colors"
-                                        >
-                                            No
-                                        </button>
+                                        <button onClick={() => handleVerifyPrice(myInv.id, true, product.defaultPricePerKg)} className="flex-1 py-2.5 bg-white border border-gray-200 rounded-xl text-[10px] font-black text-gray-500 uppercase tracking-widest">Changed</button>
+                                        <button onClick={() => handleVerifyPrice(myInv.id, false, product.defaultPricePerKg)} className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Correct</button>
                                     </div>
                                 </div>
                             )}
                         </div>
+                    ) : (
+                        <button onClick={() => { setProductId(product.id); setIsAddInvModalOpen(true); }} className="w-full mt-4 py-3 bg-gray-50 border-2 border-dashed border-gray-200 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white hover:border-emerald-300 hover:text-emerald-600 transition-all">
+                            <PackagePlus size={16}/> Record Stock
+                        </button>
                     )}
                 </div>
-
-                <div 
-                    onClick={(e) => { e.stopPropagation(); handleProductClick(product); }}
-                    className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400 font-medium hover:text-gray-600 cursor-pointer transition-colors"
-                >
-                    <span>Manage Category Pricing</span>
-                    <ChevronDown size={14} className="-rotate-90"/>
+                <div onClick={() => handleProductClick(product)} className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center group/footer cursor-pointer">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover/footer:text-indigo-600 transition-colors">Category Rules</span>
+                    <ChevronRight size={14} className="text-gray-300 group-hover/footer:text-indigo-600 group-hover/footer:translate-x-1 transition-all"/>
                 </div>
             </div>
             );
         })}
       </div>
 
-      {/* DIALOGS */}
-      {isSellModalOpen && productToSell && (
-          <SellProductDialog 
-              isOpen={isSellModalOpen}
-              onClose={() => setIsSellModalOpen(false)}
-              product={productToSell}
-              onComplete={handleSellComplete}
-          />
-      )}
-
-      {isShareModalOpen && itemToShare && (
-          <ShareModal 
-              item={itemToShare}
-              onClose={() => setIsShareModalOpen(false)}
-              onComplete={() => setIsShareModalOpen(false)}
-              currentUser={user}
-          />
-      )}
-
       <AddInventoryModal 
-          isOpen={isAddInvModalOpen}
-          onClose={() => setIsAddInvModalOpen(false)}
-          user={user}
-          products={products}
-          onComplete={fetchData}
+        isOpen={isAddInvModalOpen} 
+        onClose={() => { setIsAddInvModalOpen(false); setProductId(''); }} 
+        user={user} 
+        products={products} 
+        onComplete={fetchData} 
+        initialProductId={productId}
       />
+      {isSellModalOpen && productToSell && <SellProductDialog isOpen={isSellModalOpen} onClose={() => setIsSellModalOpen(false)} product={productToSell} onComplete={handleSellComplete} />}
+      {isShareModalOpen && itemToShare && <ShareModal item={itemToShare} onClose={() => setIsShareModalOpen(false)} onComplete={() => setIsShareModalOpen(false)} currentUser={user} />}
+      <EditPricingModal isOpen={isEditPricingModalOpen} onClose={() => { setIsEditPricingModalOpen(false); setSelectedProduct(null); }} product={selectedProduct} onComplete={fetchData} />
     </div>
   );
 };

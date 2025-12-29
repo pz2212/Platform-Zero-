@@ -1,36 +1,37 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { UserRole, User, AppNotification } from './types';
-import { mockService } from './services/mockDataService';
-import { Dashboard } from './components/Dashboard';
-import { FarmerDashboard } from './components/FarmerDashboard';
-import { ConsumerDashboard } from './components/ConsumerDashboard';
-import { ProductPricing } from './components/ProductPricing';
-import { Marketplace } from './components/Marketplace';
-import { SupplierMarket } from './components/SupplierMarket';
-import { AdminDashboard } from './components/AdminDashboard';
-import { RepDashboard } from './components/RepDashboard';
-import { Settings as SettingsComponent } from './components/Settings';
-import { LoginRequests } from './components/LoginRequests';
-import { ConsumerOnboarding } from './components/ConsumerOnboarding';
-import { CustomerPortals } from './components/CustomerPortals';
-import { Accounts } from './components/Accounts';
-import { PricingRequests } from './components/PricingRequests';
-import { AdminPriceRequests } from './components/AdminPriceRequests';
-import { ConsumerLanding } from './components/ConsumerLanding';
-import { CustomerOrders } from './components/CustomerOrders'; 
-import { AdminRepManagement } from './components/AdminRepManagement';
-import { TradingInsights } from './components/TradingInsights';
-import { AdminSuppliers } from './components/AdminSuppliers';
-import { Contacts } from './components/Contacts';
-import { LiveActivity } from './components/LiveActivity';
+import { UserRole, User, AppNotification } from '../types';
+import { mockService } from '../services/mockDataService';
+import { Dashboard } from './Dashboard';
+import { FarmerDashboard } from './FarmerDashboard';
+import { ConsumerDashboard } from './ConsumerDashboard';
+import { ProductPricing } from './ProductPricing';
+import { Marketplace } from './Marketplace';
+import { SupplierMarket } from './SupplierMarket';
+import { AdminDashboard } from './AdminDashboard';
+import { Settings as SettingsComponent } from './Settings';
+import { LoginRequests } from './LoginRequests';
+import { ConsumerOnboarding } from './ConsumerOnboarding';
+// Fix: Added missing import for CustomerPortals
+import { CustomerPortals } from './CustomerPortals';
+import { Accounts } from './Accounts';
+import { PricingRequests } from './PricingRequests';
+import { AdminPriceRequests } from './AdminPriceRequests';
+import { ConsumerLanding } from './ConsumerLanding';
+import { CustomerOrders } from './CustomerOrders'; 
+import { AdminRepManagement } from './AdminRepManagement';
+import { AdminSuppliers } from './AdminSuppliers';
+// Fix: Added missing imports for TradingInsights and Contacts to support routes and navigation
+import { TradingInsights } from './TradingInsights';
+import { Contacts } from './Contacts';
+import { LiveActivity } from './LiveActivity';
 import { 
   LayoutDashboard, ShoppingCart, Users, Settings, LogOut, Tags, ChevronDown, UserPlus, 
-  ScanLine, DollarSign, Store, X, Lock, ArrowLeft, Bell, 
+  DollarSign, X, Lock, ArrowLeft, Bell, 
   ShoppingBag, ShieldCheck, TrendingUp, Target, Plus, ChevronUp, Layers, 
-  Sparkles, Calculator, User as UserIcon, Menu as HamburgerIcon, Mail, LogIn, ArrowRight, Building, ChevronRight,
-  Sprout, Package, BarChart3, Globe, Users2, Circle
+  Sparkles, User as UserIcon, Building, ChevronRight,
+  Sprout, Globe, Users2, Circle, LogIn, ArrowRight
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, active, onClick, isSubItem = false, badge = 0, subLabel }: any) => (
@@ -57,75 +58,6 @@ const SidebarLink = ({ to, icon: Icon, label, active, onClick, isSubItem = false
     )}
   </Link>
 );
-
-const NotificationDropdown = ({ user, onClose }: { user: User, onClose: () => void }) => {
-    const [notifications, setNotifications] = useState<AppNotification[]>([]);
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        setNotifications(mockService.getAppNotifications(user.id));
-        const interval = setInterval(() => {
-            setNotifications(mockService.getAppNotifications(user.id));
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [user.id]);
-
-    const handleRead = (notif: AppNotification) => {
-        mockService.markNotificationAsRead(notif.id);
-        if (notif.link) {
-            navigate(notif.link);
-        }
-        onClose();
-    };
-
-    return (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-[100] animate-in zoom-in-95 duration-200 origin-top-right overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h3 className="font-black text-gray-900 uppercase text-[10px] tracking-widest flex items-center gap-2">
-                    <Bell size={14} className="text-emerald-600"/> Notifications
-                </h3>
-            </div>
-            <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                {notifications.length === 0 ? (
-                    <div className="p-12 text-center text-gray-400">
-                        <Bell size={32} className="mx-auto mb-3 opacity-20"/>
-                        <p className="text-xs font-bold uppercase tracking-widest">No notifications yet.</p>
-                    </div>
-                ) : (
-                    notifications.map(n => (
-                        <div 
-                            key={n.id} 
-                            onClick={() => handleRead(n)}
-                            className={`p-4 border-b border-gray-50 cursor-pointer transition-all hover:bg-emerald-50/30 relative group ${!n.isRead ? 'bg-white' : 'bg-gray-50/20'}`}
-                        >
-                            {!n.isRead && <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-500 rounded-full"></div>}
-                            <div className="flex gap-4">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
-                                    n.type === 'ORDER' ? 'bg-blue-100 text-blue-600' :
-                                    n.type === 'APPLICATION' ? 'bg-orange-100 text-orange-600' :
-                                    n.type === 'PRICE_REQUEST' ? 'bg-indigo-100 text-indigo-600' :
-                                    'bg-emerald-100 text-emerald-600'
-                                }`}>
-                                    {n.type === 'ORDER' ? <ShoppingCart size={20}/> :
-                                     n.type === 'APPLICATION' ? <UserPlus size={20}/> :
-                                     n.type === 'PRICE_REQUEST' ? <Calculator size={20}/> :
-                                     <Sparkles size={20}/>}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-start mb-0.5">
-                                        <p className="text-sm font-black text-gray-900 truncate pr-4">{n.title}</p>
-                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter whitespace-nowrap pt-0.5">{new Date(n.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-500 leading-snug line-clamp-2">{n.message}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-        </div>
-    );
-};
 
 const NetworkSignalsWidget = ({ user, mode = 'sidebar', onFinish }: { user: User, mode?: 'sidebar' | 'popup', onFinish?: () => void }) => {
   const [sellingTags, setSellingTags] = useState<string[]>(user.activeSellingInterests || []);
@@ -249,6 +181,7 @@ const NetworkSignalsWidget = ({ user, mode = 'sidebar', onFinish }: { user: User
   );
 };
 
+// Fix: Added missing AuthModal component definition to resolve "Cannot find name 'AuthModal'" error
 const AuthModal = ({ isOpen, onClose, step, setStep, onLogin, email, setEmail, password, setPassword, selectedRole, setSelectedRole, onAutoLogin }: any) => {
     if (!isOpen) return null;
 
@@ -343,13 +276,8 @@ const AppLayout = ({ children, user, onLogout }: any) => {
   const isActive = (path: string) => location.pathname === path;
   
   const [showDailyPopup, setShowDailyPopup] = useState(false);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [latestLiveNotif, setLatestLiveNotif] = useState<AppNotification | null>(null);
-
-  const notifRef = useRef<HTMLDivElement>(null);
-  const mobileNavRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user.role === UserRole.WHOLESALER || user.role === UserRole.FARMER) {
@@ -402,7 +330,6 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                       <SidebarLink to="/" icon={LayoutGrid} label="Order Management" active={isActive('/')} badge={mockService.getOrders(user.id).filter(o => o.sellerId === user.id && o.status === 'Pending').length} />
                       <SidebarLink to="/pricing" icon={Tags} label="Inventory & Price" active={isActive('/pricing')} />
                       <SidebarLink to="/accounts" icon={DollarSign} label="Financials" active={isActive('/accounts')} />
-                      <SidebarLink to="/trading-insights" icon={BarChart3} label="Market Intelligence" active={isActive('/trading-insights')} />
                     </div>
                   </div>
 
@@ -417,8 +344,6 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                     <h4 className="px-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Contacts</h4>
                     <div className="space-y-0.5">
                       <SidebarLink to="/contacts" icon={Users2} label="Directory" active={isActive('/contacts')} />
-                      <SidebarLink to="/contacts?id=u3" icon={Circle} label="Green Valley Farms" active={false} subLabel="Farmer" />
-                      <SidebarLink to="/contacts?id=u2" icon={Circle} label="Pippa's Farm" active={false} subLabel="Wholesaler" />
                     </div>
                   </div>
 

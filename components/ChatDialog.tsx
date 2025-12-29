@@ -63,7 +63,7 @@ export const ChatDialog: React.FC<ChatDialogProps> = ({ isOpen, onClose, orderId
 
         setMessages(initialMessages);
       } else {
-        // STANDARD SUPPORT FLOW
+        // UPDATED: Support/General flow text changed per user request
         setMessages([
           {
             id: '1',
@@ -73,7 +73,7 @@ export const ChatDialog: React.FC<ChatDialogProps> = ({ isOpen, onClose, orderId
           },
           {
             id: '2',
-            text: `Hi there! 👋 I'm ${repName} from Platform Zero Support. I'm here to help you resolve this issue as quickly as possible. How can I assist you with this today?`,
+            text: `Hi there! 👋 I'm ${repName}. Would you like to purchase the products they are interested in?`,
             sender: 'admin',
             timestamp: new Date(Date.now() + 500)
           }

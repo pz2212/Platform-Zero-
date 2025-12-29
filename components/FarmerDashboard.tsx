@@ -29,7 +29,7 @@ const HarvestLoggingModal = ({ isOpen, onClose, onSave, products }: any) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <div>
@@ -169,13 +169,16 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
   };
 
   const handleSaveHarvest = (data: any) => {
+      // Fix: Added missing properties lotNumber and uploadedAt required by InventoryItem
       const newItem: InventoryItem = {
           id: `inv-${Date.now()}`,
+          lotNumber: mockService.generateLotId(),
           productId: data.productId,
           ownerId: user.id,
           quantityKg: parseFloat(data.quantity),
           status: 'Available',
           harvestDate: `${data.date}T${data.time}:00Z`,
+          uploadedAt: new Date().toISOString(),
           expiryDate: new Date(Date.now() + 86400000 * 7).toISOString(),
           harvestLocation: `Field Update: ${data.weather}`,
           notes: JSON.stringify({

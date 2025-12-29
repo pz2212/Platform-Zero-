@@ -102,14 +102,17 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
     // Find matching product in catalog
     const product = products.find(p => p.name.toLowerCase().includes(analysisResult.name.toLowerCase())) || products[0];
     
+    /* Fixed missing properties: lotNumber and uploadedAt added */
     const newItem: InventoryItem = {
         id: `inv-ai-${Date.now()}`,
+        lotNumber: mockService.generateLotId(),
         ownerId: user?.id || 'u2',
         productId: product.id,
         quantityKg: 100, // Default for quick entry
         status: 'Available',
         harvestDate: new Date().toISOString(),
         harvestLocation: 'Direct via AI Scanner',
+        uploadedAt: new Date().toISOString(),
         expiryDate: new Date(Date.now() + 86400000 * 7).toISOString(),
         batchImageUrl: image || undefined
     };
@@ -152,13 +155,16 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
   };
 
   // Mock a temporary item for the share modal to work with
+  /* Fixed missing properties: lotNumber and uploadedAt added */
   const syntheticItem: InventoryItem | null = analysisResult ? {
       id: `tmp-share-${Date.now()}`,
+      lotNumber: 'TMP-LOT',
       ownerId: user?.id || 'u2',
       productId: products.find(p => p.name.toLowerCase().includes(analysisResult.name.toLowerCase()))?.id || 'p1',
       quantityKg: 100,
       expiryDate: new Date().toISOString(),
       harvestDate: new Date().toISOString(),
+      uploadedAt: new Date().toISOString(),
       status: 'Available'
   } : null;
 

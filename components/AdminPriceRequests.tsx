@@ -90,7 +90,7 @@ export const AdminPriceRequests: React.FC = () => {
           </div>
           <button 
             onClick={() => handleGetStarted(newlyCreatedCustomer.id)}
-            className="bg-white text-[#043003] px-10 py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl hover:bg-emerald-50 transition-all flex items-center gap-2 whitespace-nowrap"
+            className="bg-white text-[#043003] px-10 py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl hover:bg-emerald-50 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
           >
             Get Started
           </button>
@@ -259,7 +259,7 @@ export const AdminPriceRequests: React.FC = () => {
 
       <ChatDialog 
         isOpen={isChatOpen}
-        /* Fix typo: setChatOpen -> setIsChatOpen */
+        /* Fixed typo: setChatOpen -> setIsChatOpen */
         onClose={() => setIsChatOpen(false)}
         orderId="QUOTE-NEGOTIATION"
         issueType={chatQuoteContext}

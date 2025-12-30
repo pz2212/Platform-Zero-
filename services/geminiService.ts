@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { InventoryItem, Product } from "../types";
+// Moved ParsedOrderItem to types and imported here
+import { InventoryItem, Product, ProductUnit, ParsedOrderItem } from "../types";
 
 export interface InvoiceItem {
   name: string;
@@ -15,6 +16,61 @@ export interface SeasonalProduct {
     variety: string;
     co2Savings: number;
 }
+
+export const parseNaturalLanguageOrder = async (text: string, catalog: Product[]): Promise<ParsedOrderItem[]> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    // Provide catalog context to AI for better matching
+    const catalogSummary = catalog.map(p => `${p.name} (${p.variety}) [ID: ${p.id}]`).join(', ');
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: `Convert this natural language produce order into a structured JSON array.
+            
+            Order Text: "${text}"
+            
+            Marketplace Catalog: ${catalogSummary}
+            
+            Strict Rules:
+            1. For each item mentioned, return "productName", "quantity" (number), and "unit".
+            2. "unit" must be one of: KG, Tray, Each, Loose, Bag. Default to KG if unknown or "bags" mentioned.
+            3. CRITICAL: If the user input is a generic term (e.g. "bananas", "banans", "tomatoes", "potatoes") and multiple variations exist in the Marketplace Catalog, you MUST set "isAmbiguous" to true.
+            4. If "isAmbiguous" is true, provide ALL relevant variation Product IDs in "suggestedProductIds".
+            5. ONLY set "selectedProductId" if the name is an exact and unambiguous match.
+            6. Handle misspellings (e.g. "banans" should be matched against "Bananas" variants).
+            
+            Return ONLY a JSON array of objects.`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            productName: { type: Type.STRING },
+                            quantity: { type: Type.NUMBER },
+                            unit: { type: Type.STRING, enum: ["KG", "Tray", "Each", "Loose", "Bag"] },
+                            isAmbiguous: { type: Type.BOOLEAN },
+                            suggestedProductIds: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            selectedProductId: { type: Type.STRING }
+                        },
+                        required: ["productName", "quantity", "unit"]
+                    }
+                }
+            }
+        });
+
+        const result = response.text;
+        if (result) {
+            return JSON.parse(result);
+        }
+        return [];
+    } catch (error) {
+        console.error("Gemini Order Parsing Error:", error);
+        return [];
+    }
+};
 
 export const generateSeasonalCatalog = async (): Promise<SeasonalProduct[]> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -140,7 +196,16 @@ export const identifyProductFromImage = async (base64Image: string): Promise<{ n
         ]
       },
       config: {
-        responseMimeType: 'application/json'
+        responseMimeType: 'application/json',
+        // Added responseSchema for better structured output reliability
+        responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+                name: { type: Type.STRING },
+                quality: { type: Type.STRING }
+            },
+            required: ["name", "quality"]
+        }
       }
     });
 
@@ -182,12 +247,26 @@ export const extractInvoiceItems = async (base64Data: string, mimeType: string):
             - 'marketRate' (number, the unit price on the invoice).
             
             Also estimate a 'pzRate' (number) for each item, which represents a "Platform Zero" wholesale price. The pzRate should generally be 15-25% lower than the marketRate found on the invoice.
-            Return ONLY a JSON array of objects. Example: [{"name": "Milk", "qty": 10, "marketRate": 3.50, "pzRate": 2.80}]`
+            Return ONLY a JSON array of objects.`
           }
         ]
       },
       config: {
-        responseMimeType: 'application/json'
+        responseMimeType: 'application/json',
+        // Added responseSchema for robust item extraction from documents
+        responseSchema: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING },
+                    qty: { type: Type.NUMBER },
+                    marketRate: { type: Type.NUMBER },
+                    pzRate: { type: Type.NUMBER }
+                },
+                required: ["name", "qty", "marketRate", "pzRate"]
+            }
+        }
       }
     });
 

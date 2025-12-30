@@ -259,7 +259,7 @@ export const AdminPriceRequests: React.FC = () => {
 
       <ChatDialog 
         isOpen={isChatOpen}
-        /* Fixed typo: setChatOpen -> setIsChatOpen */
+        /* Corrected typo: setChatOpen -> setIsChatOpen */
         onClose={() => setIsChatOpen(false)}
         orderId="QUOTE-NEGOTIATION"
         issueType={chatQuoteContext}

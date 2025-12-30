@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { UserRole, User, AppNotification } from '../types';
@@ -29,7 +30,8 @@ import {
   DollarSign, X, Lock, ArrowLeft, Bell, 
   ShoppingBag, ShieldCheck, TrendingUp, Target, Plus, ChevronUp, Layers, 
   Sparkles, User as UserIcon, Building, ChevronRight,
-  Sprout, Globe, Users2, Circle, LogIn, ArrowRight, Menu, Search, Calculator, BarChart3
+  Sprout, Globe, Users2, Circle, LogIn, ArrowRight, Menu, Search, Calculator, BarChart3,
+  Wallet, FileText, CreditCard
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, active, onClick, isSubItem = false, badge = 0, subLabel }: any) => (
@@ -252,7 +254,6 @@ const NetworkSignalsWidget = ({ user, mode = 'sidebar', onFinish }: { user: User
   );
 };
 
-// Fix: Added missing AuthModal component definition to resolve scoping issues in components/App.tsx
 const AuthModal = ({ isOpen, onClose, step, setStep, onLogin, email, setEmail, password, setPassword, selectedRole, setSelectedRole, onAutoLogin }: any) => {
     if (!isOpen) return null;
 
@@ -406,6 +407,7 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                     <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/')} />
                     <SidebarLink to="/orders" icon={ShoppingCart} label="Track Orders" active={isActive('/orders')} />
                     <SidebarLink to="/marketplace" icon={ShoppingBag} label="Fresh Catalog" active={isActive('/marketplace')} />
+                    <SidebarLink to="/accounts" icon={Wallet} label="Financials" active={isActive('/accounts')} />
                 </div>
               ) : isPartner ? (
                 <>
@@ -569,6 +571,7 @@ const App = () => {
           <Route path="/trading-insights" element={<TradingInsights user={user} />} />
           <Route path="/contacts" element={<Contacts user={user} />} />
           <Route path="/notifications" element={<Notifications user={user} />} />
+          <Route path="/accounts" element={<Accounts user={user} />} />
           {user.role === UserRole.ADMIN && (
               <>
                 <Route path="/" element={<AdminDashboard />} />
@@ -591,7 +594,6 @@ const App = () => {
               <>
                 <Route path="/" element={user.role === UserRole.FARMER ? <FarmerDashboard user={user} /> : <Dashboard user={user} />} />
                 <Route path="/pricing" element={<ProductPricing user={user} />} />
-                <Route path="/accounts" element={<Accounts user={user} />} />
                 <Route path="/market" element={<SupplierMarket user={user} />} />
               </>
           )}

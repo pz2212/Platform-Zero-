@@ -1,3 +1,4 @@
+
 export enum UserRole {
   FARMER = 'FARMER',
   WHOLESALER = 'WHOLESALER',
@@ -33,23 +34,18 @@ export interface BusinessProfile {
   abn?: string;
   businessLocation?: string;
   companyName?: string;
-  // Banking
   bankName?: string;
   bsb?: string;
   accountNumber?: string;
-  // Directors
   directorName?: string;
   directorEmail?: string;
   directorPhone?: string;
-  // Accounts
   accountsName?: string;
   accountsEmail?: string;
   accountsPhone?: string;
-  // Products
   productsSell?: string;
   productsGrow?: string;
   productsBuy?: string;
-  // Logistics
   hasLogistics?: boolean;
   isPzAgent?: boolean;
 }
@@ -69,7 +65,7 @@ export interface User {
   commissionRate?: number;
 }
 
-export type ProductUnit = 'KG' | 'Tray' | 'Bin' | 'Tonne' | 'loose';
+export type ProductUnit = 'KG' | 'Tray' | 'Bin' | 'Tonne' | 'loose' | 'Each' | 'Bag';
 
 export interface Product {
   id: string;
@@ -80,6 +76,15 @@ export interface Product {
   defaultPricePerKg: number;
   unit?: ProductUnit;
   co2SavingsPerKg?: number;
+}
+
+export interface ParsedOrderItem {
+    productName: string;
+    quantity: number;
+    unit: ProductUnit;
+    isAmbiguous?: boolean;
+    suggestedProductIds?: string[];
+    selectedProductId?: string;
 }
 
 export interface InventoryItem {
@@ -107,6 +112,18 @@ export interface OrderItem {
   productId: string;
   quantityKg: number;
   pricePerKg: number;
+  isVerified?: boolean;
+  hasIssue?: boolean;
+  unit?: ProductUnit;
+}
+
+export interface OrderIssue {
+  productId?: string;
+  type: string;
+  description: string;
+  reportedAt: string;
+  images?: string[];
+  replacementRequired?: 'URGENT' | 'NEXT_DELIVERY' | 'NONE';
 }
 
 export interface Order {
@@ -117,22 +134,26 @@ export interface Order {
   totalAmount: number;
   status: 'Pending' | 'Confirmed' | 'Ready for Delivery' | 'Shipped' | 'Delivered' | 'Cancelled';
   date: string;
+  confirmedAt?: string;
+  preparedAt?: string;
+  shippedAt?: string;
+  deliveredAt?: string;
   paymentStatus?: 'Paid' | 'Unpaid' | 'Overdue';
   paymentMethod?: 'pay_now' | 'invoice' | 'amex';
   priority?: 'STANDARD' | 'HIGH' | 'URGENT';
   packedAt?: string;
-  deliveredAt?: string;
   logistics?: {
     driverName?: string;
     deliveryTime?: string;
     deliveryLocation?: string;
     deliveryDate?: string;
+    vehicleDetails?: string;
+    deliveryPhoto?: string;
+    instructions?: string;
   };
-  issue?: {
-    type: string;
-    description: string;
-    reportedAt: string;
-  };
+  issue?: OrderIssue;
+  itemIssues?: OrderIssue[];
+  isFullyVerified?: boolean;
 }
 
 export interface Customer {

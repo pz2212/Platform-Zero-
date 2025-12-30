@@ -49,7 +49,6 @@ export const AdminDashboard: React.FC = () => {
       }
   }, [activeTab, selectedRole]);
 
-  // Fix line 54: Replaced undefined notifRef with existing menuRef and added event listeners for click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -71,36 +70,14 @@ export const AdminDashboard: React.FC = () => {
     setReps(allUsers.filter(u => u.role === UserRole.PZ_REP));
   };
 
-  const handleApprove = (itemId: string) => {
-    mockService.updateInventoryStatus(itemId, 'Available');
-    refreshData();
-  };
-
-  const handleReject = (itemId: string) => {
-    mockService.updateInventoryStatus(itemId, 'Rejected');
-    refreshData();
-  };
-
-  const handleUpdateMarkup = (customerId: string) => {
-      mockService.updateCustomerMarkup(customerId, tempMarkup);
-      setEditingMarkupId(null);
-      refreshData();
-  };
-
   const handleUpdateSupplier = (customerId: string, supplierId: string) => {
       mockService.updateCustomerSupplier(customerId, supplierId);
       refreshData();
   };
 
-  const handleUpdateRep = (customerId: string, rid: string) => {
-      mockService.updateCustomerRep(customerId, rid);
-      refreshData();
-  };
-
-  const handleOpenInvoices = (customer: Customer) => {
-      const history = allOrders.filter(o => o.buyerId === customer.id);
-      setCustomerInvoices(history);
-      setViewingInvoicesCustomer(customer);
+  const toggleActionMenu = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setActiveActionMenu(activeActionMenu === id ? null : id);
   };
 
   const getCustomerMetrics = (customerId: string) => {
@@ -115,48 +92,7 @@ export const AdminDashboard: React.FC = () => {
     return { orderCount, activeInvoices, outstanding, ltv };
   };
 
-  const toggleActionMenu = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setActiveActionMenu(activeActionMenu === id ? null : id);
-  };
-
-  const handleSaveTemplate = () => {
-    if (formTemplate) {
-      mockService.updateFormTemplate(selectedRole, formTemplate);
-      alert(`${selectedRole} onboarding form updated!`);
-    }
-  };
-
-  const addField = (sectionIdx: number) => {
-    if (!formTemplate) return;
-    const newTemplate = { ...formTemplate };
-    const newField: FormField = {
-      id: `f-${Date.now()}`,
-      label: 'New Question',
-      type: 'text',
-      required: false
-    };
-    newTemplate.sections[sectionIdx].fields.push(newField);
-    setFormTemplate(newTemplate);
-  };
-
-  const updateField = (sectionIdx: number, fieldIdx: number, key: string, value: any) => {
-    if (!formTemplate) return;
-    const newTemplate = JSON.parse(JSON.stringify(formTemplate));
-    // @ts-ignore
-    newTemplate.sections[sectionIdx].fields[fieldIdx][key] = value;
-    setFormTemplate(newTemplate);
-  };
-
-  const removeField = (sectionIdx: number, fieldIdx: number) => {
-    if (!formTemplate) return;
-    const newTemplate = JSON.parse(JSON.stringify(formTemplate));
-    newTemplate.sections[sectionIdx].fields.splice(fieldIdx, 1);
-    setFormTemplate(newTemplate);
-  };
-
   const totalWholesalers = users.filter(u => u.role === 'WHOLESALER').length;
-  const pendingItems = inventory.filter(i => i.status === 'Pending Approval');
   const totalGMV = allOrders.reduce((sum, o) => sum + o.totalAmount, 0);
 
   const filteredCustomers = customers.filter(c => 
@@ -165,14 +101,14 @@ export const AdminDashboard: React.FC = () => {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="mb-10">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+      <div className="mb-4 md:mb-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6 md:mb-10">
             <div>
-                <h1 className="text-3xl font-black text-gray-900 tracking-tight uppercase">HQ Control Center</h1>
-                <p className="text-gray-500 font-medium">Managing marketplace operations and network health.</p>
+                <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight uppercase leading-none">HQ Control Center</h1>
+                <p className="text-gray-500 font-medium text-xs md:text-sm mt-1">Managing marketplace operations and network health.</p>
             </div>
-            <div className="flex bg-gray-100 p-1.5 rounded-xl w-full md:w-auto overflow-x-auto border border-gray-200 shadow-sm">
+            <div className="flex bg-gray-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar border border-gray-200 shadow-sm whitespace-nowrap">
                 {[
                     {id: 'overview', label: 'Overview', icon: LayoutDashboard},
                     {id: 'pending', label: 'Approvals', icon: AlertTriangle},
@@ -181,9 +117,9 @@ export const AdminDashboard: React.FC = () => {
                 ].map(t => (
                     <button 
                         key={t.id} onClick={() => setActiveTab(t.id as any)}
-                        className={`px-5 py-2.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all whitespace-nowrap flex-1 md:flex-none flex items-center justify-center gap-2 ${activeTab === t.id ? 'bg-white text-gray-900 shadow-sm border border-gray-200' : 'text-gray-400 hover:text-gray-600'}`}
+                        className={`px-4 md:px-5 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-lg transition-all whitespace-nowrap shrink-0 flex items-center justify-center gap-2 ${activeTab === t.id ? 'bg-white text-gray-900 shadow-sm border border-gray-200' : 'text-gray-400 hover:text-gray-600'}`}
                     >
-                        <t.icon size={16}/> {t.label}
+                        <t.icon size={14}/> {t.label}
                     </button>
                 ))}
             </div>
@@ -191,46 +127,46 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {activeTab === 'overview' && (
-          <div className="space-y-12">
-            {/* Desktop Full Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between group hover:shadow-xl hover:-translate-y-1 transition-all">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Total GMV</p>
+          <div className="space-y-8 md:space-y-12">
+            {/* KPI METRICS - CONDESED FOR MOBILE */}
+            <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto no-scrollbar -mx-6 px-6 md:mx-0 md:px-0 pb-2">
+                <div className="min-w-[180px] md:min-w-0 bg-white p-5 md:p-8 rounded-[1.75rem] md:rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between group hover:shadow-xl hover:-translate-y-1 transition-all shrink-0">
+                    <p className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Total GMV</p>
                     <div className="flex justify-between items-end">
-                        <h3 className="text-4xl font-black text-gray-900 tracking-tighter">${totalGMV.toLocaleString()}</h3>
-                        <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 shadow-inner-sm"><DollarSign size={24} /></div>
+                        <h3 className="text-2xl md:text-4xl font-black text-gray-900 tracking-tighter">${totalGMV.toLocaleString()}</h3>
+                        <div className="p-2 md:p-3 bg-emerald-50 rounded-xl md:rounded-2xl text-emerald-600 shadow-inner-sm"><DollarSign size={18} className="md:w-6 md:h-6" /></div>
                     </div>
                 </div>
-                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between group hover:shadow-xl hover:-translate-y-1 transition-all">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Market Orders</p>
+                <div className="min-w-[180px] md:min-w-0 bg-white p-5 md:p-8 rounded-[1.75rem] md:rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between group hover:shadow-xl hover:-translate-y-1 transition-all shrink-0">
+                    <p className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Market Orders</p>
                     <div className="flex justify-between items-end">
-                        <h3 className="text-4xl font-black text-gray-900 tracking-tighter">{allOrders.length}</h3>
-                        <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 shadow-inner-sm"><ShoppingCart size={24} /></div>
+                        <h3 className="text-2xl md:text-4xl font-black text-gray-900 tracking-tighter">{allOrders.length}</h3>
+                        <div className="p-2 md:p-3 bg-blue-50 rounded-xl md:rounded-2xl text-blue-600 shadow-inner-sm"><ShoppingCart size={18} className="md:w-6 md:h-6" /></div>
                     </div>
                 </div>
-                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between group hover:shadow-xl hover:-translate-y-1 transition-all">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Partner Stock</p>
+                <div className="min-w-[180px] md:min-w-0 bg-white p-5 md:p-8 rounded-[1.75rem] md:rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between group hover:shadow-xl hover:-translate-y-1 transition-all shrink-0">
+                    <p className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Partner Stock</p>
                     <div className="flex justify-between items-end">
-                        <h3 className="text-4xl font-black text-gray-900 tracking-tighter">{inventory.length}</h3>
-                        <div className="p-3 bg-purple-50 rounded-2xl text-purple-600 shadow-inner-sm"><Box size={24} /></div>
+                        <h3 className="text-2xl md:text-4xl font-black text-gray-900 tracking-tighter">{inventory.length}</h3>
+                        <div className="p-2 md:p-3 bg-purple-50 rounded-xl md:rounded-2xl text-purple-600 shadow-inner-sm"><Box size={18} className="md:w-6 md:h-6" /></div>
                     </div>
                 </div>
-                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between group hover:shadow-xl hover:-translate-y-1 transition-all">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Connected Partners</p>
+                <div className="min-w-[180px] md:min-w-0 bg-white p-5 md:p-8 rounded-[1.75rem] md:rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between group hover:shadow-xl hover:-translate-y-1 transition-all shrink-0">
+                    <p className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Connected Partners</p>
                     <div className="flex justify-between items-end">
-                        <h3 className="text-4xl font-black text-gray-900 tracking-tighter">{totalWholesalers}</h3>
-                        <div className="p-3 bg-amber-50 rounded-2xl text-amber-500 shadow-inner-sm"><Users size={24} /></div>
+                        <h3 className="text-2xl md:text-4xl font-black text-gray-900 tracking-tighter">{totalWholesalers}</h3>
+                        <div className="p-2 md:p-3 bg-amber-50 rounded-xl md:rounded-2xl text-amber-500 shadow-inner-sm"><Users size={18} className="md:w-6 md:h-6" /></div>
                     </div>
                 </div>
             </div>
 
             <div className="bg-white border border-gray-100 rounded-[2.5rem] shadow-sm overflow-visible">
-                <div className="p-10 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6 bg-gray-50/30">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white rounded-2xl text-gray-900 border border-gray-200 shadow-sm">
+                <div className="p-6 md:p-10 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6 bg-gray-50/30">
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                        <div className="p-3 bg-white rounded-2xl text-gray-900 border border-gray-200 shadow-sm hidden md:block">
                             <Store size={28}/>
                         </div>
-                        <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase">Buyer Relationships</h2>
+                        <h2 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight uppercase">Buyer Relationships</h2>
                     </div>
                     <div className="relative w-full md:w-96 group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-emerald-500 transition-colors" size={20} />
@@ -245,7 +181,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse min-w-[1000px]">
                         <thead className="bg-white border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
                             <tr>
                                 <th className="px-8 py-6">Customer Entity</th>
@@ -326,9 +262,6 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
       )}
-
-      {/* Rest of component logic ... */}
-      {/* (pending, orders, forms views follow same header logic) */}
     </div>
   );
 };

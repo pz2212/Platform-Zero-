@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Order, InventoryItem, Product } from '../types';
 import { mockService } from '../services/mockDataService';
@@ -68,7 +67,7 @@ const HarvestLoggingModal = ({ isOpen, onClose, onSave, products }: any) => {
                     <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Harvest Description</label>
                         <textarea 
-                            className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl font-bold text-gray-900 outline-none focus:ring-2 focus:ring-emerald-500 h-24 resize-none"
+                            className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-900 outline-none focus:ring-2 focus:ring-emerald-500 h-24 resize-none"
                             placeholder="e.g. Field 4, row 12. Early morning pick, high sugar content."
                             value={formData.description}
                             onChange={e => setFormData({...formData, description: e.target.value})}
@@ -153,9 +152,8 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
     loadData();
     const interval = setInterval(loadData, 5000);
 
-    // Prompt for interests if they are empty
-    if ((!user.activeSellingInterests || user.activeSellingInterests.length === 0) && 
-        (!user.activeBuyingInterests || user.activeBuyingInterests.length === 0)) {
+    // Trigger popup if interests are empty
+    if ((!user.activeSellingInterests || user.activeSellingInterests.length === 0) && (!user.activeBuyingInterests || user.activeBuyingInterests.length === 0)) {
         setIsInterestsModalOpen(true);
     }
 

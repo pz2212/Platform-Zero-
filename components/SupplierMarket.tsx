@@ -5,7 +5,6 @@ import {
   Store, MapPin, Tag, MessageSquare, ChevronDown, ChevronUp, ShoppingCart, 
   X, CheckCircle, Bell, DollarSign, Truck, Send, 
   TrendingUp, Loader2, Users, Zap, Star, AlertCircle, Package, ArrowRight,
-  /* Fix line 10: Added missing HelpCircle import */
   HelpCircle
 } from 'lucide-react';
 import { ChatDialog } from './ChatDialog';

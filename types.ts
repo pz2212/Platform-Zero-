@@ -1,11 +1,11 @@
-
 export enum UserRole {
   FARMER = 'FARMER',
   WHOLESALER = 'WHOLESALER',
   CONSUMER = 'CONSUMER',
   ADMIN = 'ADMIN',
   DRIVER = 'DRIVER',
-  PZ_REP = 'PZ_REP'
+  PZ_REP = 'PZ_REP',
+  GROCERY = 'GROCERY'
 }
 
 export interface AppNotification {

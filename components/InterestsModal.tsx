@@ -1,7 +1,6 @@
-
-import React, { useState } from 'react';
-import { X, Sprout, ShoppingCart, Check, Sparkles, ArrowRight } from 'lucide-react';
-import { User, UserRole } from '../types';
+import React, { useState, KeyboardEvent } from 'react';
+import { X, Sprout, ShoppingCart, Check, Sparkles, ArrowRight, Plus } from 'lucide-react';
+import { User } from '../types';
 import { mockService } from '../services/mockDataService';
 
 interface InterestsModalProps {
@@ -21,6 +20,7 @@ export const InterestsModal: React.FC<InterestsModalProps> = ({ user, isOpen, on
   const [selling, setSelling] = useState<string[]>(user.activeSellingInterests || []);
   const [buying, setBuying] = useState<string[]>(user.activeBuyingInterests || []);
   const [step, setStep] = useState<1 | 2>(1);
+  const [customInput, setCustomInput] = useState('');
 
   if (!isOpen) return null;
 
@@ -29,6 +29,28 @@ export const InterestsModal: React.FC<InterestsModalProps> = ({ user, isOpen, on
       setList(list.filter(i => i !== item));
     } else {
       setList([...list, item]);
+    }
+  };
+
+  const addCustomItem = (type: 'selling' | 'buying') => {
+    const trimmed = customInput.trim();
+    if (!trimmed) return;
+    
+    // Capitalize first letter
+    const formatted = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    
+    if (type === 'selling' && !selling.includes(formatted)) {
+      setSelling([...selling, formatted]);
+    } else if (type === 'buying' && !buying.includes(formatted)) {
+      setBuying([...buying, formatted]);
+    }
+    setCustomInput('');
+  };
+
+  const handleKeyDown = (e: KeyboardEvent, type: 'selling' | 'buying') => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addCustomItem(type);
     }
   };
 
@@ -65,26 +87,65 @@ export const InterestsModal: React.FC<InterestsModalProps> = ({ user, isOpen, on
                 <h3 className="font-black uppercase text-sm tracking-widest">What are you SELLING?</h3>
               </div>
               <p className="text-sm text-gray-500 font-medium leading-relaxed">
-                Select items you currently have in stock or grow. We'll match you with buyers looking for these.
+                Type or select items you currently have in stock or grow. We'll match you with buyers looking for these.
               </p>
-              <div className="flex flex-wrap gap-2">
-                {COMMON_PRODUCE.map(item => (
-                  <button
-                    key={item}
-                    onClick={() => toggleInterest(selling, setSelling, item)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 ${
-                      selling.includes(item) 
-                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg' 
-                        : 'bg-white border-gray-100 text-gray-400 hover:border-emerald-200'
-                    }`}
-                  >
-                    {selling.includes(item) && <Check size={12} strokeWidth={4} />}
-                    {item}
-                  </button>
-                ))}
+              
+              {/* Custom Type Input */}
+              <div className="flex gap-2">
+                <div className="relative flex-1 group">
+                  <input 
+                    type="text" 
+                    placeholder="Type a product name..." 
+                    className="w-full pl-4 pr-4 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 font-bold text-gray-900 transition-all shadow-inner-sm"
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, 'selling')}
+                  />
+                </div>
+                <button 
+                  onClick={() => addCustomItem('selling')}
+                  className="bg-[#043003] text-white p-4 rounded-2xl shadow-lg active:scale-95 transition-all"
+                >
+                  <Plus size={24}/>
+                </button>
               </div>
+
+              {/* Selection View */}
+              <div className="space-y-4">
+                {selling.length > 0 && (
+                  <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-1">
+                    {selling.map(item => (
+                      <button
+                        key={item}
+                        onClick={() => toggleInterest(selling, setSelling, item)}
+                        className="px-4 py-2 bg-emerald-600 border-2 border-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 group transition-all"
+                      >
+                        <Check size={12} strokeWidth={4} />
+                        {item}
+                        <X size={12} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="h-px bg-gray-50"></div>
+
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Common Market Suggestions</p>
+                <div className="flex flex-wrap gap-2">
+                  {COMMON_PRODUCE.filter(p => !selling.includes(p)).map(item => (
+                    <button
+                      key={item}
+                      onClick={() => toggleInterest(selling, setSelling, item)}
+                      className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 bg-white border-gray-100 text-gray-400 hover:border-emerald-200 transition-all"
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button 
-                onClick={() => setStep(2)}
+                onClick={() => { setStep(2); setCustomInput(''); }}
                 className="w-full mt-8 py-5 bg-[#0F172A] text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3"
               >
                 Continue to Buying <ArrowRight size={18} />
@@ -97,27 +158,66 @@ export const InterestsModal: React.FC<InterestsModalProps> = ({ user, isOpen, on
                 <h3 className="font-black uppercase text-sm tracking-widest">What are you looking to BUY?</h3>
               </div>
               <p className="text-sm text-gray-500 font-medium leading-relaxed">
-                Select items you frequently source. We'll find network partners who grow or wholesale these.
+                Type or select items you frequently source. We'll find network partners who grow or wholesale these.
               </p>
-              <div className="flex flex-wrap gap-2">
-                {COMMON_PRODUCE.map(item => (
-                  <button
-                    key={item}
-                    onClick={() => toggleInterest(buying, setBuying, item)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center gap-2 ${
-                      buying.includes(item) 
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' 
-                        : 'bg-white border-gray-100 text-gray-400 hover:border-indigo-200'
-                    }`}
-                  >
-                    {buying.includes(item) && <Check size={12} strokeWidth={4} />}
-                    {item}
-                  </button>
-                ))}
+
+              {/* Custom Type Input */}
+              <div className="flex gap-2">
+                <div className="relative flex-1 group">
+                  <input 
+                    type="text" 
+                    placeholder="Type what you need..." 
+                    className="w-full pl-4 pr-4 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:bg-white focus:border-indigo-500 font-bold text-gray-900 transition-all shadow-inner-sm"
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, 'buying')}
+                  />
+                </div>
+                <button 
+                  onClick={() => addCustomItem('buying')}
+                  className="bg-indigo-600 text-white p-4 rounded-2xl shadow-lg active:scale-95 transition-all"
+                >
+                  <Plus size={24}/>
+                </button>
               </div>
+
+              {/* Selection View */}
+              <div className="space-y-4">
+                {buying.length > 0 && (
+                  <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-1">
+                    {buying.map(item => (
+                      <button
+                        key={item}
+                        onClick={() => toggleInterest(buying, setBuying, item)}
+                        className="px-4 py-2 bg-indigo-600 border-2 border-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 group transition-all"
+                      >
+                        <Check size={12} strokeWidth={4} />
+                        {item}
+                        <X size={12} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="h-px bg-gray-50"></div>
+
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Common Market Suggestions</p>
+                <div className="flex flex-wrap gap-2">
+                  {COMMON_PRODUCE.filter(p => !buying.includes(p)).map(item => (
+                    <button
+                      key={item}
+                      onClick={() => toggleInterest(buying, setBuying, item)}
+                      className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 bg-white border-gray-100 text-gray-400 hover:border-indigo-200 transition-all"
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex gap-4 mt-8">
                 <button 
-                  onClick={() => setStep(1)}
+                  onClick={() => { setStep(1); setCustomInput(''); }}
                   className="flex-1 py-5 bg-gray-100 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all"
                 >
                   Back

@@ -1,11 +1,12 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { UserRole, User, AppNotification } from './types';
+import { UserRole, User, AppNotification, RegistrationRequest } from './types';
 import { mockService } from './services/mockDataService';
 import { Dashboard } from './components/Dashboard';
 import { FarmerDashboard } from './components/FarmerDashboard';
 import { ConsumerDashboard } from './components/ConsumerDashboard';
+import { GrocerDashboard } from './components/GrocerDashboard';
+import { GrocerMarketplace } from './components/GrocerMarketplace';
 import { ProductPricing } from './components/ProductPricing';
 import { Marketplace } from './components/Marketplace';
 import { SupplierMarket } from './components/SupplierMarket';
@@ -32,7 +33,7 @@ import {
   ShoppingBag, ShieldCheck, TrendingUp, Target, Plus, ChevronUp, Layers, 
   Sparkles, User as UserIcon, Building, ChevronRight,
   Sprout, Globe, Users2, Circle, LogIn, ArrowRight, Menu, Search, Calculator, BarChart3,
-  Wallet, FileText, CreditCard, Activity, Briefcase, Store
+  Wallet, FileText, CreditCard, Activity, Briefcase, Store, TrendingDown
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, active, onClick, badge = 0 }: any) => (
@@ -96,6 +97,13 @@ const AppLayout = ({ children, user, onLogout }: any) => {
                     <SidebarLink to="/marketplace" icon={ShoppingBag} label="Fresh Catalog" active={isActive('/marketplace')} />
                     <SidebarLink to="/accounts" icon={Wallet} label="Accounts & Billing" active={isActive('/accounts')} />
                 </div>
+              ) : user.role === UserRole.GROCERY ? (
+                <div className="space-y-1">
+                    <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/', true)} />
+                    <SidebarLink to="/grocer/marketplace" icon={TrendingDown} label="Clearance Market" active={isActive('/grocer/marketplace')} />
+                    <SidebarLink to="/orders" icon={ShoppingCart} label="My Orders" active={isActive('/orders')} />
+                    <SidebarLink to="/accounts" icon={Wallet} label="Financials" active={isActive('/accounts')} />
+                </div>
               ) : isPartner ? (
                 <div className="space-y-1">
                     <SidebarLink to="/" icon={LayoutDashboard} label="Order Management" active={isActive('/', true)} />
@@ -108,7 +116,7 @@ const AppLayout = ({ children, user, onLogout }: any) => {
 
         <div className="p-4 border-t border-gray-50 space-y-1">
             <SidebarLink to="/settings" icon={Settings} label="Settings" active={isActive('/settings')} />
-            <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl text-sm font-bold transition-all">
+            <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl text-sm font-bold transition-all uppercase">
                 <LogOut size={20} />
                 <span>Sign Out</span>
             </button>
@@ -167,7 +175,13 @@ const App = () => {
     <Router>
       <AppLayout user={user} onLogout={() => setUser(null)}>
         <Routes>
-          <Route path="/" element={user.role === UserRole.ADMIN ? <AdminDashboard /> : user.role === UserRole.CONSUMER ? <ConsumerDashboard user={user} /> : <Dashboard user={user} />} />
+          <Route path="/" element={
+            user.role === UserRole.ADMIN ? <AdminDashboard /> : 
+            user.role === UserRole.CONSUMER ? <ConsumerDashboard user={user} /> : 
+            user.role === UserRole.GROCERY ? <GrocerDashboard user={user} /> :
+            <Dashboard user={user} />
+          } />
+          <Route path="/grocer/marketplace" element={<GrocerMarketplace user={user} />} />
           <Route path="/login-requests" element={<LoginRequests />} />
           <Route path="/consumer-onboarding" element={<ConsumerOnboarding />} />
           <Route path="/customer-portal" element={<CustomerPortals />} />
@@ -179,6 +193,7 @@ const App = () => {
           <Route path="/inventory" element={<Inventory items={mockService.getAllInventory()} />} />
           <Route path="/accounts" element={<Accounts user={user} />} />
           <Route path="/settings" element={<SettingsComponent user={user} />} />
+          <Route path="/orders" element={<CustomerOrders user={user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppLayout>
@@ -189,10 +204,11 @@ const App = () => {
 const AuthModal = ({ isOpen, onClose, step, setStep, onAutoLogin }: any) => {
     if (!isOpen) return null;
     const demoLogins = [
-        { label: 'ADMIN HQ', email: 'admin@pz.com' },
-        { label: 'WHOLESALER', email: 'sarah@fresh.com' },
-        { label: 'FARMER', email: 'bob@greenvalley.com' },
-        { label: 'BUYER', email: 'alice@cafe.com' },
+        { label: 'ADMIN HQ', email: 'admin@pz.com', color: 'bg-slate-50 border-slate-100 hover:bg-slate-100' },
+        { label: 'WHOLESALER', email: 'sarah@fresh.com', color: 'bg-blue-50 border-blue-100 hover:bg-blue-100' },
+        { label: 'FARMER', email: 'bob@greenvalley.com', color: 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100' },
+        { label: 'BUYER (CAFÉ)', email: 'alice@cafe.com', color: 'bg-indigo-50 border-indigo-100 hover:bg-indigo-100' },
+        { label: 'GROCERY BUYER', email: 'gary@grocer.com', color: 'bg-orange-50 border-orange-100 hover:bg-orange-100' },
     ];
 
     return (
@@ -200,22 +216,22 @@ const AuthModal = ({ isOpen, onClose, step, setStep, onAutoLogin }: any) => {
             <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95">
                 <div className="p-8 border-b border-gray-100 flex justify-between items-center">
                     <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase">Portal Access</h2>
-                    <button onClick={onClose} className="text-gray-300 hover:text-gray-600"><X size={28} /></button>
+                    <button onClick={onClose} className="text-gray-300 hover:text-gray-600 transition-all"><X size={28} /></button>
                 </div>
                 <div className="p-10 space-y-6">
-                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest text-center">Development Demo Logins</p>
+                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest text-center">Select Portal Mode</p>
                     <div className="grid grid-cols-1 gap-3">
                         {demoLogins.map(demo => (
                             <button 
                                 key={demo.label} 
                                 onClick={() => onAutoLogin(demo.email)} 
-                                className="flex items-center justify-between p-6 bg-gray-50 hover:bg-emerald-50 rounded-2xl border border-transparent hover:border-emerald-100 transition-all group"
+                                className={`flex items-center justify-between p-6 rounded-2xl border transition-all group ${demo.color}`}
                             >
                                 <div className="text-left">
                                     <span className="text-[11px] font-black text-gray-900 uppercase tracking-widest">{demo.label}</span>
                                     <span className="block text-xs text-gray-400 font-medium">{demo.email}</span>
                                 </div>
-                                <ArrowRight size={20} className="text-gray-300 group-hover:text-emerald-600 transition-all"/>
+                                <ArrowRight size={20} className="text-gray-300 group-hover:text-gray-900 transition-all group-hover:translate-x-1"/>
                             </button>
                         ))}
                     </div>

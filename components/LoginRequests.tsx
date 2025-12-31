@@ -4,206 +4,163 @@ import { useNavigate } from 'react-router-dom';
 import { RegistrationRequest, UserRole } from '../types';
 import { mockService } from '../services/mockDataService';
 import { triggerNativeSms, generateProductDeepLink } from '../services/smsService';
-import { Check, X, Clock, UserCheck, UserX, Info, ShoppingBag, FileText, Calculator, UserPlus, Link as LinkIcon, Copy, Building, User, Mail, Smartphone, MapPin, ChevronRight, CheckCircle, Trash2, Send } from 'lucide-react';
-
-const ManualInviteModal = ({ isOpen, onClose, onInvite }: { isOpen: boolean, onClose: () => void, onInvite: (data: any) => void }) => {
-    const [formData, setFormData] = useState({
-        businessName: '',
-        name: '',
-        email: '',
-        mobile: '',
-        role: UserRole.WHOLESALER as UserRole,
-        location: ''
-    });
-
-    if (!isOpen) return null;
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onInvite(formData);
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
-                    <h2 className="text-xl font-bold text-gray-900 uppercase tracking-tight">Manual Business Invite</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2"><X size={24}/></button>
-                </div>
-                <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                    <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Invitation Type</label>
-                        <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
-                            <button type="button" onClick={() => setFormData({...formData, role: UserRole.WHOLESALER})} className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all ${formData.role === UserRole.WHOLESALER ? 'bg-white text-gray-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Wholesaler / Farmer</button>
-                            <button type="button" onClick={() => setFormData({...formData, role: UserRole.CONSUMER})} className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all ${formData.role === UserRole.CONSUMER ? 'bg-white text-gray-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Buyer / Customer</button>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="relative"><Building className="absolute left-3 top-3.5 text-slate-400" size={18}/><input required placeholder="Business Trading Name" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#043003] outline-none text-sm font-black text-slate-900 placeholder-slate-400" value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} /></div>
-                        <div className="relative"><User className="absolute left-3 top-3.5 text-slate-400" size={18}/><input required placeholder="Key Contact Name" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#043003] outline-none text-sm font-black text-slate-900 placeholder-slate-400" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} /></div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="relative"><Mail className="absolute left-3 top-3.5 text-slate-400" size={18}/><input required type="email" placeholder="Email Address" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#043003] outline-none text-sm font-black text-slate-900 placeholder-slate-400" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} /></div>
-                            <div className="relative"><Smartphone className="absolute left-3 top-3.5 text-slate-400" size={18}/><input placeholder="Mobile (Optional)" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#043003] outline-none text-sm font-black text-slate-900 placeholder-slate-400" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} /></div>
-                        </div>
-                        <div className="relative"><MapPin className="absolute left-3 top-3.5 text-slate-400" size={18}/><input placeholder="Location / Region" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#043003] outline-none text-sm font-black text-slate-900 placeholder-slate-400" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} /></div>
-                    </div>
-
-                    <button type="submit" className="w-full py-4 bg-[#043003] text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all">Generate Invite Link</button>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-const SuccessInviteModal = ({ invite, onClose }: { invite: RegistrationRequest, onClose: () => void }) => {
-    const link = generateProductDeepLink('portal', invite.id.split('-')[1] || invite.id);
-    
-    const copyLink = () => {
-        navigator.clipboard.writeText(link);
-        alert("Link copied to clipboard!");
-    };
-
-    const sendViaSms = () => {
-        if (!invite.consumerData?.mobile) {
-            alert("No mobile number available for this invite.");
-            return;
-        }
-        const msg = `Welcome to Platform Zero! Set up your ${invite.requestedRole} portal here: ${link}`;
-        triggerNativeSms(invite.consumerData.mobile, msg);
-    };
-
-    return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center animate-in zoom-in-95 duration-300">
-                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 text-emerald-600"><LinkIcon size={40} /></div>
-                <h2 className="text-2xl font-black text-gray-900 mb-2">Invite Generated!</h2>
-                <p className="text-gray-500 mb-8">Share this unique setup link with <span className="font-bold text-gray-900">{invite.businessName}</span>.</p>
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 flex items-center gap-3"><input readOnly value={link} className="bg-transparent flex-1 text-xs font-mono text-gray-900 font-bold outline-none" /><button onClick={copyLink} className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm"><Copy size={18}/></button></div>
-                <button onClick={sendViaSms} className="w-full py-4 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 mb-2"><Smartphone size={18}/> Send via SMS App</button>
-                <button onClick={onClose} className="w-full py-4 bg-gray-900 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all">Back to Dashboard</button>
-            </div>
-        </div>
-    );
-};
+/* Added Plus to imports from lucide-react */
+import { 
+  Check, X, Clock, UserPlus, Link as LinkIcon, Copy, Building, 
+  User, Mail, Smartphone, CheckCircle, Calculator, FileText, 
+  Calendar, Send, Trash2, ExternalLink, Plus
+} from 'lucide-react';
 
 export const LoginRequests: React.FC = () => {
     const [requests, setRequests] = useState<RegistrationRequest[]>([]);
-    const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-    const [successInvite, setSuccessInvite] = useState<RegistrationRequest | null>(null);
+    const [approvedLinks, setApprovedLinks] = useState<Record<string, string>>({});
     const navigate = useNavigate();
 
     useEffect(() => {
-        setRequests(mockService.getRegistrationRequests());
-        const interval = setInterval(() => setRequests(mockService.getRegistrationRequests()), 3000);
+        loadRequests();
+        const interval = setInterval(loadRequests, 3000);
         return () => clearInterval(interval);
     }, []);
 
-    const handleApprove = (id: string) => {
-        mockService.approveRegistration(id);
+    const loadRequests = () => {
         setRequests(mockService.getRegistrationRequests());
+    };
+
+    const handleApprove = (req: RegistrationRequest) => {
+        mockService.approveRegistration(req.id);
+        // Generate a unique onboarding link for this user
+        const setupLink = `${window.location.origin}/#/setup/${req.id.split('-').pop()}`;
+        setApprovedLinks(prev => ({ ...prev, [req.id]: setupLink }));
+        loadRequests();
     };
 
     const handleReject = (id: string) => {
-        mockService.rejectRegistration(id);
-        setRequests(mockService.getRegistrationRequests());
+        if (confirm("Are you sure you want to deny this request?")) {
+            mockService.rejectRegistration(id);
+            loadRequests();
+        }
     };
 
     const handleGenerateQuote = (req: RegistrationRequest) => {
-        // Navigate to quote generator with pre-filled state including invoice file
-        navigate('/pricing-requests', { 
-            state: { 
-                customerName: req.businessName,
-                customerLocation: req.consumerData?.location || '',
-                invoiceFile: req.consumerData?.invoiceFile || null, // THIS IS KEY: Pass the stored base64
-                weeklySpend: req.consumerData?.weeklySpend || 0,
-                orderFreq: req.consumerData?.orderFrequency || 'Weekly'
-            } 
-        });
+        navigate('/pricing-requests', { state: { req } });
     };
 
-    const handleManualInvite = (data: any) => {
-        const invite = mockService.createManualInvite(data);
-        setRequests(mockService.getRegistrationRequests());
-        setIsManualModalOpen(false);
-        setSuccessInvite(invite);
+    const handleBookMeeting = (req: RegistrationRequest) => {
+        const subject = encodeURIComponent(`Platform Zero Onboarding: ${req.businessName}`);
+        const body = encodeURIComponent(`Hi ${req.name},\n\nThanks for applying to Platform Zero as a ${req.requestedRole}. We'd love to jump on a quick 15-minute call to walk you through the marketplace and finalize your setup.\n\nPlease book a time here: https://calendly.com/pz-onboarding\n\nBest regards,\nPZ Admin`);
+        window.location.href = `mailto:${req.email}?subject=${subject}&body=${body}`;
     };
 
-    const handleDelete = (id: string) => {
-        if(confirm("Permanently delete this request?")) {
-            mockService.deleteRegistrationRequest(id);
-            setRequests(mockService.getRegistrationRequests());
-        }
-    }
+    const handleTextLink = (req: RegistrationRequest, link: string) => {
+        const msg = `Hi ${req.name}! Your Platform Zero account for ${req.businessName} is approved. Complete your setup here: ${link}`;
+        triggerNativeSms(req.consumerData?.mobile || '0400000000', msg);
+    };
 
     const pending = requests.filter(r => r.status === 'Pending');
 
     return (
-        <div className="space-y-8 pb-20">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="space-y-8 pb-20 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-2">
                 <div>
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Login Requests</h1>
-                    <p className="text-gray-500 font-medium">Review and approve new business access requests.</p>
+                    <h1 className="text-3xl font-black text-gray-900 tracking-tight uppercase">Login Requests</h1>
+                    <p className="text-gray-500 font-medium">Review new signups and provision network access.</p>
                 </div>
-                <button 
-                    onClick={() => setIsManualModalOpen(true)}
-                    className="px-6 py-3 bg-[#043003] text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg hover:bg-black transition-all flex items-center gap-2"
-                >
-                    <UserPlus size={18}/> Manual Invite
-                </button>
             </div>
 
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-8 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                     <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3">
-                        <Clock size={24} className="text-orange-500"/> Pending Review
+                        <Clock size={24} className="text-orange-500"/> Incoming Applicants
                     </h2>
+                    <span className="bg-white border border-gray-200 text-gray-400 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{pending.length} Waiting</span>
                 </div>
                 
                 <div className="divide-y divide-gray-100">
                     {pending.length === 0 ? (
-                        <div className="p-20 text-center text-gray-400">
-                            <CheckCircle size={48} className="mx-auto mb-4 opacity-20"/>
-                            <p className="font-bold uppercase tracking-widest text-xs">No pending requests</p>
+                        <div className="p-32 text-center text-gray-400">
+                            <CheckCircle size={64} className="mx-auto mb-6 opacity-10"/>
+                            <p className="font-black uppercase tracking-[0.2em] text-xs">No pending applications</p>
                         </div>
                     ) : (
                         pending.map(req => (
-                            <div key={req.id} className="p-8 hover:bg-gray-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                <div className="flex gap-5">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-sm ${req.requestedRole === UserRole.CONSUMER ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                        {req.businessName.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <h3 className="font-black text-gray-900 text-lg leading-tight mb-1">{req.businessName}</h3>
-                                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">{req.requestedRole} Request</p>
-                                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400 font-bold uppercase">
-                                            <span className="flex items-center gap-1.5"><User size={14}/> {req.name}</span>
-                                            <span className="flex items-center gap-1.5"><Mail size={14}/> {req.email}</span>
-                                            {req.consumerData?.location && <span className="flex items-center gap-1.5"><MapPin size={14}/> {req.consumerData.location}</span>}
-                                            {req.consumerData?.invoiceFile && (
-                                                <span className="flex items-center gap-1.5 text-emerald-600">
-                                                    <FileText size={14}/> Invoice Attached
+                            <div key={req.id} className="p-8 hover:bg-gray-50/30 transition-colors">
+                                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                                    <div className="flex gap-6">
+                                        <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center font-black text-2xl shadow-inner-sm shrink-0 ${
+                                            req.requestedRole === UserRole.FARMER ? 'bg-emerald-100 text-emerald-700' : 
+                                            req.requestedRole === UserRole.WHOLESALER ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'
+                                        }`}>
+                                            {req.businessName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-3 mb-1">
+                                                <h3 className="font-black text-gray-900 text-xl tracking-tight uppercase">{req.businessName}</h3>
+                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${
+                                                    req.requestedRole === UserRole.FARMER ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'
+                                                }`}>
+                                                    {req.requestedRole}
                                                 </span>
-                                            )}
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-6 text-[10px] text-gray-400 font-black uppercase tracking-tight mt-2">
+                                                <span className="flex items-center gap-2"><User size={14} className="text-gray-300"/> {req.name}</span>
+                                                <span className="flex items-center gap-2"><Mail size={14} className="text-gray-300"/> {req.email}</span>
+                                                <span className="flex items-center gap-2 text-indigo-500"><Smartphone size={14}/> {req.consumerData?.mobile || '04xx xxx xxx'}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <button onClick={() => handleDelete(req.id)} className="p-3 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={20}/></button>
-                                    
-                                    {/* Action: Quote Generator Transition */}
-                                    <button 
-                                        onClick={() => handleGenerateQuote(req)} 
-                                        className="px-6 py-3 bg-white border border-gray-200 text-indigo-600 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-indigo-50 hover:border-indigo-200 transition-all flex items-center gap-2"
-                                    >
-                                        <Calculator size={16}/> Generate Quote
-                                    </button>
 
-                                    <button onClick={() => handleReject(req.id)} className="px-6 py-3 bg-white border border-gray-200 text-gray-500 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all">Reject</button>
-                                    
-                                    <button onClick={() => handleApprove(req.id)} className="px-8 py-3 bg-emerald-600 text-white font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-emerald-700 shadow-md transition-all flex items-center gap-2">
-                                        <Check size={16}/> Approve Access
-                                    </button>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        {approvedLinks[req.id] ? (
+                                            <div className="flex items-center gap-2 animate-in zoom-in-95">
+                                                <div className="bg-gray-100 border border-gray-200 px-4 py-3 rounded-xl flex items-center gap-3">
+                                                    <LinkIcon size={14} className="text-indigo-600"/>
+                                                    <span className="text-[10px] font-mono font-black text-gray-500 truncate max-w-[120px]">{approvedLinks[req.id]}</span>
+                                                </div>
+                                                <button 
+                                                    onClick={() => handleTextLink(req, approvedLinks[req.id])}
+                                                    className="bg-indigo-600 text-white p-3 rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
+                                                >
+                                                    <Smartphone size={18}/>
+                                                    <span className="text-[10px] font-black uppercase">Text Link</span>
+                                                </button>
+                                                <button 
+                                                    onClick={() => { delete approvedLinks[req.id]; setApprovedLinks({...approvedLinks}); }}
+                                                    className="p-3 text-gray-300 hover:text-gray-600"
+                                                >
+                                                    <X size={20}/>
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {req.consumerData?.invoiceFile && (
+                                                    <button 
+                                                        onClick={() => handleGenerateQuote(req)}
+                                                        className="px-6 py-3.5 bg-indigo-50 text-indigo-600 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center gap-2 shadow-sm border border-indigo-100"
+                                                    >
+                                                        <Calculator size={16}/> Build Quote
+                                                    </button>
+                                                )}
+                                                <button 
+                                                    onClick={() => handleBookMeeting(req)}
+                                                    className="px-6 py-3.5 bg-white border-2 border-indigo-100 text-indigo-600 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2 shadow-sm"
+                                                >
+                                                    <Calendar size={16}/> Book Meeting
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleReject(req.id)}
+                                                    className="px-6 py-3.5 bg-white border-2 border-red-50 text-red-400 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-red-50 transition-all"
+                                                >
+                                                    Deny
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleApprove(req)}
+                                                    className="px-8 py-3.5 bg-emerald-600 text-white font-black rounded-xl text-[10px] uppercase tracking-[0.15em] hover:bg-emerald-700 shadow-xl shadow-emerald-100 transition-all flex items-center gap-2 active:scale-95"
+                                                >
+                                                    <CheckCircle size={18}/> Approve Trade
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         ))
@@ -211,8 +168,21 @@ export const LoginRequests: React.FC = () => {
                 </div>
             </div>
 
-            <ManualInviteModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} onInvite={handleManualInvite} />
-            {successInvite && <SuccessInviteModal invite={successInvite} onClose={() => setSuccessInvite(null)} />}
+            <div className="bg-white rounded-[2.5rem] p-10 border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-12 opacity-[0.03] transform rotate-12 group-hover:scale-110 transition-transform pointer-events-none">
+                    <UserPlus size={180}/>
+                </div>
+                <div className="relative z-10 text-center md:text-left">
+                    <h3 className="text-2xl font-black text-gray-900 tracking-tight uppercase mb-2">Need to manual invite?</h3>
+                    <p className="text-gray-500 font-medium max-w-md">Instantly provision a profile and generate a setup link without waiting for an application.</p>
+                </div>
+                <button 
+                    onClick={() => navigate('/consumer-onboarding')}
+                    className="relative z-10 px-10 py-5 bg-[#0F172A] text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl hover:bg-black transition-all flex items-center justify-center gap-3 active:scale-95"
+                >
+                    <Plus size={20}/> Manual Provision
+                </button>
+            </div>
         </div>
     );
 };

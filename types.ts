@@ -181,6 +181,8 @@ export interface Customer {
 export interface SupplierPriceRequestItem {
   productId: string;
   productName: string;
+  qty: number;
+  invoicePrice: number;
   targetPrice: number;
   offeredPrice?: number;
   isMatchingTarget?: boolean;
@@ -234,23 +236,10 @@ export interface LogisticsDetails {
   deliveryLocation?: string;
 }
 
-export interface FormField {
-  id: string;
-  label: string;
-  type: 'text' | 'textarea' | 'number' | 'checkbox';
-  required: boolean;
-}
-
-export interface FormSection {
-  id: string;
-  title: string;
-  fields: FormField[];
-}
-
 export interface OnboardingFormTemplate {
   id: string;
   role: UserRole;
-  sections: FormSection[];
+  sections: any[];
 }
 
 export interface RegistrationRequest {

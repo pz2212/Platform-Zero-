@@ -1,11 +1,12 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, UserRole, SupplierPriceRequest, SupplierPriceRequestItem, Product, InventoryItem } from '../types';
 import { mockService } from '../services/mockDataService';
 import { 
   Store, MapPin, Tag, MessageSquare, ChevronDown, ChevronUp, ShoppingCart, 
   X, CheckCircle, Bell, DollarSign, Truck, Send, 
-  TrendingUp, Loader2, Users, Zap, Star, AlertCircle, Package, ArrowRight
+  TrendingUp, Loader2, Users, Zap, Star, AlertCircle, Package, ArrowRight,
+  /* Fix line 10: Added missing HelpCircle import */
+  HelpCircle
 } from 'lucide-react';
 import { ChatDialog } from './ChatDialog';
 
@@ -57,69 +58,104 @@ const PriceRequestResponse: React.FC<{ request: SupplierPriceRequest, onUpdate: 
             items: localItems
         };
         mockService.updateSupplierPriceRequest(request.id, updatedReq);
+        
+        // Notify Admin
+        mockService.addAppNotification(
+            'u1', 
+            'Price Match Response Received', 
+            `${mockService.getAllUsers().find(u => u.id === request.supplierId)?.businessName} has responded to the ${request.customerContext} audit.`, 
+            'PRICE_REQUEST'
+        );
+
         setTimeout(() => {
             setIsSubmitting(false);
             onUpdate();
-            alert("Pricing submitted to Platform Zero Admin!");
+            alert("Pricing response submitted to PZ HQ!");
         }, 800);
     };
 
     return (
-        <div className="bg-white rounded-3xl border border-indigo-100 p-6 shadow-sm animate-in zoom-in-95 duration-300">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <div>
-                    <h3 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2 uppercase">
-                        <TrendingUp className="text-indigo-600" size={20}/> Lead ID: #{request.id.split('-').pop()}
-                    </h3>
-                    <div className="flex items-center gap-4 mt-1 text-gray-400 font-bold text-[9px] uppercase tracking-widest">
-                        <span className="flex items-center gap-1.5"><MapPin size={10}/> {request.customerLocation}</span>
-                        <span className="flex items-center gap-1.5"><Tag size={10}/> {request.items.length} Line Items</span>
+        <div className="bg-white rounded-[2.5rem] border-2 border-indigo-100 p-8 shadow-2xl animate-in zoom-in-95 duration-300 mb-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+                <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><TrendingUp size={28}/></div>
+                    <div>
+                        <h3 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-3 uppercase">
+                            Admin Price Sourcing Lead
+                        </h3>
+                        <div className="flex items-center gap-6 mt-1 text-gray-400 font-bold text-[10px] uppercase tracking-widest">
+                            <span className="flex items-center gap-2"><MapPin size={12} className="text-indigo-400"/> Region Restricted</span>
+                            <span className="flex items-center gap-2"><Tag size={12} className="text-indigo-400"/> {request.items.length} Product Varieties</span>
+                        </div>
                     </div>
                 </div>
-                <div className="bg-indigo-50 px-3 py-1.5 rounded-lg text-indigo-700 font-black text-[9px] uppercase tracking-widest border border-indigo-100">
-                    Awaiting Quote
+                <div className="bg-orange-50 px-6 py-2.5 rounded-xl text-orange-600 font-black text-[10px] uppercase tracking-[0.2em] border border-orange-100 animate-pulse">
+                    Offer Pending
                 </div>
             </div>
 
-            <div className="overflow-x-auto mb-6">
+            <div className="bg-indigo-50/30 rounded-3xl p-6 mb-8 border border-indigo-100/50">
+                 <p className="text-xs text-indigo-900 font-medium leading-relaxed">
+                     <span className="font-black">Direct Assignment:</span> Match the "PZ Target Rate" to secure this customer's weekly volume. Original invoice details are hidden for privacy.
+                 </p>
+            </div>
+
+            <div className="overflow-x-auto mb-8">
                 <table className="w-full text-left">
-                    <thead className="bg-gray-50/50 text-[9px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                    <thead className="bg-gray-50/50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                         <tr>
-                            <th className="px-4 py-3">Product</th>
-                            <th className="px-4 py-3">PZ Target</th>
-                            <th className="px-4 py-3 text-center">Match?</th>
-                            <th className="px-4 py-3">Your Offer</th>
-                            <th className="px-4 py-3 text-right">Win Likelihood</th>
+                            <th className="px-6 py-4">Product</th>
+                            <th className="px-6 py-4 text-right">Avg Spend / Week</th>
+                            <th className="px-6 py-4 text-right">Wholesale Target Price</th>
+                            <th className="px-6 py-4 text-center">Can match?</th>
+                            <th className="px-6 py-4">Your Price</th>
+                            <th className="px-6 py-4 text-right">Win Probability</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {localItems.map((item, idx) => {
                             const prob = WinProbability({ target: item.targetPrice, offered: item.offeredPrice || 0 });
+                            const weeklySpend = item.qty * item.invoicePrice;
+                            
                             return (
-                                <tr key={idx} className="group hover:bg-gray-50/30 transition-colors">
-                                    <td className="px-4 py-4 font-black text-gray-900 text-sm tracking-tight">{item.productName}</td>
-                                    <td className="px-4 py-4 font-black text-indigo-600 text-base">${item.targetPrice.toFixed(2)}</td>
-                                    <td className="px-4 py-4">
-                                        <div className="flex justify-center gap-1 bg-gray-100 p-1 rounded-lg w-fit mx-auto shadow-inner-sm">
-                                            <button onClick={() => handleToggleMatch(idx, true)} className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${item.isMatchingTarget ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Yes</button>
-                                            <button onClick={() => handleToggleMatch(idx, false)} className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all ${!item.isMatchingTarget ? 'bg-red-500 text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>No</button>
+                                <tr key={idx} className="group hover:bg-gray-50/50 transition-colors">
+                                    <td className="px-6 py-6">
+                                        <div className="font-black text-gray-900 text-base tracking-tight uppercase">{item.productName}</div>
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase mt-1">Est. {item.qty} units/week</div>
+                                    </td>
+                                    <td className="px-6 py-6 text-right font-bold text-gray-500 text-lg">${weeklySpend.toFixed(2)}</td>
+                                    <td className="px-6 py-6 text-right font-black text-indigo-600 text-xl tracking-tighter bg-indigo-50/10">${item.targetPrice.toFixed(2)}</td>
+                                    <td className="px-6 py-6">
+                                        <div className="flex justify-center gap-1.5 bg-gray-100 p-1.5 rounded-xl w-fit mx-auto shadow-inner-sm">
+                                            <button 
+                                                onClick={() => handleToggleMatch(idx, true)} 
+                                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${item.isMatchingTarget ? 'bg-[#043003] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                                            >
+                                                {item.isMatchingTarget && <CheckCircle size={14}/>} YES
+                                            </button>
+                                            <button 
+                                                onClick={() => handleToggleMatch(idx, false)} 
+                                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${!item.isMatchingTarget ? 'bg-red-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                                            >
+                                                {!item.isMatchingTarget && <X size={14}/>} NO
+                                            </button>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-4">
-                                        <div className="relative w-24">
-                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-black text-[10px]">$</span>
+                                    <td className="px-6 py-6">
+                                        <div className="relative w-32 group">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-black text-xs">$</span>
                                             <input 
                                                 type="number" step="0.01" disabled={item.isMatchingTarget}
-                                                className="w-full pl-5 pr-2 py-1.5 rounded-lg text-xs font-black transition-all outline-none border border-gray-200 focus:border-indigo-500"
+                                                className={`w-full pl-7 pr-3 py-3 rounded-xl text-sm font-black transition-all outline-none border-2 ${item.isMatchingTarget ? 'bg-gray-100 border-transparent text-gray-400' : 'bg-white border-indigo-100 focus:border-indigo-500'}`}
                                                 value={item.offeredPrice}
                                                 onChange={e => handlePriceChange(idx, e.target.value)}
                                             />
                                         </div>
                                     </td>
-                                    <td className="px-4 py-4 text-right">
-                                        <span className={`text-xs font-black ${prob.color}`}>{prob.label}</span>
-                                        <div className="w-20 h-1 bg-gray-100 rounded-full mt-1 overflow-hidden ml-auto">
-                                            <div className={`h-full ${prob.color.replace('text-', 'bg-')}`} style={{width: `${prob.percent}%`}}></div>
+                                    <td className="px-6 py-6 text-right">
+                                        <span className={`text-[10px] font-black uppercase tracking-widest ${prob.color}`}>{prob.label}</span>
+                                        <div className="w-24 h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden ml-auto">
+                                            <div className={`h-full ${prob.color.replace('text-', 'bg-')} transition-all duration-1000`} style={{width: `${prob.percent}%`}}></div>
                                         </div>
                                     </td>
                                 </tr>
@@ -129,12 +165,13 @@ const PriceRequestResponse: React.FC<{ request: SupplierPriceRequest, onUpdate: 
                 </table>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-gray-50">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-6 pt-8 border-t border-gray-100">
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Confidential assignment • Platform Zero Network</p>
                 <button 
                     onClick={handleSubmit} disabled={isSubmitting}
-                    className="px-8 py-3 bg-[#0F172A] text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full sm:w-auto px-12 py-5 bg-[#0F172A] text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50 active:scale-[0.98]"
                 >
-                    {isSubmitting ? <Loader2 size={16} className="animate-spin"/> : <><Send size={14}/> Submit Proposal</>}
+                    {isSubmitting ? <Loader2 size={18} className="animate-spin"/> : <><Send size={18}/> Submit Response</>}
                 </button>
             </div>
         </div>
@@ -181,28 +218,49 @@ export const SupplierMarket: React.FC<SupplierMarketProps> = ({ user }) => {
 
   const refreshData = () => {
     const allUsers = mockService.getAllUsers();
-    const potentialSuppliers = allUsers
+    
+    // 1. Dynamic Matching: Find people who are selling what I want to buy
+    const matchingSuppliers = allUsers
       .filter(u => u.id !== user.id && (u.role === UserRole.FARMER || u.role === UserRole.WHOLESALER))
+      .filter(u => {
+          // If I have buying interests, find people who sell them
+          const matchingSelling = u.activeSellingInterests?.some(item => user.activeBuyingInterests?.includes(item));
+          return matchingSelling;
+      })
       .sort((a, b) => {
-          const aMatch = a.activeSellingInterests?.some(si => user.activeBuyingInterests?.includes(si)) ? 1 : 0;
-          const bMatch = b.activeSellingInterests?.some(si => user.activeBuyingInterests?.includes(si)) ? 1 : 0;
-          return bMatch - aMatch;
+          const aCount = a.activeSellingInterests?.filter(i => user.activeBuyingInterests?.includes(i)).length || 0;
+          const bCount = b.activeSellingInterests?.filter(i => user.activeBuyingInterests?.includes(i)).length || 0;
+          return bCount - aCount;
       });
-    setSuppliers(potentialSuppliers);
 
-    const buyers = [
-        { id: 'wh-1', businessName: 'Melbourne Fresh Distributors', product: 'Broccoli', qty: '250kg', priority: 'HIGH' },
-        { id: 'wh-2', businessName: 'Sydney Premium Produce', product: 'Asparagus', qty: '180kg', priority: 'MEDIUM' },
-        { id: 'wh-3', businessName: 'Brisbane Organic Wholesale', product: 'Carrots', qty: '300kg', priority: 'LOW' },
-        { id: 'wh-4', businessName: 'Metro Food Services', product: 'Potatoes', qty: '500kg', priority: 'MEDIUM' }
-    ];
-    setDemandMatches(buyers);
+    setSuppliers(matchingSuppliers);
 
+    // 2. Dynamic Demand: Find people who want to buy what I am selling
+    const potentialBuyers = allUsers
+        .filter(u => u.id !== user.id && (u.role === UserRole.FARMER || u.role === UserRole.WHOLESALER))
+        .filter(u => {
+            const isBuyingWhatISell = u.activeBuyingInterests?.some(item => user.activeSellingInterests?.includes(item));
+            return isBuyingWhatISell;
+        })
+        .map(u => {
+            const sharedInterests = u.activeBuyingInterests?.filter(i => user.activeSellingInterests?.includes(i));
+            return {
+                id: u.id,
+                businessName: u.businessName,
+                product: sharedInterests?.[0] || 'Produce',
+                qty: 'Negotiable',
+                priority: 'HIGH'
+            };
+        });
+
+    setDemandMatches(potentialBuyers);
+
+    // 3. Admin Price Requests
     const priceReqs = mockService.getSupplierPriceRequests(user.id).filter(r => r.status === 'PENDING');
     setActiveRequests(priceReqs);
 
     const invMap: Record<string, InventoryItem[]> = {};
-    potentialSuppliers.forEach(supplier => {
+    matchingSuppliers.forEach(supplier => {
         const items = mockService.getInventoryByOwner(supplier.id).filter(i => i.status === 'Available');
         if (items.length > 0) invMap[supplier.id] = items;
     });
@@ -249,20 +307,34 @@ export const SupplierMarket: React.FC<SupplierMarketProps> = ({ user }) => {
             <p className="text-gray-400 font-bold text-xs tracking-tight mt-1">Cross-referencing global demand with your supply network.</p>
         </div>
 
-        {/* --- READY TO PURCHASE WHOLESALERS SECTION (SCREENSHOT MATCH) --- */}
+        {/* --- PRICE ASSIGNMENTS (PZ HQ Sourcing) --- */}
+        {activeRequests.length > 0 && (
+            <div className="space-y-4 px-2">
+                {activeRequests.map(req => (
+                    <PriceRequestResponse key={req.id} request={req} onUpdate={() => refreshData()} />
+                ))}
+            </div>
+        )}
+
+        {/* --- DYNAMIC BUYER MATCHES --- */}
         <div className="bg-[#F0F7FF] rounded-[2rem] border border-[#D1E9FF] p-6 md:p-8 space-y-6 shadow-sm">
             <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-[#2563EB] shadow-sm border border-blue-50">
                     <Users size={22} />
                 </div>
                 <div>
-                    <h2 className="text-lg font-black text-[#0F172A] tracking-tight">Ready to Purchase Wholesalers</h2>
-                    <p className="text-[#3B82F6] font-bold text-xs">Allocated wholesalers ready to purchase products needing quick sale</p>
+                    <h2 className="text-lg font-black text-[#0F172A] tracking-tight uppercase">Incoming Network Demand</h2>
+                    <p className="text-[#3B82F6] font-bold text-xs">Wholesalers & Farmers looking to purchase items you sell</p>
                 </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {demandMatches.map((buyer, idx) => {
+                {demandMatches.length === 0 ? (
+                    <div className="col-span-full py-12 text-center text-gray-400 border-2 border-dashed border-blue-100 rounded-3xl">
+                        <Users size={32} className="mx-auto mb-2 opacity-20" />
+                        <p className="text-xs font-black uppercase tracking-widest">No active buying matches found</p>
+                    </div>
+                ) : demandMatches.map((buyer, idx) => {
                     const isDropdownOpen = activeDropdownId === buyer.id;
                     return (
                         <div key={idx} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm transition-all hover:shadow-md hover:scale-[1.005]">
@@ -272,7 +344,7 @@ export const SupplierMarket: React.FC<SupplierMarketProps> = ({ user }) => {
                                         <h3 className="text-base font-black text-[#0F172A] tracking-tight uppercase leading-tight">{buyer.businessName}</h3>
                                         <div className="flex items-center gap-2 text-[#3B82F6] mt-1">
                                             <AlertCircle size={14} className="shrink-0" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest leading-none">NEEDS: {buyer.product.toUpperCase()} {buyer.qty}</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest leading-none">NEEDS: {buyer.product.toUpperCase()} ({buyer.qty})</span>
                                         </div>
                                     </div>
                                     <span className={`inline-block px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
@@ -280,7 +352,7 @@ export const SupplierMarket: React.FC<SupplierMarketProps> = ({ user }) => {
                                         buyer.priority === 'MEDIUM' ? 'bg-orange-50 text-orange-600' : 
                                         'bg-emerald-50 text-emerald-600'
                                     }`}>
-                                        {buyer.priority} PRIORITY
+                                        {buyer.priority} PRIORITY MATCH
                                     </span>
                                 </div>
                                 <div className="relative">
@@ -336,7 +408,7 @@ export const SupplierMarket: React.FC<SupplierMarketProps> = ({ user }) => {
                                         disabled={isSubmittingOffer || !offerForm.price}
                                         className="w-full py-3.5 bg-[#0F172A] text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-black transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
                                     >
-                                        {isSubmittingOffer ? <Loader2 size={14} className="animate-spin"/> : <><Send size={14}/> Send back to supplier</>}
+                                        {isSubmittingOffer ? <Loader2 size={14} className="animate-spin"/> : <><Send size={14}/> Send Direct Match Offer</>}
                                     </button>
                                 </div>
                             )}
@@ -346,7 +418,7 @@ export const SupplierMarket: React.FC<SupplierMarketProps> = ({ user }) => {
             </div>
         </div>
 
-        {/* --- SUPPLY SIDE: FARMERS & WHOLESALERS YOU WANT TO BUY FROM (COMPACT) --- */}
+        {/* --- DYNAMIC SUPPLIER MATCHES --- */}
         <div className="space-y-5 pt-6">
             <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-3">
@@ -354,46 +426,40 @@ export const SupplierMarket: React.FC<SupplierMarketProps> = ({ user }) => {
                         <Store size={20}/>
                     </div>
                     <div>
-                        <h2 className="text-lg font-black text-gray-900 tracking-tight uppercase leading-none">Suppliers to purchase from</h2>
-                        <p className="text-gray-400 font-bold text-xs tracking-tight mt-1">Selling produce matching your buying interests</p>
+                        <h2 className="text-lg font-black text-gray-900 tracking-tight uppercase leading-none">Suppliers Matching Your Needs</h2>
+                        <p className="text-gray-400 font-bold text-xs tracking-tight mt-1">Produce matching your buying interests</p>
                     </div>
                 </div>
-                <button className="bg-white border border-gray-200 text-gray-400 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:text-gray-900 transition-all flex items-center gap-2">
-                    <Star size={12}/> Manage Favorites
-                </button>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
-                {suppliers.filter(s => inventoryMap[s.id]).map(supplier => {
-                    const items = inventoryMap[supplier.id];
+                {suppliers.length === 0 ? (
+                    <div className="py-20 text-center bg-white border border-gray-100 rounded-3xl">
+                        <HelpCircle size={40} className="mx-auto mb-4 text-gray-100" />
+                        <p className="text-sm font-black text-gray-300 uppercase tracking-widest">No active suppliers found for your buying interests</p>
+                    </div>
+                ) : suppliers.map(supplier => {
+                    const items = inventoryMap[supplier.id] || [];
                     const isExpanded = expandedSupplierId === supplier.id;
-                    const matchesUserInterest = items.some(item => 
-                        user.activeBuyingInterests?.some(interest => 
-                            getProductName(item.productId).toLowerCase().includes(interest.toLowerCase())
-                        )
-                    );
-
+                    const sharedInterests = supplier.activeSellingInterests?.filter(i => user.activeBuyingInterests?.includes(i)) || [];
+                    
                     return (
-                        <div key={supplier.id} className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all duration-300 hover:shadow-md ${matchesUserInterest ? 'border-indigo-400' : 'border-gray-100'}`}>
+                        <div key={supplier.id} className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all duration-300 hover:shadow-md border-gray-100`}>
                             <div onClick={() => toggleSupplier(supplier.id)} className="p-5 flex flex-col md:flex-row md:items-center justify-between cursor-pointer hover:bg-gray-50/50 transition-colors">
                                 <div className="flex items-center gap-5">
                                     <div className={`h-12 w-12 md:h-14 md:w-14 rounded-xl flex items-center justify-center text-xl font-black shadow-inner-sm relative ${supplier.role === 'FARMER' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
                                         {supplier.businessName.charAt(0)}
-                                        {matchesUserInterest && (
-                                            <div className="absolute -top-2 -right-2 bg-indigo-600 text-white p-1 rounded-full shadow-md border border-white animate-pulse">
-                                                <Zap size={10} fill="currentColor"/>
-                                            </div>
-                                        )}
                                     </div>
                                     <div>
-                                        <div className="flex flex-wrap items-center gap-2">
+                                        <div className="flex wrap items-center gap-2">
                                             <h3 className="text-base md:text-lg font-black text-gray-900 tracking-tight uppercase leading-none">{supplier.businessName}</h3>
                                             <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${supplier.role === 'FARMER' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{supplier.role}</span>
-                                            {matchesUserInterest && <span className="bg-indigo-50 text-indigo-700 text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Signal Match</span>}
                                         </div>
-                                        <div className="flex items-center gap-4 text-[9px] text-gray-400 mt-2 font-bold uppercase tracking-widest">
-                                            <span className="flex items-center gap-1.5"><MapPin size={12} className="text-indigo-300"/> {items[0]?.harvestLocation || 'Australia'}</span>
-                                            <span className="flex items-center gap-1.5"><Tag size={12} className="text-indigo-300"/> {items.length} ACTIVE BATCHES</span>
+                                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                                            {sharedInterests.map(interest => (
+                                                <span key={interest} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[8px] font-black uppercase border border-indigo-100">{interest}</span>
+                                            ))}
+                                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest ml-2 flex items-center gap-1.5"><MapPin size={10} className="text-indigo-300"/> Market Vendor</span>
                                         </div>
                                     </div>
                                 </div>
@@ -404,21 +470,17 @@ export const SupplierMarket: React.FC<SupplierMarketProps> = ({ user }) => {
                             </div>
                             {isExpanded && (
                                 <div className="border-t border-gray-100 bg-gray-50/50 p-5 md:p-6 animate-in slide-in-from-top-2 duration-300">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        {items.map(item => {
-                                            const isPersonalMatch = user.activeBuyingInterests?.some(interest => 
-                                                getProductName(item.productId).toLowerCase().includes(interest.toLowerCase())
-                                            );
-                                            return (
-                                                <div key={item.id} onClick={() => handleProductClick(item, supplier)} className={`bg-white rounded-2xl border p-4 flex flex-col gap-4 hover:shadow-lg transition-all cursor-pointer group shadow-sm ${isPersonalMatch ? 'border-indigo-500 bg-indigo-50/10' : 'border-transparent'}`}>
+                                    {items.length === 0 ? (
+                                        <div className="text-center py-8 text-gray-400">
+                                            <p className="text-xs font-black uppercase tracking-widest">No active catalog listings for this supplier</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                            {items.map(item => (
+                                                <div key={item.id} onClick={() => handleProductClick(item, supplier)} className={`bg-white rounded-2xl border p-4 flex flex-col gap-4 hover:shadow-lg transition-all cursor-pointer group shadow-sm border-transparent`}>
                                                     <div className="relative h-32 w-full rounded-xl overflow-hidden bg-gray-100 border border-gray-50">
                                                         <img src={getProductImage(item.productId)} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"/>
                                                         <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-md px-2 py-1 rounded-lg text-[8px] font-black text-gray-900 uppercase tracking-widest shadow-sm">{item.quantityKg}kg</div>
-                                                        {isPersonalMatch && (
-                                                            <div className="absolute bottom-2 left-2 bg-indigo-600 text-white px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest shadow-md flex items-center gap-1.5">
-                                                                <Zap size={10} fill="currentColor"/> Match
-                                                            </div>
-                                                        )}
                                                     </div>
                                                     <div>
                                                         <div className="font-black text-gray-900 text-sm leading-tight mb-0.5 uppercase tracking-tight truncate">{getProductName(item.productId)}</div>
@@ -428,15 +490,15 @@ export const SupplierMarket: React.FC<SupplierMarketProps> = ({ user }) => {
                                                                 <span className="text-[8px] font-black text-gray-300 uppercase tracking-widest mb-0.5">Rate</span>
                                                                 <span className="font-black text-emerald-600 text-base tracking-tighter">${getProductPrice(item.productId).toFixed(2)}<span className="text-[10px] text-emerald-400 ml-0.5 font-bold">/kg</span></span>
                                                             </div>
-                                                            <div className={`p-2 rounded-xl transition-all shadow-sm ${isPersonalMatch ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400 group-hover:bg-indigo-600 group-hover:text-white'}`}>
+                                                            <div className={`p-2 rounded-xl transition-all shadow-sm bg-gray-100 text-gray-400 group-hover:bg-indigo-600 group-hover:text-white`}>
                                                                 <ShoppingCart size={16}/>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -444,26 +506,6 @@ export const SupplierMarket: React.FC<SupplierMarketProps> = ({ user }) => {
                 })}
             </div>
         </div>
-
-        {/* PRICE REQUESTS SECTION (COMPACT) */}
-        {activeRequests.length > 0 && (
-            <div className="space-y-5 pt-6 border-t border-gray-100">
-                <div className="flex items-center gap-3 px-2">
-                    <div className="bg-orange-500 p-2 rounded-xl text-white shadow-md border border-orange-400">
-                        <Bell size={20}/>
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-black text-gray-900 tracking-tight uppercase leading-none">Admin Price Assignments</h2>
-                        <p className="text-gray-400 font-bold text-xs tracking-tight mt-1">Direct sourcing requests assigned by Platform Zero.</p>
-                    </div>
-                </div>
-                <div className="space-y-6">
-                    {activeRequests.map(req => (
-                        <PriceRequestResponse key={req.id} request={req} onUpdate={() => refreshData()} />
-                    ))}
-                </div>
-            </div>
-        )}
 
         {/* ITEM DETAILS MODAL */}
         {selectedItem && selectedItemSupplier && (

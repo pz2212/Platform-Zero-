@@ -18,7 +18,8 @@ export const ShareModal: React.FC<{
   onClose: () => void;
   onComplete: () => void;
   currentUser: User;
-}> = ({ item, onClose, onComplete, currentUser }) => {
+  overridePrice?: number; // Added to support scanning flow prices
+}> = ({ item, onClose, onComplete, currentUser, overridePrice }) => {
   const product = mockService.getProduct(item.productId);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
@@ -79,6 +80,20 @@ export const ShareModal: React.FC<{
     }
   };
 
+  // Helper for consistent message formatting
+  const getSmsContent = () => {
+    const senderName = currentUser.businessName;
+    const productName = product?.name || 'fresh produce';
+    const priceValue = overridePrice !== undefined ? overridePrice : (product?.defaultPricePerKg || 0);
+    const priceDisplay = priceValue > 0 ? `$${priceValue.toFixed(2)}` : 'market rates';
+    const productLink = generateProductDeepLink('product', item.id, senderName, priceValue);
+    
+    return {
+        text: `Hey there! ${senderName} wants you to view this: fresh ${productName} at ${priceDisplay}. We'd like to connect and chat with you. View and trade here: ${productLink}`,
+        shortLink: "https://pz.io/l/..." // For visual preview
+    };
+  };
+
   const handleSendBlast = () => {
     const targetNumbers = [
       ...customers.filter(c => selectedCustomerIds.includes(c.id)).map(c => c.phone).filter(p => !!p),
@@ -91,18 +106,11 @@ export const ShareModal: React.FC<{
     }
 
     setIsSending(true);
-    
-    const senderName = currentUser.businessName;
-    const productName = product?.name || 'fresh produce';
-    const priceValue = product?.defaultPricePerKg || 0;
-    const priceDisplay = priceValue > 0 ? `$${priceValue.toFixed(2)}` : 'market rates';
-    
-    // Pass everything to deep link so landing matches exactly
-    const productLink = generateProductDeepLink('product', item.id, senderName, priceValue);
-    
-    const smsMessage = `Hey there! ${senderName} wants you to view this: fresh ${productName} at ${priceDisplay}. We'd like to connect and chat with you. View and trade here: ${productLink}`;
+    const content = getSmsContent();
 
-    triggerNativeSms(targetNumbers[0] as string, smsMessage);
+    // In a real app, this might be a bulk SMS API call. 
+    // Here we trigger the native app for the first recipient as per user intent.
+    triggerNativeSms(targetNumbers[0] as string, content.text);
     
     setTimeout(() => {
       alert(`🚀 SMS Dispatch initiated to ${targetNumbers.length} recipients!`);
@@ -110,6 +118,8 @@ export const ShareModal: React.FC<{
       onComplete();
     }, 1200);
   };
+
+  const smsContent = getSmsContent();
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
@@ -126,7 +136,7 @@ export const ShareModal: React.FC<{
           <div className="bg-emerald-50 rounded-3xl p-6 border-2 border-emerald-100 relative shadow-sm">
             <span className="absolute -top-3 left-6 bg-emerald-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">SMS PREVIEW</span>
             <p className="text-sm text-emerald-900 italic leading-relaxed pt-2">
-              "Hey there! <span className="font-bold">{currentUser.businessName}</span> wants you to view this: fresh <span className="font-bold">{product?.name || 'Produce'}</span> at <span className="font-bold">${product?.defaultPricePerKg.toFixed(2) || '0.00'}</span>. We'd like to connect and chat with you. View and trade here: <span className="underline font-bold text-emerald-700">https://pz.io/l/...</span>"
+              "{smsContent.text.replace(/http.*$/, '')}<span className="underline font-bold text-emerald-700">{smsContent.shortLink}</span>"
             </p>
           </div>
 
@@ -214,8 +224,6 @@ export const ShareModal: React.FC<{
   );
 };
 
-/* Dashboard V1 Logic continues below unchanged */
 export const SellerDashboardV1: React.FC<SellerDashboardV1Props> = ({ user, onSwitchVersion }) => {
-    // ... logic remains as is ...
-    return <div/>; // Placeholder for brevity in XML
+    return <div className="p-10 text-center text-gray-400">Simplified View Placeholder</div>;
 }

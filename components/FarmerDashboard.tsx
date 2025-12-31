@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Order, InventoryItem, Product } from '../types';
 import { mockService } from '../services/mockDataService';
@@ -8,6 +9,7 @@ import {
   Edit2, CloudRain, Thermometer, Droplets, SprayCan, FileText, Camera, X, Share2, Search, ChevronDown
 } from 'lucide-react';
 import { AiOpportunityMatcher } from './AiOpportunityMatcher';
+import { InterestsModal } from './InterestsModal';
 
 interface FarmerDashboardProps {
   user: User;
@@ -143,12 +145,20 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
   const [isHarvestModalOpen, setIsHarvestModalOpen] = useState(false);
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [showStatsDropdown, setShowStatsDropdown] = useState(false);
+  const [isInterestsModalOpen, setIsInterestsModalOpen] = useState(false);
 
   const statsDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 5000);
+
+    // Prompt for interests if they are empty
+    if ((!user.activeSellingInterests || user.activeSellingInterests.length === 0) && 
+        (!user.activeBuyingInterests || user.activeBuyingInterests.length === 0)) {
+        setIsInterestsModalOpen(true);
+    }
+
     const handleClickOutside = (event: MouseEvent) => {
       if (statsDropdownRef.current && !statsDropdownRef.current.contains(event.target as Node)) {
         setShowStatsDropdown(false);
@@ -399,7 +409,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
       />
 
       {isSellModalOpen && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-300">
               <div className="bg-white rounded-[3rem] w-full max-w-6xl h-[90vh] overflow-hidden relative shadow-2xl flex flex-col border border-gray-100">
                   <div className="p-10 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <h2 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-4 uppercase"><Camera size={36} className="text-indigo-600"/> Visual Market Capture</h2>
@@ -411,6 +421,13 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ user }) => {
               </div>
           </div>
       )}
+
+      <InterestsModal 
+        user={user}
+        isOpen={isInterestsModalOpen}
+        onClose={() => setIsInterestsModalOpen(false)}
+        onSaved={loadData}
+      />
     </div>
   );
 };

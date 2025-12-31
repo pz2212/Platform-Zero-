@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { User, UserRole, Order, Product, Customer } from '../types';
 import { mockService } from '../services/mockDataService';
@@ -6,9 +7,7 @@ import {
   DollarSign, Calendar as CalendarIcon, ChevronLeft, ChevronRight, 
   Clock, Package, User as UserIcon, CreditCard, Banknote, ChevronDown,
   TrendingUp, ChevronUp, Wallet, ShieldCheck, CheckCircle2, AlertTriangle,
-  ArrowRight, BarChart3, PieChart,
-  // Fix: Added missing icon imports
-  LayoutDashboard, Plus
+  ArrowRight, BarChart3, PieChart, LayoutDashboard, Plus
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 

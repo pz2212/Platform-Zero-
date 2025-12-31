@@ -311,7 +311,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user }) => {
       navigate('/orders');
   };
 
-  const CATEGORIES = ['ALL', 'VEGETABLES', 'FRUIT', 'DELI'];
+  const CATEGORIES = ['ALL', 'VEGETABLES', 'FRUIT'];
   const filtered = products.filter(p => (activeCategory === 'ALL' || p.category.toString().toUpperCase() === activeCategory) && p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (

@@ -99,16 +99,14 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
   const handleAddToInventory = () => {
     if (!analysisResult) return;
     
-    // Find matching product in catalog
     const product = products.find(p => p.name.toLowerCase().includes(analysisResult.name.toLowerCase())) || products[0];
     
-    /* Fixed missing properties: lotNumber and uploadedAt added */
     const newItem: InventoryItem = {
         id: `inv-ai-${Date.now()}`,
         lotNumber: mockService.generateLotId(),
         ownerId: user?.id || 'u2',
         productId: product.id,
-        quantityKg: 100, // Default for quick entry
+        quantityKg: 100,
         status: 'Available',
         harvestDate: new Date().toISOString(),
         harvestLocation: 'Direct via AI Scanner',
@@ -154,8 +152,6 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
     }
   };
 
-  // Mock a temporary item for the share modal to work with
-  /* Fixed missing properties: lotNumber and uploadedAt added */
   const syntheticItem: InventoryItem | null = analysisResult ? {
       id: `tmp-share-${Date.now()}`,
       lotNumber: 'TMP-LOT',
@@ -180,8 +176,6 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        {/* LEFT COLUMN: UPLOAD & PREVIEW */}
         <div className="space-y-6">
             <div 
                 onDragOver={onDragOver}
@@ -189,7 +183,6 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
                 onClick={() => !image && setShowSourceMenu(true)}
                 className={`border-2 border-dashed rounded-[2rem] h-96 flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden bg-white shadow-inner-sm ${image ? 'border-indigo-100 shadow-none' : 'border-gray-200 hover:border-indigo-400 hover:bg-gray-50/50'}`}
             >
-                {/* Hidden Inputs */}
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                 <input type="file" ref={cameraInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleFileChange} />
                 
@@ -213,7 +206,6 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
                     </div>
                 )}
                 
-                {/* Photo Source Menu */}
                 {showSourceMenu && (
                     <div ref={menuRef} className="absolute z-20 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 py-2 w-64 animate-in zoom-in-95 fade-in duration-200">
                         <button onClick={() => fileInputRef.current?.click()} className="w-full text-left px-5 py-3.5 hover:bg-gray-50 flex items-center gap-4 transition-colors">
@@ -313,7 +305,6 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
             )}
         </div>
 
-        {/* RIGHT COLUMN: MATCHED BUYERS */}
         <div className="bg-white rounded-[2rem] shadow-sm border border-gray-200 flex flex-col h-[700px] overflow-hidden">
             <div className="p-8 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                 <div>
@@ -431,6 +422,7 @@ export const AiOpportunityMatcher: React.FC<AiOpportunityMatcherProps> = ({ user
             onClose={() => setIsShareOpen(false)}
             onComplete={() => setIsShareOpen(false)}
             currentUser={user || {id: 'u2', name: ' Sarah Wholesaler', businessName: 'Fresh Wholesalers', role: 'WHOLESALER' as any, email: 'sarah@fresh.com'}}
+            overridePrice={price} // Pass the dynamic scanner price
           />
       )}
     </div>

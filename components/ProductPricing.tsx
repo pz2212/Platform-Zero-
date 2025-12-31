@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, PricingRule, User, InventoryItem, ProductUnit } from '../types';
 import { mockService } from '../services/mockDataService';
@@ -8,8 +9,7 @@ import {
   MoreVertical, ShoppingBag, 
   Share2, PackagePlus, CheckCircle, Plus, Camera, Loader2, ChevronRight,
   Box, Hash, Printer, QrCode, Sparkles, ChevronDown, Pencil, ShoppingCart,
-  /* Added missing Search icon import */
-  Search
+  Search, HandCoins
 } from 'lucide-react';
 
 interface ProductPricingProps {
@@ -124,7 +124,7 @@ const AddInventoryModal = ({ isOpen, onClose, user, products, onComplete, initia
     const [price, setPrice] = useState('');
     const [discountPrice, setDiscountPrice] = useState('');
     const [discountAfterDays, setDiscountAfterDays] = useState('3');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSubmitting, setSubmitting] = useState(false);
     
     const [isNewProductMode, setIsNewProductMode] = useState(false);
     const [newProductName, setNewProductName] = useState('');
@@ -158,7 +158,8 @@ const AddInventoryModal = ({ isOpen, onClose, user, products, onComplete, initia
             return;
         }
 
-        setIsSubmitting(true);
+        // Fix: Changed setIsSubmitting to setSubmitting to match state definition
+        setSubmitting(true);
         const lotId = mockService.generateLotId();
         
         let targetProductId = productId;
@@ -201,7 +202,8 @@ const AddInventoryModal = ({ isOpen, onClose, user, products, onComplete, initia
         mockService.updateProductPrice(targetProductId, parseFloat(price));
 
         setTimeout(() => {
-            setIsSubmitting(false);
+            // Fix: Changed setIsSubmitting to setSubmitting to match state definition
+            setSubmitting(false);
             setNewLotId(lotId);
             onComplete();
             setIsNewProductMode(false);
@@ -537,16 +539,6 @@ export const ProductPricing: React.FC<ProductPricingProps> = ({ user }) => {
                                             </div>
                                             <span className="font-black text-gray-900 text-xs uppercase tracking-widest">Send Quote Link</span>
                                         </button>
-                                        <div className="h-px bg-gray-100 mx-5 my-1"></div>
-                                        <button 
-                                            onClick={() => { setSaleProduct(product); setActiveActionMenu(null); }}
-                                            className="w-full text-left px-5 py-3.5 hover:bg-emerald-50 flex items-center gap-4 group/item transition-colors"
-                                        >
-                                            <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600 group-hover/item:bg-emerald-600 group-hover/item:text-white transition-all">
-                                                <ShoppingCart size={16}/>
-                                            </div>
-                                            <span className="font-black text-emerald-700 text-xs uppercase tracking-widest">Instant Sale</span>
-                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -577,12 +569,20 @@ export const ProductPricing: React.FC<ProductPricingProps> = ({ user }) => {
                                 </div>
                             </div>
                             
-                            <button 
-                                onClick={() => handleProductAddStock(product.id)}
-                                className="w-full py-4 bg-gray-50 border border-gray-100 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 transition-all flex items-center justify-center gap-2 group-hover:border-indigo-200"
-                            >
-                                <Plus size={16}/> Log Batch
-                            </button>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setSaleProduct(product)}
+                                    className="flex-[2] py-4 bg-[#043003] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black shadow-lg shadow-emerald-100 transition-all flex items-center justify-center gap-2 active:scale-95 group-hover:border-indigo-200"
+                                >
+                                    <HandCoins size={16}/> SELL
+                                </button>
+                                <button 
+                                    onClick={() => handleProductAddStock(product.id)}
+                                    className="flex-1 py-4 bg-gray-50 border border-gray-100 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 transition-all flex items-center justify-center gap-2 group-hover:border-indigo-200"
+                                >
+                                    <Plus size={16}/> LOG BATCH
+                                </button>
+                            </div>
                         </div>
                     </div>
                 );

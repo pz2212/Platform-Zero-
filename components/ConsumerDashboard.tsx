@@ -8,7 +8,7 @@ import {
   CheckCircle, Clock, Package, Leaf, ArrowRight, Search,
   X, Loader2, Check, Sparkles, ShoppingCart, AlertTriangle,
   ChevronRight, Minus, Plus, RefreshCcw, Calendar, Edit3, 
-  User as UserIcon
+  User as UserIcon, LayoutGrid, BookOpen
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -731,11 +731,13 @@ const ActiveRunStatus = ({ order, products }: { order: Order, products: Product[
 
 export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({ user }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('Recent Orders'); 
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [checkoutItems, setCheckoutItems] = useState<OrderItem[] | null>(null);
   
+  // Mobile Tab State
+  const [activeMobileFeature, setActiveMobileFeature] = useState<'WEEKLY' | 'AI_QUICK' | 'DELIVERIES'>('WEEKLY');
+
   useEffect(() => {
     const fetchOrders = () => {
         const userOrders = mockService.getOrders(user.id).filter(o => o.buyerId === user.id);
@@ -769,8 +771,15 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({ user }) =>
       navigate('/orders');
   };
 
+  const mobileFeatureTabs = [
+      { id: 'WEEKLY', label: 'Weekly View', icon: Calendar },
+      { id: 'AI_QUICK', label: 'AI Quick Order', icon: Sparkles },
+      { id: 'CATALOG', label: 'Catalog', icon: ShoppingBag, action: () => navigate('/marketplace') },
+      { id: 'DELIVERIES', label: 'Deliveries', icon: Truck }
+  ];
+
   return (
-    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 bg-[#F8FAFC]">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 bg-[#F8FAFC] pb-24">
       {/* Top Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <div className="bg-white p-6 rounded-[1.25rem] shadow-sm border border-gray-100 shrink-0">
@@ -811,7 +820,31 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({ user }) =>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* MOBILE NAVIGATION BAR (Requested Change) */}
+      <div className="md:hidden sticky top-20 z-20 -mx-8 px-8 py-4 bg-[#F8FAFC]/80 backdrop-blur-md border-y border-gray-100">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+              {mobileFeatureTabs.map(tab => (
+                  <button 
+                    key={tab.id}
+                    onClick={() => {
+                        if (tab.action) tab.action();
+                        else setActiveMobileFeature(tab.id as any);
+                    }}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-full text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-2 ${
+                        activeMobileFeature === tab.id 
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' 
+                        : 'bg-white border-gray-50 text-gray-400 hover:border-gray-200'
+                    }`}
+                  >
+                      <tab.icon size={14} strokeWidth={3} />
+                      {tab.label}
+                  </button>
+              ))}
+          </div>
+      </div>
+
+      {/* Desktop Layout - Remains Grid */}
+      <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-8">
             <AiQuickOrder onItemsConfirmed={handleConfirmedItems} catalog={products} />
             
@@ -855,6 +888,54 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({ user }) =>
             )}
             <WeeklyOrderCalendar orders={allOrders} products={products} onReorder={handleConfirmedItems} />
         </div>
+      </div>
+
+      {/* Mobile Dynamic Layout - Based on Tab State */}
+      <div className="md:hidden space-y-8">
+          {activeMobileFeature === 'WEEKLY' && (
+              <div className="animate-in slide-in-from-right-4 duration-500">
+                  <WeeklyOrderCalendar orders={allOrders} products={products} onReorder={handleConfirmedItems} />
+              </div>
+          )}
+          {activeMobileFeature === 'AI_QUICK' && (
+              <div className="animate-in slide-in-from-right-4 duration-500">
+                  <AiQuickOrder onItemsConfirmed={handleConfirmedItems} catalog={products} />
+              </div>
+          )}
+          {activeMobileFeature === 'DELIVERIES' && (
+              <div className="animate-in slide-in-from-right-4 duration-500">
+                  {activeOrderForTracking ? (
+                      <ActiveRunStatus order={activeOrderForTracking} products={products} />
+                  ) : (
+                      <div className="p-12 text-center bg-white rounded-[2rem] border border-gray-100 shadow-sm">
+                          <Truck size={48} className="mx-auto text-gray-100 mb-4" />
+                          <p className="text-gray-400 font-black uppercase text-[10px] tracking-widest">No active deliveries tracked</p>
+                      </div>
+                  )}
+                  <div className="mt-8 bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                    <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/20">
+                        <h2 className="text-base font-black text-gray-900 uppercase tracking-tight">Recent Activity</h2>
+                        <button onClick={() => navigate('/orders')} className="text-emerald-600 font-black text-[9px] uppercase tracking-widest hover:underline">HISTORY</button>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                        {allOrders.slice(0, 3).map(order => (
+                            <div key={order.id} className="p-6 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                                        <ShoppingCart size={18}/>
+                                    </div>
+                                    <div>
+                                        <p className="font-black text-gray-900 text-sm uppercase leading-none">Order #{order.id.split('-').pop()}</p>
+                                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1.5">${order.totalAmount.toFixed(2)}</p>
+                                    </div>
+                                </div>
+                                <span className="px-2 py-1 rounded-lg bg-gray-100 text-gray-400 text-[8px] font-black uppercase tracking-widest">{order.status}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+              </div>
+          )}
       </div>
 
       <CheckoutModal 

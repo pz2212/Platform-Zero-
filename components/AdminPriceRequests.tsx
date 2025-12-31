@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SupplierPriceRequest, User, Customer } from '../types';
 import { mockService } from '../services/mockDataService';
-/* Added Check to imports */
 import { 
   Handshake, Store, CheckCircle, ChevronRight, X, MessageSquare, 
   Clock, AlertCircle, Rocket, MapPin, DollarSign, ArrowLeft, Percent, TrendingUp, Check
@@ -259,7 +258,6 @@ export const AdminPriceRequests: React.FC = () => {
 
       <ChatDialog 
         isOpen={isChatOpen}
-        /* Corrected typo: setChatOpen -> setIsChatOpen */
         onClose={() => setIsChatOpen(false)}
         orderId="QUOTE-NEGOTIATION"
         issueType={chatQuoteContext}

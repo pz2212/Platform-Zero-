@@ -1,12 +1,11 @@
-
 import React, { useState, useRef } from 'react';
 import { 
   Upload, ArrowRight, CheckCircle, Calendar, DollarSign, 
   TrendingUp, FileText, Loader2, MapPin, Mail, Phone, 
   Building, User, Clock, Star, X, Table, ArrowDown, Rocket, ClipboardList, ShieldCheck, CreditCard, Truck, Users, BookOpen, FilePlus, Sprout, Store, ShoppingCart, ChevronDown, UploadCloud, Leaf, TrendingDown, Sparkles
 } from 'lucide-react';
-import { mockService } from '../services/mockDataService';
-import { UserRole } from '../types';
+import { mockService, INDUSTRIES } from '../services/mockDataService';
+import { UserRole, Industry } from '../types';
 import { CompleteProfileModal } from './CompleteProfileModal';
 import { extractInvoiceItems, InvoiceItem } from '../services/geminiService';
 
@@ -31,6 +30,7 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
 
   const [formData, setFormData] = useState({
     role: UserRole.CONSUMER as UserRole,
+    industry: 'Cafe' as Industry,
     businessName: '',
     location: '',
     email: '',
@@ -140,7 +140,7 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
       <div className="max-w-6xl mx-auto px-4 py-8 md:py-12 flex-1 flex flex-col justify-center">
         {step === 1 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start max-w-6xl mx-auto">
-            {/* HERO CONTENT - Now visible on all screen sizes */}
+            {/* HERO CONTENT */}
             <div className="space-y-8 lg:pr-12 animate-in slide-in-from-left-4 duration-700">
               <div className="max-w-xl">
                 <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-black text-[#0F172A] leading-[1.05] mb-6 tracking-tight">
@@ -185,11 +185,9 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
               </div>
 
               <div className="mb-8">
-                 {formData.role === UserRole.CONSUMER ? (
-                     <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">Get Your Savings Analysis</h2>
-                 ) : (
-                     <p className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em] mt-2 animate-in slide-in-from-top-1 text-center w-full">Sign-up Details</p>
-                 )}
+                 <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
+                   {formData.role === UserRole.CONSUMER ? 'Get Your Savings Analysis' : 'Join the Marketplace'}
+                 </h2>
               </div>
 
               <div className="space-y-5">
@@ -217,6 +215,22 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
                   <div>
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">LOCATION</label>
                     <div className="relative"><MapPin size={16} className="absolute left-3.5 top-3.5 text-gray-300"/><input name="location" value={formData.location} onChange={handleInputChange} placeholder="Melbourne, VIC" className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none font-bold text-gray-900 placeholder-gray-300 transition-all" /></div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">INDUSTRY</label>
+                  <div className="relative">
+                    <Store size={16} className="absolute left-3.5 top-3.5 text-gray-300"/>
+                    <select 
+                      name="industry" 
+                      value={formData.industry} 
+                      onChange={handleInputChange} 
+                      className="w-full pl-10 pr-10 py-3.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none font-bold text-gray-900 appearance-none transition-all"
+                    >
+                      {INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3.5 top-4 text-gray-400 pointer-events-none" size={16}/>
                   </div>
                 </div>
 
@@ -255,7 +269,6 @@ export const ConsumerLanding: React.FC<{ onLogin?: () => void }> = ({ onLogin })
           </div>
         )}
         
-        {/* ... rest of the component remains the same (step 2 and step 4 views) ... */}
         {step === 2 && (
           <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in zoom-in-95 duration-500">
              <div className="text-center space-y-4">

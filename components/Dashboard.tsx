@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Order, Product, Customer, SupplierPriceRequest, UserRole, AppNotification, RegistrationRequest, InventoryItem } from '../types';
 import { mockService } from '../services/mockDataService';
@@ -330,7 +331,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3">
                                     <Globe className="text-indigo-600" size={24}/> Wholesale Market
                                 </h3>
-                                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1">Live Network Procurement</p>
+                                <p className="text-[10px] font-black text-indigo-50 uppercase tracking-widest mt-1">Live Network Procurement</p>
                             </div>
                             <button onClick={() => navigate('/grocer/marketplace')} className="p-2 bg-white rounded-xl shadow-sm border border-gray-100 text-gray-400 hover:text-indigo-600 transition-all"><ArrowUpRight size={20}/></button>
                         </div>
@@ -432,7 +433,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 <p className="text-sm font-bold uppercase tracking-widest">No active leads</p>
                               </div>
                           ) : leads.map(lead => (
-                              <div key={lead.id} className="p-6 bg-gray-50 rounded-3xl flex justify-between items-center border border-transparent hover:border-indigo-200 hover:bg-white transition-all shadow-sm group">
+                              <div 
+                                key={lead.id} 
+                                onClick={() => navigate('/login-requests')}
+                                className="p-6 bg-gray-50 rounded-3xl flex justify-between items-center border border-transparent hover:border-indigo-200 hover:bg-white transition-all shadow-sm group cursor-pointer"
+                              >
                                   <div>
                                       <p className="font-black text-gray-900 uppercase text-base leading-none mb-2">{lead.businessName}</p>
                                       <div className="flex items-center gap-3">
@@ -543,7 +548,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 <h3 className="font-black text-gray-900 text-3xl tracking-tighter leading-none mb-3 group-hover:text-indigo-600 transition-colors uppercase">{customer.businessName}</h3>
                                 <p className="text-xs text-gray-400 font-bold uppercase tracking-[0.2em] mb-10">{customer.category}</p>
                             </div>
-                            <button className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-[0.25em] shadow-2xl hover:bg-black transition-all">Open Records</button>
+                            <button 
+                                onClick={() => navigate('/customer-portal')}
+                                className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black text-xs uppercase tracking-[0.25em] shadow-2xl hover:bg-black transition-all"
+                            >
+                                Open Records
+                            </button>
                         </div>
                     );
                 })}

@@ -8,6 +8,21 @@ export enum UserRole {
   GROCERY = 'GROCERY'
 }
 
+export type Industry = 
+  | 'Cafe' 
+  | 'Restaurant' 
+  | 'Pub' 
+  | 'Hotel' 
+  | 'Sporting Club' 
+  | 'RSL' 
+  | 'Casino' 
+  | 'Catering' 
+  | 'Grocery Store' 
+  | 'Airlines' 
+  | 'School' 
+  | 'Aged Care' 
+  | 'Hospital';
+
 export interface AppNotification {
   id: string;
   userId: string;
@@ -58,11 +73,13 @@ export interface User {
   email: string;
   phone?: string;
   category?: string;
+  industry?: Industry;
   dashboardVersion?: 'v1' | 'v2';
   businessProfile?: BusinessProfile;
   activeSellingInterests?: string[];
   activeBuyingInterests?: string[];
   commissionRate?: number;
+  smsNotificationsEnabled?: boolean;
 }
 
 export type ProductUnit = 'KG' | 'Tray' | 'Bin' | 'Tonne' | 'loose' | 'Each' | 'Bag';
@@ -163,6 +180,7 @@ export interface Customer {
   email?: string;
   phone?: string;
   category: string;
+  industry?: Industry;
   location?: string;
   connectedSupplierId?: string;
   connectedSupplierName?: string;
@@ -248,6 +266,7 @@ export interface RegistrationRequest {
   name: string;
   email: string;
   requestedRole: UserRole;
+  industry?: Industry;
   status: 'Pending' | 'Approved' | 'Rejected';
   submittedDate: string;
   paymentTerms?: string;
@@ -265,8 +284,8 @@ export interface Lead {
   id: string;
   businessName: string;
   contactName: string;
-  email: string;
-  phone: string;
+  email?: string;
+  phone?: string;
   location: string;
   source: 'AI_SCAN' | 'MANUAL' | 'REFERRAL';
   status: 'NEW' | 'CONTACTED' | 'QUOTED' | 'CONVERTED';

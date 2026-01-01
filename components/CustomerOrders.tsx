@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, Order, Product } from '../types';
 import { mockService } from '../services/mockDataService';
@@ -75,6 +74,18 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({ user }) => {
       }
   };
 
+  const getStatusStepIndex = (status: string) => {
+    switch (status) {
+      case 'Pending': return 0;
+      case 'Confirmed': return 1;
+      case 'Ready for Delivery':
+      case 'Shipped': return 2;
+      case 'Delivered': return 3;
+      case 'Cancelled': return -1;
+      default: return 0;
+    }
+  };
+
   const toggleItemCheck = (orderId: string, productId: string) => {
       const key = `${orderId}-${productId}`;
       setCheckedItems(prev => ({...prev, [key]: !prev[key]}));
@@ -145,6 +156,8 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({ user }) => {
             displayedOrders.map(order => {
                 const impact = calculateImpact(order);
                 const isImpactOpen = showImpactId === order.id;
+                const statusIndex = getStatusStepIndex(order.status);
+                const steps = ['Pending', 'Confirmed', 'Shipping', 'Delivered'];
 
                 return (
                     <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all animate-in zoom-in-95 duration-200">
@@ -169,17 +182,43 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({ user }) => {
                                 </div>
                             </div>
                             
-                            <div className="flex items-center gap-3 self-end sm:self-center">
-                                <button 
-                                    onClick={() => setShowImpactId(isImpactOpen ? null : order.id)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black uppercase tracking-wider transition-all ${isImpactOpen ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-100' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}
-                                >
-                                    <Leaf size={14} className={isImpactOpen ? 'animate-bounce' : ''}/> {isImpactOpen ? 'Close Report' : 'See Impact Report'}
-                                </button>
-                                <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-widest ${getStatusColor(order.status)} shadow-sm`}>
-                                    {getStatusIcon(order.status)}
-                                    {order.status}
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-3 self-end sm:self-center">
+                                    <button 
+                                        onClick={() => setShowImpactId(isImpactOpen ? null : order.id)}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black uppercase tracking-wider transition-all ${isImpactOpen ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-100' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}
+                                    >
+                                        <Leaf size={14} className={isImpactOpen ? 'animate-bounce' : ''}/> {isImpactOpen ? 'Close Report' : 'See Impact Report'}
+                                    </button>
+                                    <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-widest ${getStatusColor(order.status)} shadow-sm`}>
+                                        {getStatusIcon(order.status)}
+                                        {order.status}
+                                    </div>
                                 </div>
+                                
+                                {/* VISUAL STATUS INDICATOR */}
+                                {order.status !== 'Cancelled' && (
+                                  <div className="w-full sm:w-64 space-y-1.5 pt-1">
+                                    <div className="flex justify-between px-1">
+                                        {steps.map((step, idx) => (
+                                          <div key={step} className={`text-[8px] font-black uppercase tracking-tighter transition-colors ${idx <= statusIndex ? 'text-emerald-600' : 'text-gray-300'}`}>
+                                            {step}
+                                          </div>
+                                        ))}
+                                    </div>
+                                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex relative">
+                                        <div 
+                                          className="h-full bg-emerald-500 transition-all duration-1000 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+                                          style={{ width: `${(statusIndex / (steps.length - 1)) * 100}%` }}
+                                        />
+                                        <div className="absolute inset-0 flex justify-between items-center px-0.5">
+                                          {steps.map((_, idx) => (
+                                            <div key={idx} className={`w-1.5 h-1.5 rounded-full z-10 ${idx <= statusIndex ? 'bg-white border-2 border-emerald-500' : 'bg-gray-300'}`} />
+                                          ))}
+                                        </div>
+                                    </div>
+                                  </div>
+                                )}
                             </div>
                         </div>
 

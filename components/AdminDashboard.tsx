@@ -60,10 +60,10 @@ export const AdminDashboard: React.FC = () => {
                 )}
             </button>
             <button 
-                onClick={() => navigate('/pricing-requests')} 
+                onClick={() => navigate('/negotiations')} 
                 className="flex-1 sm:flex-none px-6 py-3 bg-[#043003] text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-black transition-all active:scale-95"
             >
-                New Comparison
+                View Pipeline
             </button>
         </div>
       </div>
